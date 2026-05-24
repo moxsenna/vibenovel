@@ -2,7 +2,7 @@ import type { StateCreator } from 'zustand'
 import type { OutlineProgress, Chapter } from '../../types/project'
 import type { ProjectStore } from '../useProjectStore'
 import { aiRouter } from '../../services/ai/ai-router'
-import { validatePacing, validateFalseResolution, validateHookChainCoverage } from '../../lib/kbm-pacing'
+import { validatePacing, validateFalseResolution, validateHookChainCoverage, validateDanglingThreads } from '../../lib/kbm-pacing'
 import type { OutlineResponse } from '../../services/ai/types'
 
 export interface OutlinesPart {
@@ -16,20 +16,8 @@ export interface OutlinesPart {
 }
 
 // Helper: Arc Position Description
-export function getArcPosition(chapterNumber: number, totalChapters: number): string {
-  const ratio = chapterNumber / totalChapters
-
-  if (ratio <= 0.05) return 'OPENING — Perkenalan dunia dan karakter. Hook kuat!'
-  if (ratio <= 0.15) return 'SETUP — Bangun character investment. Tunjukkan vulnerability.'
-  if (ratio <= 0.25) return 'INCITING INCIDENT — Konflik utama mulai muncul.'
-  if (ratio <= 0.40) return 'RISING ACTION — Eskalasi konflik, stakes naik.'
-  if (ratio <= 0.50) return 'MIDPOINT — Twist besar atau false resolution.'
-  if (ratio <= 0.65) return 'COMPLICATIONS — Konsekuensi dari midpoint. Tekanan bertambah.'
-  if (ratio <= 0.75) return 'CRISIS — Momen paling gelap. Semua tampak mustahil.'
-  if (ratio <= 0.85) return 'CLIMAX APPROACH — Persiapan klimaks. Resolusi misteri terakhir.'
-  if (ratio <= 0.95) return 'CLIMAX — Pertarungan/konfrontasi besar. Emosi puncak.'
-  return 'RESOLUTION — Penutupan. Jawaban terakhir. Epilog.'
-}
+// (moved to `src/lib/kbm-pacing.ts` so visualization components can import
+// the structured `computeArcBands` helper without pulling the outline store.)
 
 export const outlinesPart: StateCreator<
   ProjectStore,
@@ -44,6 +32,17 @@ export const outlinesPart: StateCreator<
   generateOutlineBatch: async (startChapter, endChapter) => {
     const { activeProject, characters, items, worldRules, mysteryLayers, chapters } = get()
     if (!activeProject) throw new Error('No active project')
+
+    // ── Story Compass completeness guard (safety net) ──────────────────
+    const compassMissing: string[] = []
+    if (!activeProject.title || !activeProject.genre) compassMissing.push('Premis & Genre')
+    if (!characters.some((c) => c.role === 'PROTAGONIST')) compassMissing.push('Tokoh Utama (Protagonis)')
+    if (!characters.some((c) => c.role === 'ANTAGONIST')) compassMissing.push('Antagonis')
+    if (!activeProject.target_ending) compassMissing.push('Target Ending')
+    if (mysteryLayers.length === 0) compassMissing.push('Lapisan Misteri')
+    if (compassMissing.length > 0) {
+      throw new Error(`Story Compass belum lengkap! Belum terisi: ${compassMissing.join(', ')}. Lengkapi di mode Brainstorm terlebih dahulu.`)
+    }
 
     const totalToGenerate = endChapter - startChapter + 1
     set({
@@ -84,6 +83,15 @@ export const outlinesPart: StateCreator<
     })
     if (hookCoverage.warnings.length > 0) {
       allWarnings.push(...hookCoverage.warnings)
+    }
+
+    // Sprint 7 — Dangling thread alert surfaced once per batch.
+    const danglingResult = validateDanglingThreads({
+      threads: get().plotThreads,
+      currentChapter: startChapter
+    })
+    if (danglingResult.warnings.length > 0) {
+      allWarnings.push(...danglingResult.warnings)
     }
 
     try {
@@ -277,6 +285,17 @@ export const outlinesPart: StateCreator<
   regenerateOutline: async (chapterId) => {
     const { activeProject, chapters, characters, items, worldRules, mysteryLayers } = get()
     if (!activeProject) return
+
+    // ── Story Compass completeness guard (safety net) ──────────────────
+    const compassMissing: string[] = []
+    if (!activeProject.title || !activeProject.genre) compassMissing.push('Premis & Genre')
+    if (!characters.some((c) => c.role === 'PROTAGONIST')) compassMissing.push('Tokoh Utama (Protagonis)')
+    if (!characters.some((c) => c.role === 'ANTAGONIST')) compassMissing.push('Antagonis')
+    if (!activeProject.target_ending) compassMissing.push('Target Ending')
+    if (mysteryLayers.length === 0) compassMissing.push('Lapisan Misteri')
+    if (compassMissing.length > 0) {
+      throw new Error(`Story Compass belum lengkap! Belum terisi: ${compassMissing.join(', ')}. Lengkapi di mode Brainstorm terlebih dahulu.`)
+    }
 
     const chapter = chapters.find((ch) => ch.id === chapterId)
     if (!chapter) return

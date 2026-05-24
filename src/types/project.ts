@@ -24,6 +24,10 @@ export interface Project {
   // Sprint 5 — Hook Chain (top-level project hooks)
   series_hook: string | null
   season_hooks: string[]
+  // Sprint 9 — Mimicry Engine: project-wide voice DNA jsonb (extracted from
+  // a writing sample provided by the user). Optional/nullable for projects
+  // created before the v2 schema migration.
+  voice_dna_project?: Record<string, unknown>
   created_at?: string
   updated_at?: string
 }
@@ -196,6 +200,22 @@ export interface MysteryLayer {
   breadcrumbs: { chapter: number; hint: string }[]
   status: 'ACTIVE' | 'REVEALED' | 'PLANNED'
   season_id?: string | null
+}
+
+/**
+ * Sprint 7 — RAG-backed chapter summary.
+ * Embedding is a 768-dim vector (Gemini `text-embedding-004`) stored in
+ * pgvector. `key_facts` is a JSONB array of factual bullet points used as
+ * a keyword-search fallback when pgvector is unavailable.
+ */
+export interface ChapterSummary {
+  id: string
+  chapter_id: string
+  project_id: string
+  summary: string
+  embedding: number[] | null
+  key_facts: string[]
+  created_at?: string
 }
 
 export interface EmotionalPattern {

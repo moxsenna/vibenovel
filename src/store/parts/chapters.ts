@@ -325,7 +325,10 @@ export const chaptersPart: StateCreator<
         plotThreads: (threads ?? []) as unknown as PlotThread[]
       }
       set(next)
-      await get().loadCharacterStates(projectId)
+      await Promise.all([
+        get().loadCharacterStates(projectId),
+        get().loadChapterSummaries(projectId)
+      ])
     } catch (e) {
       console.warn('Error syncing project data from Supabase, keeping local state:', e)
     } finally {

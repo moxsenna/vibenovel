@@ -2,11 +2,28 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { BatchProgress } from '../types/project'
 
-export type WorkspaceMode = 'brainstorm' | 'outline' | 'write' | 'review'
+export type WorkspaceMode = 'brainstorm' | 'outline' | 'write' | 'review' | 'visualize'
 
 export interface QaLogs {
   passed: boolean
   warnings: string[]
+}
+
+export interface Toast {
+  id: string
+  message: string
+  type: 'success' | 'error' | 'info' | 'warning'
+  duration?: number
+}
+
+export interface ConfirmOptions {
+  title: string
+  message: string
+  confirmText?: string
+  cancelText?: string
+  severity?: 'info' | 'warning' | 'danger'
+  onConfirm: () => void
+  onCancel?: () => void
 }
 
 interface UiState {
@@ -19,6 +36,10 @@ interface UiState {
   runningQa: boolean
   /** Sprint 6 — Auto-Pilot batch progress (transient, never persisted). */
   batchProgress: BatchProgress | null
+  
+  // Custom dialogs states
+  toasts: Toast[]
+  confirmOptions: ConfirmOptions | null
 }
 
 interface UiActions {
@@ -31,6 +52,12 @@ interface UiActions {
   setQaLogs: (logs: QaLogs | null) => void
   setRunningQa: (running: boolean) => void
   setBatchProgress: (progress: BatchProgress | null) => void
+  
+  // Custom dialogs actions
+  addToast: (message: string, type: Toast['type'], duration?: number) => void
+  removeToast: (id: string) => void
+  showConfirm: (options: ConfirmOptions) => void
+  hideConfirm: () => void
 }
 
 export type UiStore = UiState & UiActions
@@ -47,6 +74,8 @@ export const useUiStore = create<UiStore>()(
       qaLogs: null,
       runningQa: false,
       batchProgress: null,
+      toasts: [],
+      confirmOptions: null,
 
       // Actions
       setMode: (activeMode) => set({ activeMode }),
@@ -57,6 +86,34 @@ export const useUiStore = create<UiStore>()(
       setQaLogs: (qaLogs) => set({ qaLogs }),
       setRunningQa: (runningQa) => set({ runningQa }),
       setBatchProgress: (batchProgress) => set({ batchProgress }),
+      
+      addToast: (message, type, duration = 4000) => {
+        const id = crypto.randomUUID()
+        const newToast: Toast = { id, message, type, duration }
+        set((state) => ({
+          toasts: [...state.toasts, newToast]
+        }))
+
+        // Auto remove
+        setTimeout(() => {
+          get().removeToast(id)
+        }, duration)
+      },
+      
+      removeToast: (id) => {
+        set((state) => ({
+          toasts: state.toasts.filter((t) => t.id !== id)
+        }))
+      },
+
+      showConfirm: (confirmOptions) => {
+        set({ confirmOptions })
+      },
+
+      hideConfirm: () => {
+        set({ confirmOptions: null })
+      },
+
       toggleTheme: () => {
         const nextTheme = get().theme === 'dark' ? 'light' : 'dark'
         set({ theme: nextTheme })

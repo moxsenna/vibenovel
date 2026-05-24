@@ -13,15 +13,19 @@ import { CoAuthorChat } from '../components/chat/CoAuthorChat'
 import { SeasonArchitectPanel } from '../components/workspace/SeasonArchitectPanel'
 import { ProseWriterPanel } from '../components/workspace/ProseWriterPanel'
 import { ReviewPanel } from '../components/workspace/ReviewPanel'
+import { VisualizationPanel } from '../components/visualization/VisualizationPanel'
 import { LoreDiffModal } from '../components/modals/LoreDiffModal'
 import { BatchSuccessModal } from '../components/modals/BatchSuccessModal'
 import { BatchProgressPanel } from '../components/prose/BatchProgressPanel'
+import { FreeWriteIndexerWatcher } from '../components/onboarding/FreeWriteIndexerWatcher'
+import { SkipLink } from '../components/ui/SkipLink'
 
 const MODES = [
   { id: 'brainstorm', label: '💬 Brainstorm' },
   { id: 'outline', label: '📋 Outline' },
   { id: 'write', label: '✍ Menulis' },
-  { id: 'review', label: '📊 Review' }
+  { id: 'review', label: '📊 Review' },
+  { id: 'visualize', label: '🌌 Visualisasi' }
 ] as const
 
 export const Workspace: React.FC = () => {
@@ -82,9 +86,11 @@ export const Workspace: React.FC = () => {
 
   return (
     <div className="h-screen w-full flex flex-col bg-surface-container-lowest overflow-hidden">
+      <SkipLink />
       <LoreDiffModal />
       <BatchSuccessModal />
       <BatchProgressPanel />
+      <FreeWriteIndexerWatcher />
       {/* ── Header ── */}
       <header className="flex-shrink-0 z-50">
         <div className="bg-surface-dim/80 backdrop-blur-md flex flex-col w-full px-5 md:px-16 py-4 space-y-4 border-b border-surface-variant/20 shadow-sm">
@@ -149,7 +155,11 @@ export const Workspace: React.FC = () => {
         </AnimatePresence>
 
         {/* Right Side: Primary Canvas (Takes remaining viewport space) */}
-        <main className="flex-1 flex flex-col overflow-hidden relative bg-surface-container-lowest">
+        <main
+          id="main-content"
+          role="main"
+          className="flex-1 flex flex-col overflow-hidden relative bg-surface-container-lowest"
+        >
           {/* Mobile Compass Header Toggle */}
           <div className="md:hidden flex items-center justify-between p-4 border-b border-surface-variant/20 bg-surface-dim/90 backdrop-blur-sm z-10">
             <button
@@ -194,6 +204,11 @@ export const Workspace: React.FC = () => {
               {activeMode === 'review' && (
                 <ReviewPanel />
               )}
+
+              {/* 5. VISUALIZE CANVAS (Sprint 8) */}
+              {activeMode === 'visualize' && (
+                <VisualizationPanel />
+              )}
             </motion.div>
           </AnimatePresence>
         </main>
@@ -221,7 +236,9 @@ export const Workspace: React.FC = () => {
                   ? 'list_alt'
                   : tab.id === 'write'
                   ? 'edit'
-                  : 'radar'}
+                  : tab.id === 'review'
+                  ? 'radar'
+                  : 'analytics'}
               </span>
               <span className="text-[10px] mt-0.5 font-semibold">
                 {tab.label.split(' ')[1] || tab.label.split(' ')[0]}

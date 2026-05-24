@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Chapter } from '../../types/project'
 import { useProjectStore } from '../../store/useProjectStore'
+import { useUiStore } from '../../store/useUiStore'
 
 interface ChapterOutlineCardProps {
   chapter: Chapter
@@ -24,6 +25,25 @@ export const ChapterOutlineCard: React.FC<ChapterOutlineCardProps> = ({
   const regenerateOutline = useProjectStore((s) => s.regenerateOutline)
   const lockOutline = useProjectStore((s) => s.lockOutline)
   const deleteChapter = useProjectStore((s) => s.deleteChapter)
+  
+  const showConfirm = useUiStore((s) => s.showConfirm)
+  const addToast = useUiStore((s) => s.addToast)
+  const characters = useProjectStore((s) => s.characters)
+  const mysteryLayers = useProjectStore((s) => s.mysteryLayers)
+  const activeProject = useProjectStore((s) => s.activeProject)
+
+  // ── Story Compass completeness check for Regenerate guard ──
+  const isCompassComplete = useMemo(() => {
+    if (!activeProject) return false
+    return (
+      !!activeProject.title &&
+      !!activeProject.genre &&
+      characters.some((c) => c.role === 'PROTAGONIST') &&
+      characters.some((c) => c.role === 'ANTAGONIST') &&
+      !!activeProject.target_ending &&
+      mysteryLayers.length > 0
+    )
+  }, [activeProject, characters, mysteryLayers])
 
   const ch = chapter
 
@@ -57,38 +77,65 @@ export const ChapterOutlineCard: React.FC<ChapterOutlineCardProps> = ({
   }
 
   const handleRegenerate = async () => {
-    if (ch.outline_source === 'MANUAL') {
-      if (!confirm('Outline ini dibuat manual. Yakin mau overwrite dengan AI?')) return
-    }
-    if (ch.outline_source === 'IMPORTED') {
-      if (
-        !confirm(
-          'Bab ini hasil import. Regenerate akan ubah outline_source jadi GENERATED dan mengganti datanya. Lanjut?'
-        )
-      ) {
+    const proceedWithRegen = async () => {
+      if (ch.prose) {
+        addToast('Bab ini sudah ada prosa. Hapus prosa dulu sebelum regenerate outline.', 'error')
         return
       }
-      // Unlock + flip to MANUAL so the regenerate path can proceed.
-      await updateChapter(ch.id, { is_locked: false, outline_source: 'MANUAL' })
+      setRegenerating(true)
+      try {
+        await regenerateOutline(ch.id)
+        addToast(`Outline Bab ${ch.chapter_number} berhasil diregenerasi!`, 'success')
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Error'
+        addToast(`Gagal: ${msg}`, 'error')
+      } finally {
+        setRegenerating(false)
+      }
     }
-    if (ch.prose) {
-      alert('Bab ini sudah ada prosa. Hapus prosa dulu sebelum regenerate outline.')
+
+    if (ch.outline_source === 'MANUAL') {
+      showConfirm({
+        title: 'Overwrite Outline?',
+        message: 'Outline ini dibuat manual. Apakah Anda yakin ingin menulis ulang (overwrite) data outline ini dengan AI?',
+        confirmText: 'Ya, Overwrite',
+        cancelText: 'Batal',
+        severity: 'warning',
+        onConfirm: proceedWithRegen
+      })
       return
     }
-    setRegenerating(true)
-    try {
-      await regenerateOutline(ch.id)
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Error'
-      alert(`Gagal regenerate: ${msg}`)
-    } finally {
-      setRegenerating(false)
+
+    if (ch.outline_source === 'IMPORTED') {
+      showConfirm({
+        title: 'Regenerate Outline Import?',
+        message: 'Bab ini diimpor dari naskah Anda. Proses regenerasi akan mengubah sumber outline menjadi GENERATED dan mengganti data yang ada. Lanjutkan?',
+        confirmText: 'Ya, Lanjutkan',
+        cancelText: 'Batal',
+        severity: 'warning',
+        onConfirm: async () => {
+          await updateChapter(ch.id, { is_locked: false, outline_source: 'MANUAL' })
+          await proceedWithRegen()
+        }
+      })
+      return
     }
+
+    await proceedWithRegen()
   }
 
   const handleDelete = async () => {
-    if (!confirm(`Hapus outline Bab ${ch.chapter_number}?`)) return
-    await deleteChapter(ch.id)
+    showConfirm({
+      title: 'Hapus Outline?',
+      message: `Apakah Anda yakin ingin menghapus outline Bab ${ch.chapter_number}? Tindakan ini akan menghapus data outline secara permanen.`,
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+      severity: 'danger',
+      onConfirm: async () => {
+        await deleteChapter(ch.id)
+        addToast(`Outline Bab ${ch.chapter_number} berhasil dihapus!`, 'success')
+      }
+    })
   }
 
   const handleToggleLock = async () => {
@@ -393,8 +440,9 @@ export const ChapterOutlineCard: React.FC<ChapterOutlineCardProps> = ({
                   <div className="flex flex-wrap gap-2 pt-2 border-t border-outline-variant/10">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleRegenerate() }}
-                      disabled={regenerating || ch.is_locked}
-                      className="h-8 px-3 rounded-lg bg-surface-container border border-outline-variant/30 text-on-surface-variant text-label-md cursor-pointer hover:bg-surface-variant/30 disabled:opacity-40 flex items-center gap-1.5"
+                      disabled={regenerating || ch.is_locked || !isCompassComplete}
+                      title={!isCompassComplete ? 'Story Compass belum lengkap — lengkapi di Brainstorm terlebih dahulu' : undefined}
+                      className="h-8 px-3 rounded-lg bg-surface-container border border-outline-variant/30 text-on-surface-variant text-label-md cursor-pointer hover:bg-surface-variant/30 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
                       {regenerating ? (
                         <div className="w-3 h-3 border-2 border-on-surface-variant/30 border-t-on-surface-variant rounded-full animate-spin" />

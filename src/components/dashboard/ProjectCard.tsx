@@ -16,6 +16,10 @@ interface ProjectCardProps {
   coverGradient?: string
   onOpen: () => void
   onDelete: () => void
+  /** Sprint 9 — Spin-Off Clone (optional, falls back to noop if not wired). */
+  onSpinOff?: () => void
+  /** Sprint 9 — Adjust target chapter count (optional). */
+  onAdjustTarget?: () => void
 }
 
 const STATUS_CONFIG: Record<ProjectStatus, { dot: string; label: string }> = {
@@ -52,7 +56,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   currentActivity,
   lastActivity,
   onOpen,
-  onDelete
+  onDelete,
+  onSpinOff,
+  onAdjustTarget
 }) => {
   const statusCfg = STATUS_CONFIG[status]
   const gradient = GENRE_GRADIENTS[genre] || GENRE_GRADIENTS['Drama Rumah Tangga']
@@ -96,7 +102,36 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             <span className="material-symbols-outlined text-[18px]">more_horiz</span>
           </button>
           {menuOpen && (
-            <div className="absolute right-0 mt-2 w-40 rounded-xl bg-surface-container-high border border-outline-variant shadow-xl py-1 z-30">
+            <div className="absolute right-0 mt-2 w-48 rounded-xl bg-surface-container-high border border-outline-variant shadow-xl py-1 z-30">
+              {onAdjustTarget && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onAdjustTarget()
+                    setMenuOpen(false)
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-body-sm text-on-surface hover:bg-surface-container-highest flex items-center gap-2 cursor-pointer"
+                  data-tour-step="adjust-target"
+                >
+                  <span className="material-symbols-outlined text-[16px]">tune</span>
+                  Ubah Target Bab
+                </button>
+              )}
+              {onSpinOff && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSpinOff()
+                    setMenuOpen(false)
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-body-sm text-on-surface hover:bg-surface-container-highest flex items-center gap-2 cursor-pointer"
+                  data-tour-step="spin-off"
+                >
+                  <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                  🪞 Spin-Off Clone
+                </button>
+              )}
+              <div className="my-1 border-t border-outline-variant/30" />
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -183,6 +218,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 export const NewProjectCard: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button
     onClick={onClick}
+    data-tour-step="new-project"
     className="bg-surface-container/50 rounded-[20px] border-2 border-dashed border-primary-container/40 p-5 flex flex-col items-center justify-center gap-4 hover:bg-surface-container hover:border-primary-container transition-all duration-300 min-h-[350px] group cursor-pointer inner-glow shadow-[0_0_20px_rgba(255,220,188,0.15)]"
   >
     <span className="text-5xl group-hover:scale-110 transition-transform duration-300">✨</span>

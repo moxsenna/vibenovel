@@ -445,3 +445,21 @@ input, textarea, select, button {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+
+/* ===================================================================
+   Sprint 9 — A11y: respect prefers-reduced-motion globally
+   ===================================================================
+   Disables all animations / transitions for users who request reduced
+   motion at the OS level. Framer Motion components also call
+   `useReducedMotion()` per-component for finer control where needed. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

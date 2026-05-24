@@ -25,7 +25,8 @@ const DUMMY_PROJECTS: Project[] = [
       'Kania menemukan timeline yang tepat. Dirga selamat, tapi Kania kehilangan semua ingatan tentang perjalanan waktunya — termasuk ingatan bahwa dia pernah mencintai Dirga.',
     theme_and_tone: 'Tegang, melankolis, penuh emosi terpendam, dramatis',
     series_hook: null,
-    season_hooks: []
+    season_hooks: [],
+    voice_dna_project: {}
   },
   {
     id: 'a9b8c7d6-e5f4-3a2b-1c0d-9e8f7a6b5c4d',
@@ -44,7 +45,8 @@ const DUMMY_PROJECTS: Project[] = [
       'CEO mengorbankan posisinya demi menyelamatkan bisnis kecil wanita impiannya, bersatu dalam kesederhanaan yang kaya cinta.',
     theme_and_tone: 'Benci-jadi-cinta, glamor perkantoran, manis',
     series_hook: null,
-    season_hooks: []
+    season_hooks: [],
+    voice_dna_project: {}
   }
 ]
 
@@ -147,7 +149,8 @@ export const projectsPart: StateCreator<
       target_ending: null,
       theme_and_tone: null,
       series_hook: null,
-      season_hooks: []
+      season_hooks: [],
+      voice_dna_project: {}
     }
 
     try {

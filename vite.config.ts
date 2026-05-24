@@ -5,6 +5,24 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        // Sprint 9 — Manual vendor chunks for cache-friendly builds.
+        // Vite 8 / Rolldown uses `output.codeSplitting.groups`.
+        // App-only updates won't invalidate vendor bundles, so users keep
+        // hitting cached vendor JS (huge bandwidth saving on iterative ships).
+        codeSplitting: {
+          groups: [
+            { name: 'vendor-react', test: /[\\/]node_modules[\\/](react|react-dom|react-router-dom|scheduler)[\\/]/ },
+            { name: 'vendor-supabase', test: /[\\/]node_modules[\\/]@supabase[\\/]/ },
+            { name: 'vendor-motion', test: /[\\/]node_modules[\\/]framer-motion[\\/]/ },
+            { name: 'vendor-store', test: /[\\/]node_modules[\\/]zustand[\\/]/ }
+          ]
+        }
+      }
+    }
+  },
   plugins: [
     react(),
     tailwindcss(),

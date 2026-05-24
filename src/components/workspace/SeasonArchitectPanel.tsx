@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProjectStore } from '../../store/useProjectStore'
 import { useUiStore } from '../../store/useUiStore'
@@ -9,12 +9,16 @@ import { ChapterOutlineCard } from './ChapterOutlineCard'
 export const SeasonArchitectPanel: React.FC = () => {
   const activeProject = useProjectStore((s) => s.activeProject)
   const chapters = useProjectStore((s) => s.chapters)
+  const characters = useProjectStore((s) => s.characters)
+  const mysteryLayers = useProjectStore((s) => s.mysteryLayers)
   const outlineGenerating = useProjectStore((s) => s.outlineGenerating)
   const outlineProgress = useProjectStore((s) => s.outlineProgress)
   const generateOutlineBatch = useProjectStore((s) => s.generateOutlineBatch)
   const abortOutlineGeneration = useProjectStore((s) => s.abortOutlineGeneration)
   const setActiveChapter = useUiStore((s) => s.setActiveChapter)
   const activeChapterNumber = useUiStore((s) => s.activeChapter)
+  const addToast = useUiStore((s) => s.addToast)
+  const showConfirm = useUiStore((s) => s.showConfirm)
   const geminiKeys = useSettingsStore((s) => s.geminiKeys)
   const { startBatch, isRunning: batchRunning, progress: batchProgress } = useBatchGenerator()
 
@@ -26,9 +30,30 @@ export const SeasonArchitectPanel: React.FC = () => {
   // Completed result display
   const [showResult, setShowResult] = useState(false)
 
+  // ── Story Compass Completeness Check ───────────────────────────────────
+  const compassStatus = useMemo(() => {
+    if (!activeProject) return { isComplete: false, missing: [] as string[] }
+    const missing: string[] = []
+    if (!activeProject.title || !activeProject.genre) missing.push('Premis & Genre')
+    if (!characters.some((c) => c.role === 'PROTAGONIST')) missing.push('Tokoh Utama (Protagonis)')
+    if (!characters.some((c) => c.role === 'ANTAGONIST')) missing.push('Antagonis')
+    if (!activeProject.target_ending) missing.push('Target Ending')
+    if (mysteryLayers.length === 0) missing.push('Lapisan Misteri')
+    return { isComplete: missing.length === 0, missing }
+  }, [activeProject, characters, mysteryLayers])
+
   if (!activeProject) return null
 
   const handleOpenGenerateModal = () => {
+    // Guard: Story Compass must be complete
+    if (!compassStatus.isComplete) {
+      addToast(
+        `Story Compass belum lengkap! Yang belum terisi: ${compassStatus.missing.join(', ')}. Lengkapi di mode Brainstorm terlebih dahulu.`,
+        'warning'
+      )
+      return
+    }
+
     // Smart defaults: start from last chapter + 1
     const lastChapter = chapters.length > 0
       ? Math.max(...chapters.map((ch) => ch.chapter_number))
@@ -41,15 +66,15 @@ export const SeasonArchitectPanel: React.FC = () => {
 
   const handleGenerate = async () => {
     if (geminiKeys.length === 0) {
-      alert('❌ Belum ada Gemini API key. Masukkan key di Settings terlebih dahulu.')
+      addToast('Belum ada Gemini API key. Masukkan key di Settings terlebih dahulu.', 'error')
       return
     }
     if (rangeStart > rangeEnd) {
-      alert('Bab awal harus lebih kecil atau sama dengan bab akhir.')
+      addToast('Bab awal harus lebih kecil atau sama dengan bab akhir.', 'warning')
       return
     }
     if (rangeEnd > activeProject.target_chapters) {
-      alert(`Bab akhir tidak boleh melebihi target (${activeProject.target_chapters}).`)
+      addToast(`Bab akhir tidak boleh melebihi target (${activeProject.target_chapters}).`, 'warning')
       return
     }
 
@@ -57,43 +82,53 @@ export const SeasonArchitectPanel: React.FC = () => {
     try {
       await generateOutlineBatch(rangeStart, rangeEnd)
       setShowResult(true)
+      addToast(`Berhasil generate outline Bab ${rangeStart} sampai ${rangeEnd}!`, 'success')
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Gagal generate outline batch.'
-      alert(`Error: ${msg}`)
+      addToast(`Gagal: ${msg}`, 'error')
     }
   }
 
   const handleAutoPilot = async () => {
     if (geminiKeys.length === 0) {
-      alert('❌ Belum ada Gemini API key. Masukkan key di Settings terlebih dahulu.')
+      addToast('Belum ada Gemini API key. Masukkan key di Settings terlebih dahulu.', 'error')
       return
     }
     if (rangeStart > rangeEnd) {
-      alert('Bab awal harus lebih kecil atau sama dengan bab akhir.')
+      addToast('Bab awal harus lebih kecil atau sama dengan bab akhir.', 'warning')
       return
     }
     if (rangeEnd > activeProject.target_chapters) {
-      alert(`Bab akhir tidak boleh melebihi target (${activeProject.target_chapters}).`)
+      addToast(`Bab akhir tidak boleh melebihi target (${activeProject.target_chapters}).`, 'warning')
       return
     }
     const total = rangeEnd - rangeStart + 1
-    if (total > 10) {
-      const ok = confirm(
-        `Auto-Pilot ${total} bab akan menghasilkan ribuan kata dan banyak panggilan AI. ` +
-          `Pakai Gemini gratis aman, tapi jika kamu pakai OpenRouter (Claude/Deepseek) ini bisa mahal.\n\nLanjut?`
-      )
-      if (!ok) return
+
+    const proceedWithAutopilot = async () => {
+      try {
+        await startBatch({
+          startChapter: rangeStart,
+          endChapter: rangeEnd,
+          skipExisting: true,
+          safetyStopAfterErrors: 2
+        })
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Auto-Pilot gagal.'
+        addToast(`Gagal: ${msg}`, 'error')
+      }
     }
-    try {
-      await startBatch({
-        startChapter: rangeStart,
-        endChapter: rangeEnd,
-        skipExisting: true,
-        safetyStopAfterErrors: 2
+
+    if (total > 10) {
+      showConfirm({
+        title: 'Mulai Auto-Pilot?',
+        message: `Auto-Pilot ${total} bab akan menghasilkan ribuan kata dan banyak panggilan AI. Jika Anda menggunakan OpenRouter (Claude/Deepseek) ini bisa memerlukan biaya token berbayar.`,
+        confirmText: 'Ya, Jalankan',
+        cancelText: 'Batal',
+        severity: 'warning',
+        onConfirm: proceedWithAutopilot
       })
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Auto-Pilot gagal.'
-      alert(`Error: ${msg}`)
+    } else {
+      await proceedWithAutopilot()
     }
   }
 
@@ -116,8 +151,9 @@ export const SeasonArchitectPanel: React.FC = () => {
             </div>
             <button
               onClick={handleOpenGenerateModal}
-              disabled={outlineGenerating}
-              className="h-10 px-5 rounded-xl btn-gradient text-white font-semibold text-label-lg cursor-pointer flex items-center gap-2 hover-glow disabled:opacity-40 shrink-0"
+              disabled={outlineGenerating || !compassStatus.isComplete}
+              title={!compassStatus.isComplete ? `Story Compass belum lengkap: ${compassStatus.missing.join(', ')}` : undefined}
+              className="h-10 px-5 rounded-xl btn-gradient text-white font-semibold text-label-lg cursor-pointer flex items-center gap-2 hover-glow disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
             >
               {outlineGenerating ? (
                 <>
@@ -344,10 +380,32 @@ export const SeasonArchitectPanel: React.FC = () => {
             <p className="text-body-sm text-on-surface-variant max-w-md mx-auto leading-relaxed mb-6">
               Lengkapi Story Compass di mode Brainstorm terlebih dahulu, lalu kembali ke sini untuk generate outline bab-per-bab.
             </p>
+
+            {/* Compass incomplete warning */}
+            {!compassStatus.isComplete && (
+              <div className="max-w-md mx-auto mb-6 p-4 rounded-2xl bg-tertiary/10 border border-tertiary/25 text-left">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="material-symbols-outlined text-tertiary text-[18px]">warning</span>
+                  <span className="text-label-md font-bold text-tertiary">Story Compass Belum Lengkap</span>
+                </div>
+                <ul className="space-y-1 ml-6">
+                  {compassStatus.missing.map((item) => (
+                    <li key={item} className="text-body-sm text-on-surface-variant list-disc">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[11px] text-on-surface-variant/70 mt-2 italic">
+                  Kembali ke mode Brainstorm untuk melengkapi elemen di atas.
+                </p>
+              </div>
+            )}
+
             <button
               onClick={handleOpenGenerateModal}
-              disabled={outlineGenerating}
-              className="h-10 px-6 rounded-xl btn-gradient text-white font-semibold text-label-lg cursor-pointer hover-glow disabled:opacity-40 inline-flex items-center gap-2"
+              disabled={outlineGenerating || !compassStatus.isComplete}
+              title={!compassStatus.isComplete ? `Story Compass belum lengkap: ${compassStatus.missing.join(', ')}` : undefined}
+              className="h-10 px-6 rounded-xl btn-gradient text-white font-semibold text-label-lg cursor-pointer hover-glow disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-[16px]">psychology</span>
               Generate Outline Pertama

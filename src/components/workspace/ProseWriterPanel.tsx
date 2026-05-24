@@ -9,6 +9,7 @@ import {
   type SelectionInfo
 } from '../prose/SelectionToolbar'
 import { DirectorsCutModal } from '../modals/DirectorsCutModal'
+import { RecapModal } from '../modals/RecapModal'
 import { useBeatWriter } from '../../hooks/useBeatWriter'
 import { useUiStore } from '../../store/useUiStore'
 import { useProjectStore } from '../../store/useProjectStore'
@@ -51,6 +52,7 @@ const ProseWriterInner: React.FC<ProseWriterInnerProps> = ({
   contextPanelOpen,
   toggleContextPanel
 }) => {
+  const addToast = useUiStore((s) => s.addToast)
   const freeWriteMode = useSettingsStore((s) => s.freeWriteMode)
   const {
     currentBeatIndex,
@@ -67,6 +69,7 @@ const ProseWriterInner: React.FC<ProseWriterInnerProps> = ({
   const beatEditorRef = useRef<BeatEditorHandle>(null)
   const [selection, setSelection] = useState<SelectionInfo | null>(null)
   const [directorsCutSelection, setDirectorsCutSelection] = useState<string | null>(null)
+  const [recapOpen, setRecapOpen] = useState(false)
 
   const activeBeat = chapter.beats?.[currentBeatIndex]
   const isLastBeat = chapter.beats && currentBeatIndex === chapter.beats.length - 1
@@ -101,7 +104,7 @@ const ProseWriterInner: React.FC<ProseWriterInnerProps> = ({
       beatEditorRef.current?.replaceSelection(clean)
     } catch (e) {
       console.error('Magic Edit failed:', e)
-      alert('Magic Edit gagal: ' + (e instanceof Error ? e.message : 'Unknown'))
+      addToast('Magic Edit gagal: ' + (e instanceof Error ? e.message : 'Unknown'), 'error')
     } finally {
       setSelection(null)
     }
@@ -152,6 +155,7 @@ const ProseWriterInner: React.FC<ProseWriterInnerProps> = ({
           wordCount={chapter.word_count || 0}
           saveStatus={saveStatus}
           stateGenStatus={stateGenStatus}
+          onOpenRecap={() => setRecapOpen(true)}
         />
 
         {freeWriteMode ? (
@@ -201,6 +205,12 @@ const ProseWriterInner: React.FC<ProseWriterInnerProps> = ({
         chapter={chapter}
         onAccept={handleDirectorsCutAccept}
         onClose={() => setDirectorsCutSelection(null)}
+      />
+
+      <RecapModal
+        isOpen={recapOpen}
+        onClose={() => setRecapOpen(false)}
+        defaultRangeEnd={Math.max(1, chapter.chapter_number - 1)}
       />
     </motion.div>
   )

@@ -18,6 +18,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
 
 export const BatchProgressPanel: React.FC = () => {
   const progress = useUiStore((s) => s.batchProgress)
+  const showConfirm = useUiStore((s) => s.showConfirm)
   const { pauseBatch, resumeBatch, abortBatch } = useBatchGenerator()
 
   // Tick once per second so the elapsed-time stat refreshes without
@@ -125,9 +126,14 @@ export const BatchProgressPanel: React.FC = () => {
           )}
           <button
             onClick={() => {
-              if (confirm('Hentikan Auto-Pilot? Bab yang sedang ditulis akan tetap tersimpan sebagai draft.')) {
-                abortBatch()
-              }
+              showConfirm({
+                title: 'Hentikan Auto-Pilot?',
+                message: 'Apakah Anda yakin ingin membatalkan proses Auto-Pilot? Bab yang saat ini sedang ditulis akan tetap tersimpan sebagai draf.',
+                confirmText: 'Ya, Hentikan',
+                cancelText: 'Batal',
+                severity: 'warning',
+                onConfirm: abortBatch
+              })
             }}
             className="px-3 py-1.5 rounded-lg bg-error/10 border border-error/30 text-error text-xs font-bold hover:bg-error/20 cursor-pointer flex items-center gap-1"
           >

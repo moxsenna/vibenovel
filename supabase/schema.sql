@@ -415,3 +415,53 @@ ALTER TABLE projects
 
 ALTER TABLE chapters
   ADD COLUMN IF NOT EXISTS false_resolution BOOLEAN NOT NULL DEFAULT FALSE;
+
+
+-- ============================================================
+-- SPRINT 7 — RAG search RPC
+-- ============================================================
+-- Run this on databases that already have chapter_summaries with
+-- embeddings populated. Idempotent — safe to re-run.
+
+CREATE OR REPLACE FUNCTION match_chapter_summaries(
+  p_project_id      UUID,
+  p_query_embedding vector(768),
+  p_match_count     INT DEFAULT 3,
+  p_min_similarity  FLOAT DEFAULT 0.0
+)
+RETURNS TABLE (
+  id              UUID,
+  chapter_id      UUID,
+  project_id      UUID,
+  summary         TEXT,
+  key_facts       JSONB,
+  similarity      FLOAT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    cs.id,
+    cs.chapter_id,
+    cs.project_id,
+    cs.summary,
+    cs.key_facts,
+    1 - (cs.embedding <=> p_query_embedding) AS similarity
+  FROM chapter_summaries cs
+  WHERE cs.project_id = p_project_id
+    AND cs.embedding IS NOT NULL
+    AND 1 - (cs.embedding <=> p_query_embedding) >= p_min_similarity
+  ORDER BY cs.embedding <=> p_query_embedding
+  LIMIT p_match_count;
+END;
+$$;
+
+
+-- ============================================================
+-- SPRINT 9 — Mimicry Engine: project-wide voice DNA
+-- ============================================================
+-- Idempotent migration. Default empty jsonb so existing rows are safe.
+
+ALTER TABLE projects
+  ADD COLUMN IF NOT EXISTS voice_dna_project JSONB NOT NULL DEFAULT '{}'::jsonb;

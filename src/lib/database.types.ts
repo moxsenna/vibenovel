@@ -25,6 +25,7 @@ export interface Database {
           theme_and_tone: string | null
           series_hook: string | null
           season_hooks: Json
+          voice_dna_project: Json
           created_at: string
           updated_at: string
         }

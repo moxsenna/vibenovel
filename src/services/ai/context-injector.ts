@@ -1,4 +1,5 @@
 import type { Project, Character, CharacterState, Item, WorldRule, Chapter } from '../../types/project'
+import { searchSimilarChapters } from '../rag-service'
 
 export interface PrunedContextResult {
   contextString: string
@@ -6,6 +7,7 @@ export interface PrunedContextResult {
   activeItemNames: string[]
   activeRuleNames: string[]
   injectedStateCount: number
+  ragMatchCount: number
 }
 
 class ContextInjector {
@@ -200,8 +202,75 @@ class ContextInjector {
       activeCharacterNames: activeCharacters.map((c) => c.name),
       activeItemNames: activeItems.map((i) => i.name),
       activeRuleNames: activeRules.map((r) => r.name),
-      injectedStateCount
+      injectedStateCount,
+      ragMatchCount: 0
     }
+  }
+
+  /**
+   * Async variant that augments the pruned context with semantic RAG matches
+   * over chapter summaries. The base lorebook + state + sliding-window block
+   * is identical to `pruneAndInject`; an extra "RELATED CHAPTER MEMORY"
+   * section is appended when the RAG search finds relevant past chapters.
+   */
+  public async pruneAndInjectWithRag(
+    project: Project,
+    textToScan: string,
+    allCharacters: Character[],
+    allItems: Item[],
+    allRules: WorldRule[],
+    previousChapters: Chapter[] = [],
+    characterStates: CharacterState[] = [],
+    ragOptions: { topK?: number; signal?: AbortSignal; excludeChapterIds?: string[] } = {}
+  ): Promise<PrunedContextResult> {
+    const base = this.pruneAndInject(
+      project,
+      textToScan,
+      allCharacters,
+      allItems,
+      allRules,
+      previousChapters,
+      characterStates
+    )
+
+    let ragMatchCount = 0
+    let ragBlock = ''
+    try {
+      const matches = await searchSimilarChapters(
+        project.id,
+        textToScan,
+        ragOptions.topK ?? 3,
+        ragOptions.signal
+      )
+      const filtered = ragOptions.excludeChapterIds
+        ? matches.filter((m) => !ragOptions.excludeChapterIds!.includes(m.summary.chapter_id))
+        : matches
+      if (filtered.length > 0) {
+        ragBlock = `\n[RELATED CHAPTER MEMORY — Layer 3 RAG]\n`
+        for (const { summary, similarity } of filtered) {
+          ragBlock += `(similarity ${(similarity * 100).toFixed(0)}%) ${summary.summary}\n`
+          if (summary.key_facts.length > 0) {
+            ragBlock += `  facts: ${summary.key_facts.slice(0, 3).join(' · ')}\n`
+          }
+        }
+        ragBlock += '\n'
+        ragMatchCount = filtered.length
+      }
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') throw e
+      console.warn('[ContextInjector] RAG augmentation failed, returning base context:', e)
+    }
+
+    if (ragBlock) {
+      // Insert the RAG block before the closing delimiter line.
+      const closingDelim = `===========================`
+      const augmented = base.contextString.endsWith(closingDelim)
+        ? base.contextString.slice(0, -closingDelim.length) + ragBlock + closingDelim
+        : base.contextString + ragBlock
+      return { ...base, contextString: augmented, ragMatchCount }
+    }
+
+    return base
   }
 }
 

@@ -546,3 +546,489 @@ Sprint 6 menutup Fase 6 dengan engine batch prose yang menulis 5-10+ bab secara 
 | Fase 5 | 5 | ✅ |
 | **Fase 6** | **6** | **✅** |
 | Fase 7 | 7 (Thread Tracker & RAG) | ⏳ Next |
+
+
+---
+
+## Session: Sprint 7 — Thread Tracker & RAG
+**Date**: 2026-05-24
+**Status**: ✅ COMPLETED — TypeScript, ESLint, and Production Build all zero errors
+
+### What Was Done
+
+#### Phase 1 — Embedding Service + Chapter Summaries
+- Added `embedContent(text, signal?, model='text-embedding-004')` to `gemini-pool.ts`. Returns 768-dim float array via Gemini's `embedContent` REST endpoint, with the same key rotation + 429 cooldown + AbortSignal threading as `generateContent`. Aborts re-throw immediately rather than retrying.
+- Created `src/prompts/chapter-summary.ts` with system + user prompt builders. JSON output schema: `{ summary: string, key_facts: string[] }`. Tone constraint: factual, no embellishment, neutral, exact character names.
+- Created `src/services/chapter-summary.ts` with `generateChapterSummary(chapter, prevSummary?, signal?)`. Pipeline: generate JSON summary → embed the summary text → return `SummaryResult`. Embedding failure is intentionally non-fatal — keyword-search fallback in `rag-service.ts` still works.
+- Added `ChapterSummary` interface to `src/types/project.ts`. Mirrors the existing `database.types.ts` shape (id, chapter_id, project_id, summary, embedding, key_facts).
+- Extended `lorebookPart`: new state `chapterSummaries: ChapterSummary[]`, new actions `loadChapterSummaries(projectId)` and `upsertChapterSummary(payload)`. The upsert is idempotent — it deletes any existing row for the same `chapter_id` then inserts the new one, so re-running the background task doesn't pile up duplicates.
+- Wired `loadChapterSummaries` into `chaptersPart.loadProjectData` via `Promise.all` (parallelised with `loadCharacterStates`).
+
+#### Phase 2 — RAG Service & Context Injector Enhancement
+- Created `src/services/rag-service.ts` exposing `searchSimilarChapters(projectId, query, topK=3, signal?)`. Two-tier path:
+  1. **Primary**: embed the query via Gemini `text-embedding-004`, then `supabase.rpc('match_chapter_summaries', { p_project_id, p_query_embedding, p_match_count })` for cosine-similarity scoring (1 - distance).
+  2. **Fallback**: in-memory token-overlap scoring on the `chapterSummaries` already loaded into the store. Stopword list covers common Bahasa Indonesia connectors (yang, di, ke, untuk, dengan, etc.) + common English fillers. Scores divided by `sqrt(haystackTokens.size)` so short summaries with rare matches outrank long boilerplate.
+  Both paths return `RagMatch[]` with the same shape so callers don't care which served them.
+- Appended idempotent `match_chapter_summaries` PL/pgSQL function to `supabase/schema.sql`. Returns `(id, chapter_id, project_id, summary, key_facts, similarity)`. Uses `<=>` cosine distance operator. Filters by `project_id` + `embedding IS NOT NULL` + min similarity threshold.
+- Extended `ContextInjector`:
+  - Added `ragMatchCount: number` to `PrunedContextResult`.
+  - Created async variant `pruneAndInjectWithRag(...)` that wraps the existing sync `pruneAndInject`, then awaits `searchSimilarChapters` and appends a "RELATED CHAPTER MEMORY — Layer 3 RAG" block before the closing delimiter.
+  - Optional `excludeChapterIds` parameter so we don't inject the chapter being generated as its own context.
+  - RAG block format includes per-match similarity percent and up to 3 key_facts for downstream prompt clarity.
+
+#### Phase 3 — Thread Tracker
+- Created `src/prompts/thread-tracker.ts` with system + user prompt builders. JSON schema: `new_threads[]`, `resolved_thread_titles[]`, `updated_thread_titles[]`. Urgency calibration tied to story stakes (CRITICAL = imminent, LOW = world-building).
+- Created `src/services/thread-tracker.ts`:
+  - `analyzeChapterThreads(chapter, existingThreads, prevSummaries, signal?)` parses the JSON output with strict type guards.
+  - `findThreadByTitle(title, threads)` does exact match → substring match for fuzzy dedup.
+  - `gatherPreviousSummaries(chapter, summaries)` helper for caller use.
+- Extended `lorebookPart` again with full plot-thread CRUD:
+  - `addPlotThread(thread): Promise<string>` (returns id, optimistic temp UUID swap-out on Supabase confirmation).
+  - `updatePlotThread(id, partial)`, `deletePlotThread(id)` — same optimistic + sync pattern as character CRUD.
+  - `applyThreadAnalysis(chapterNumber, projectId, result)` — orchestrates the diff: resolves existing threads, appends timestamped notes to updated ones, inserts new threads (skipping fuzzy-match duplicates). Static import of `findThreadByTitle` to avoid Vite's INEFFECTIVE_DYNAMIC_IMPORT warning.
+- Background task chain in `useBeatWriter` upgraded from 3 tasks to 5 via `Promise.allSettled` (state + radar + lore + thread + summary). Each task has its own try/catch in the trigger callbacks so a failure stays isolated.
+- Same upgrade in `BatchGenerator.runBackgroundTasks` — 3 tasks (state + thread + summary) via `Promise.allSettled` with per-task error logging.
+- Replaced the Sprint 3B placeholder `ThreadTrackerPanel.tsx` with full CRUD UI (~470 lines):
+  - Sorted into Active vs Resolved/Abandoned groups; Active group ordered by urgency rank then `planted_at`.
+  - Manual "+ Manual" button opens an inline form with title, urgency, status, planted_at, optional resolved_at, notes.
+  - "Auto-detect" button calls `analyzeChapterThreads` on the active chapter and applies via `applyThreadAnalysis`. Shows feedback message on success/failure.
+  - Per-card actions: edit (inline form), quick-resolve (✓ icon → status RESOLVED + resolved_at = current), delete (with confirm).
+  - "🚨 Dangling" badge auto-shown for open threads with HIGH/CRITICAL urgency that aged ≥10 chapters past their `planted_at`.
+- Added `validateDanglingThreads({ threads, currentChapter, staleAfter })` to `kbm-pacing.ts`. Warnings differentiate by urgency — HIGH/CRITICAL get a stronger "pembaca akan kecewa" message, LOW/MEDIUM are gentler reminders.
+- Wired `validateDanglingThreads` into `outlinesPart.generateOutlineBatch` so dangling-thread warnings surface as part of the batch output (next to existing rollercoaster + hook chain warnings).
+
+#### Phase 4 — Recap Generator
+- Created `src/prompts/recap-generator.ts` with system + user prompt builders. Tone: warm Indonesian web-novel narrator. 2-4 short paragraphs, plain text only.
+- Added `aiRouter.generateRecap(input, signal?)` — uses Gemini Flash 2.0 (cheap, story summary task), returns trimmed plain text.
+- Created `src/components/modals/RecapModal.tsx` (~225 lines):
+  - Range picker (start/end chapter) with smart defaults (`defaultRangeEnd` prop sets initial end).
+  - Live "(N bab tersedia)" counter.
+  - Generate button calls `aiRouter.generateRecap` with the chapters in range.
+  - Result rendered in `prose-invert` styled article block with `whitespace-pre-line` for paragraph breaks.
+  - Footer actions: Copy to clipboard (with check-mark feedback), Save to Supabase `recaps` table (only shown when `isSupabaseConfigured()`).
+  - Uses render-time prev-prop pattern for `defaultRangeEnd` syncing — no setState in effect.
+- Updated `ProseToolbar.tsx` to accept optional `onOpenRecap` callback and render a "📝 Sebelumnya..." button when provided.
+- Wired up in `ProseWriterPanel.tsx`: local `recapOpen` state, mounted `<RecapModal>` with `defaultRangeEnd = chapter.chapter_number - 1`, passed `onOpenRecap={() => setRecapOpen(true)}` to ProseToolbar.
+
+### Verification Results
+- `npx tsc -b --noEmit` → **SUCCESS (Zero errors)** ✅
+- `npm run lint` → **SUCCESS (Zero errors, zero warnings)** ✅
+- `npm run build` → **SUCCESS (716ms)** ✅
+  - Main bundle: 894.60 KB / 254.76 KB gzipped (+27 KB from Sprint 6 — wajar untuk 7 file baru + 10 modifikasi)
+  - Lazy chunks unchanged: pdf-worker (1232 KB), pdf runtime (410 KB), mammoth (497 KB)
+  - 11 PWA precache entries (1872.75 KiB)
+  - Initial build had `INEFFECTIVE_DYNAMIC_IMPORT` warning for `thread-tracker.ts` (lazy import inside `applyThreadAnalysis` clashed with static imports elsewhere). Fixed by promoting to static `import { findThreadByTitle }`. Build now warning-free other than the existing 500KB chunk-size advisory.
+
+### Files Created (7)
+| File | Lines | Description |
+|---|---|---|
+| `src/prompts/chapter-summary.ts` | ~50 | Summary + key_facts JSON prompt |
+| `src/prompts/thread-tracker.ts` | ~85 | Thread detection JSON prompt |
+| `src/prompts/recap-generator.ts` | ~50 | "Sebelumnya..." narrative prompt |
+| `src/services/chapter-summary.ts` | ~95 | Summary generator + embedder |
+| `src/services/thread-tracker.ts` | ~165 | Thread analyser + fuzzy match |
+| `src/services/rag-service.ts` | ~145 | pgvector + keyword fallback search |
+| `src/components/modals/RecapModal.tsx` | ~225 | Recap UI with copy + save |
+
+### Files Modified (14)
+| File | Change |
+|---|---|
+| `src/services/ai/gemini-pool.ts` | `embedContent` method (text-embedding-004) |
+| `src/services/ai/ai-router.ts` | `generateRecap` method + recap prompt imports |
+| `src/services/ai/context-injector.ts` | `pruneAndInjectWithRag` async variant + `ragMatchCount` |
+| `src/services/batch-generator.ts` | `runBackgroundTasks` `Promise.allSettled` 3-task upgrade |
+| `src/types/project.ts` | `ChapterSummary` interface |
+| `src/lib/kbm-pacing.ts` | `validateDanglingThreads` validator |
+| `src/store/parts/lorebook.ts` | chapter_summaries + plot_threads CRUD + applyThreadAnalysis |
+| `src/store/parts/chapters.ts` | parallel loadChapterSummaries in `loadProjectData` |
+| `src/store/parts/outlines.ts` | wire validateDanglingThreads into batch |
+| `src/hooks/useBeatWriter.ts` | 5-task allSettled background chain |
+| `src/components/compass/ThreadTrackerPanel.tsx` | full CRUD replace placeholder |
+| `src/components/prose/ProseToolbar.tsx` | `onOpenRecap` optional prop + Recap button |
+| `src/components/workspace/ProseWriterPanel.tsx` | RecapModal mount + state |
+| `supabase/schema.sql` | `match_chapter_summaries` RPC migration |
+
+### Manual Verification Pending (User-Side)
+- Generate prose untuk 1 bab → setelah DRAFT, chapter_summary auto-tersimpan, embedding ada di Supabase, thread analysis populate ThreadTrackerPanel
+- Outline batch 5+ bab → dangling thread warning muncul kalau ada CRITICAL/HIGH urgency thread yang sudah lewat 10 bab
+- Klik "📝 Sebelumnya..." di ProseToolbar → RecapModal show range picker → Generate → recap text muncul → Copy + Save berfungsi
+- RAG: bab dengan synopsis yang reference kejadian bab sebelumnya → context-injector pull related summaries via pgvector RPC (kalau migration sudah dijalankan) atau keyword fallback
+- ThreadTrackerPanel: tambah manual thread → save ke Supabase, edit inline, mark resolved cepat via ✓ button, hapus dengan confirm
+
+### Next Steps (Sprint 8 — Visualization)
+- `EmotionalArcHeatmap` (Recharts) — visualisasi rollercoaster tone per bab
+- `ConstellationMap` (D3.js) — entity graph karakter + item + thread connections
+- `TimelineView` — in-story timeline dengan plot threads + character locations
+- `WordCountAnalytics` — per-chapter word count + cumulative trend
+- `npm install recharts d3` (lazy-load D3 + Recharts agar bundle utama tetap kecil)
+
+
+---
+
+## Session: Sprint 8 — Visualization
+**Date**: 2026-05-24
+**Status**: ✅ COMPLETED — TypeScript, ESLint, and Production Build all zero errors
+
+### What Was Done
+
+#### Phase 1 — Dependencies + Lazy Infrastructure
+- `npm install -D recharts d3-force d3-selection d3-scale @types/d3-force @types/d3-selection @types/d3-scale` (46 packages added).
+- Added `'visualize'` to `WorkspaceMode` union in `src/store/useUiStore.ts`.
+- `ModeSwitcher.tsx` and `Workspace.tsx` `MODES` array now expose tab ke-5 "🌌 Visualisasi". Mobile bottom nav uses `analytics` icon for the new mode.
+- Created `src/components/visualization/VisualizationPanel.tsx` — lazy wrapper that:
+  - Uses `React.lazy` + `Suspense` boundary per viz so Recharts/D3 chunks only ship when the user opens the mode.
+  - Renders 2x2 grid (lg+) / single column (mobile) with header section per viz.
+  - Empty state for projects with zero chapters → CTA navigate to Outline mode.
+
+#### Phase 2 — Emotional Arc Heatmap (multi-lens)
+- `src/components/visualization/EmotionalArcHeatmap.tsx` (~285 lines).
+- 5 lenses via chip selector: **Tone / Cliffhanger / Filler / Word Count / Status**. Each lens has its own color mapper:
+  - Tone: 9-color palette (CONFLICT, TENSION, RELIEF, DOPAMINE, SHOCK, BREATHER, ROMANCE, MELANCHOLY, MYSTERY).
+  - Cliffhanger: 6 unique colors per cliffhanger type.
+  - Filler: 3 levels (low=emerald, medium=amber, high=rose).
+  - Word Count: HSL gradient interpolating cold blue → warm orange, normalized to project's max wordcount.
+  - Status: 5 chapter statuses each unique color.
+- Cell layout: scrollable horizontal strip, auto-tighten width (16/18/22 px) based on chapter count.
+- Cell overlays: ⚡ dopamine_beat, 💔 false_resolution, 🔒 is_locked.
+- Hover/focus tooltip section below the strip shows `Bab N — Title — current lens value`.
+- Click cell → `setActiveChapter(n) + setMode('write')`. Keyboard nav: Tab + Enter/Space activates click. `aria-label` per cell with full lens value.
+- Legend bar regenerates per lens. `useMemo` discipline for both cell computation and legend.
+
+#### Phase 3 — Constellation Map (D3 force-directed)
+- `src/components/visualization/ConstellationMap.tsx` (~620 lines).
+- `useIsMobile()` hook with `ResizeObserver` for breakpoint detection (<768px).
+- Mobile fallback: `ConstellationListFallback` groups entities by type, shows top-3 connections per node sorted by edge weight. Avoids unusable D3 layout on small screens.
+- Desktop: pure React SVG rendering with d3-force computing positions in `useEffect`. State ticker via `setTick` re-renders SVG on each simulation tick — keeps DOM ownership in React, avoids the classic D3 vs React conflict.
+- Filters panel:
+  - Node type checkboxes (👤 Character / 🗝️ Item / 🧵 Thread).
+  - Edge type checkboxes (co-appearance / ownership / threaded-in).
+  - Dual-handle chapter range sliders that scope which entities are "active" within the bab range.
+- Range reset on `totalChapters` change uses **prev-prop-during-render pattern** (no `useEffect`-driven setState — satisfies the React 19 strict purity rule that ESLint `react-hooks/set-state-in-effect` enforces).
+- Edge construction:
+  - Co-appearance: char↔char weighted by shared chapter count.
+  - Ownership: item→char via `current_owner` matched via `findCharacterIdByActivation` (name + activation_keys fuzzy match).
+  - Threaded-in: thread→char via `related_characters` lookup.
+- Node shapes per type: circle (character, color by role), rounded square (item, color by category), hexagon (thread, color by urgency).
+- Interactions: drag node (sets `node.fx/fy`, restarts simulation alpha 0.3), click node toggles selection (highlights connected edges + nodes, dims rest), hover shows tooltip card, mouse pan + wheel zoom (clamped 0.3 - 3x), reset button.
+- `useMemo` for graph construction. Cap 50 nodes by `priority + chapter coverage * 0.5` to keep D3 performant on large casts.
+
+#### Phase 4 — Timeline View (arc bands + markers)
+- `src/components/visualization/TimelineView.tsx` (~260 lines).
+- Uses `computeArcBands(totalChapters)` from `kbm-pacing.ts` to group chapters into 10 dramatic arc sections (Opening → Setup → Inciting → Rising → Midpoint → Complications → Crisis → Climax Approach → Climax → Resolution). Each section has emoji, name, ratio end, and one-line description.
+- Per-band `<section>` with sticky header (`Bab X-Y` + description tooltip) and chapters that fall in that range.
+- Per-chapter row:
+  - Tone color dot + chapter number + title + status badge.
+  - Indicator chips: ⚡ dopamine, 💔 false_resolution, 🔒 locked.
+  - Compact mode hides metadata; expanded shows time_in_story chip, location chip, top-4 character chips (overflow indicator), 🍞 mystery breadcrumb chips, ✨ mystery reveal chips.
+- Plot Thread Lifespan Bars in sticky left sidebar (desktop only):
+  - Vertical bar per active thread, span from `planted_at` → `resolved_at` (or `target_chapters` if dangling).
+  - Color by urgency, dashed when dangling >10 chapters past planted.
+  - Cap to 10 lanes for legibility.
+- Click row → `setActiveChapter + setMode('write')`. Compact toggle button.
+- All transformations memoized: arc band grouping, breadcrumbs index by chapter, reveals index by chapter, thread spans.
+
+#### Phase 5 — Word Count Analytics (Recharts)
+- `src/components/visualization/WordCountAnalytics.tsx` (~225 lines).
+- 4 stat cards above the chart: Total Kata, Avg/bab, ≥ Target count, < Target count (rose accent for below).
+- Recharts `ComposedChart` (responsive container, 320 px height):
+  - `Bar` per chapter, `Cell`-colored by status.
+  - `Line` cumulative wordcount on right Y-axis.
+  - `ReferenceLine` dashed amber at `word_count_target`.
+  - Custom `<ChartTooltip>` shows chapter title, words/target, ±delta % (emerald above, rose below), status, and cumulative.
+- Click bar → `setActiveChapter + setMode('write')` via Recharts `onClick` event with type-safe payload coercion.
+- Empty states: zero chapters vs chapters-but-no-prose-yet messages.
+- Cumulative computed via immutable `reduce` (no mutable accumulator — satisfies ESLint `react-hooks/immutability`).
+
+#### Phase 6 — Verification & Polish
+- Centralised `getArcPosition` from `outline-engine.ts` and `outlines.ts` into `src/lib/kbm-pacing.ts` next to the new `computeArcBands`/`ArcBand` interface, then re-exported. The two callers now import from kbm-pacing instead of duplicating the helper.
+- Fixed pre-existing lint error in `EditDraftModal.tsx` (`useEffect` reset → prev-prop-during-render pattern) so the lint gate could close clean.
+- `WordCountAnalytics` Recharts chart-click handler typed with safe `unknown` coercion since recharts' `MouseHandlerDataParam` shape is internal.
+
+### Verification Results
+- `npx tsc -b --noEmit` → **SUCCESS (Zero errors)** ✅
+- `npm run lint` → **SUCCESS (Zero errors, zero warnings)** ✅
+- `npm run build` → **SUCCESS (1.40s)** ✅
+  - Main bundle: **920.44 KB / 258.89 KB gzipped** (+25 KB vs Sprint 7 — acceptable; 4 viz wrappers + lazy infrastructure).
+  - Lazy chunks confirmed (only loaded on `activeMode === 'visualize'`):
+    | Chunk | Size | Gzip |
+    |---|---|---|
+    | EmotionalArcHeatmap | 6.41 KB | 2.66 KB |
+    | TimelineView | 7.22 KB | 2.56 KB |
+    | ConstellationMap | 27.42 KB | 9.89 KB |
+    | WordCountAnalytics | 377.21 KB | 109.71 KB |
+  - Recharts is the heavyweight (~370 KB), but it's behind `React.lazy` so users who never open Visualisasi never download it.
+  - PWA precache: 15 entries (2309.89 KiB) — service worker rebuilt cleanly.
+
+### Files Created (5)
+| File | Lines | Description |
+|---|---|---|
+| `src/components/visualization/VisualizationPanel.tsx` | ~145 | Lazy wrapper + 2x2 grid + empty state |
+| `src/components/visualization/EmotionalArcHeatmap.tsx` | ~285 | Multi-lens heatmap (5 lenses) |
+| `src/components/visualization/ConstellationMap.tsx` | ~620 | D3 force-directed + mobile list fallback + filters |
+| `src/components/visualization/TimelineView.tsx` | ~260 | Arc bands + mystery markers + thread spans |
+| `src/components/visualization/WordCountAnalytics.tsx` | ~225 | Recharts ComposedChart + stats cards |
+
+### Files Modified (6)
+| File | Change |
+|---|---|
+| `src/store/useUiStore.ts` | `'visualize'` added to `WorkspaceMode` union |
+| `src/components/workspace/ModeSwitcher.tsx` | 5th tab "🌌 Visualisasi" |
+| `src/pages/Workspace.tsx` | Render `<VisualizationPanel />` + bottom nav `analytics` icon + import |
+| `src/lib/kbm-pacing.ts` | `ArcBand` interface + `computeArcBands` + centralized `getArcPosition` |
+| `src/store/parts/outlines.ts` | Removed local duplicate; arc helper now in kbm-pacing |
+| `src/prompts/outline-engine.ts` | Imports `getArcPosition` from `../lib/kbm-pacing` |
+| `src/components/modals/EditDraftModal.tsx` | Lint fix: `useEffect` → prev-prop-during-render pattern |
+
+### Manual Verification Pending (User-Side)
+- Mode ke-5 muncul di ModeSwitcher (desktop) + bottom nav (mobile) dengan icon `analytics`.
+- Heatmap: switch antar 5 lens (Tone/Cliffhanger/Filler/WordCount/Status), warna update, hover tooltip sync, klik cell navigate ke bab.
+- Constellation desktop: drag node bekerja, klik highlight edges connected, hover tooltip muncul, filter checkboxes hide/show nodes, range slider scope chapters, zoom + pan responsive.
+- Constellation mobile (<768px): list fallback rendered, top-3 connections per entity ditampilkan.
+- Timeline: 10 arc bands grouping correct, mystery breadcrumb 🍞 + reveal ✨ inline, thread bars span correctly di sticky left column, compact toggle works.
+- Word Count: 4 stat cards akurat, bar warna sesuai status, line cumulative naik monoton, ReferenceLine target tampil, click bar navigate.
+- Empty states: project baru tanpa chapters → friendly empty + Outline CTA.
+- Network tab: lazy chunks (EmotionalArcHeatmap, ConstellationMap, TimelineView, WordCountAnalytics) hanya download saat `activeMode === 'visualize'`.
+
+### Next Steps (Sprint 9 — Genre Blueprints & Polish)
+- Genre Blueprint library (Drama Rumah Tangga, Romance Office, Action, Mystery, dll) — preset narrative_constitution + theme_and_tone + suggested arc structure.
+- Onboarding flow polish: tutorial overlay, sample project quick-start.
+- Performance pass: code-split routes, prefetch hints, Lighthouse audit.
+- Accessibility pass: focus trap modals, screen reader labels review, color contrast audit.
+- Final UI polish: loading skeletons, error boundaries per route, friendly 404 page.
+
+
+---
+
+## Session: Sprint 9 — Genre Blueprints & Polish
+**Date**: 2026-05-24
+**Status**: ✅ COMPLETED — TypeScript, ESLint, and Production Build all zero errors
+
+### What Was Done
+
+#### Phase 1 — Genre Blueprints + Lobby Integration
+- Created `src/lib/genre-blueprints.ts` (~620 lines): static TypeScript const dengan 6 blueprint entries (Drama Rumah Tangga, Romance Office, Fantasi Kerajaan, Thriller Misteri, Action Aksi, Slice of Life Romance). Setiap blueprint punya: narrative_constitution_template multi-paragraf, theme_and_tone, suggested chapter range, target_ending_template, series_hook_template, character_archetypes (3-4 per blueprint dengan placeholder bracketed names + voice_dna_hint), item_archetypes, mystery_layer_skeleton (1-3 per blueprint dengan reveal_arc_position 0.0-1.0), arc_pacing_hint. Helper `substituteNames(template, customNames)` untuk replace placeholders, `getAllGenreNames(projectGenres)` untuk derive Lobby filter dari blueprints + custom genres.
+- Created `BlueprintSelector.tsx` (~290 lines): 2-step modal — grid 6 cards → preview drawer dengan narrative_constitution preview (≤200px scrollable), inline rename per character archetype dengan input editable, mystery skeleton list, arc pacing hint. Skip-all behavior — user yang lewatin rename, archetype-nya tidak di-insert (cek di applier).
+- Refactored `ProjectCreationModal.tsx`: layout berubah dari 2-CTA jadi 3-CTA grid (🌱 Mulai Dari Nol / 🎨 Pakai Blueprint NEW badge / 📖 Lanjut Cerita Saya). Klik Blueprint → state `selectedBlueprint` + `customNames` → submit dengan `genesis_mode: 'FRESH_BLUEPRINT'` + payload BlueprintSelection. Auto-fill title kalau kosong → `Novel ${blueprint.name} Baru`, suggested chapter count, suggested word count.
+- Created `src/services/blueprint-applier.ts`: `applyBlueprint(project, blueprint, userCharacterNames)` orchestrates updateProject (narrative_constitution + theme_and_tone + target_ending + series_hook semua disubstitusi nama) + addCharacter per archetype (skip kalau placeholder belum di-rename) + addItem per item archetype + addMysteryLayer dengan breadcrumbs di-seed di chapter ratio 0.2 dan 0.5 dari reveal target.
+- `Lobby.tsx`: `handleCreate` punya cabang baru — kalau `mode === 'FRESH_BLUEPRINT'` dan `blueprintSelection` ada, jalankan `applyBlueprint` setelah `createProject`. Genre filter dropdown sekarang `getAllGenreNames(projects.map(p => p.genre))` — single source of truth.
+
+#### Phase 2 — Spin-Off Clone + Target Chapters Adjustment
+- Created `src/services/project-cloner.ts`: `getNextSpinOffName` regex-match existing spin-offs → return next available name (`"X — Spin-Off"`, `"X — Spin-Off (2)"`, dst). `cloneProjectAsSpinOff(sourceProjectId, customTitle?)`: insert new project dengan `genesis_mode: 'FRESH_BRAINSTORM'` + status BRAINSTORMING (no migration), copy meta fields (narrative_constitution, theme_and_tone, target_ending, series_hook, season_hooks, voice_dna_project), copy lorebook (characters + items + world_rules + mystery_layers dengan revealed_at/breadcrumbs di-reset), skip chapters/states/threads/summaries/qa_logs — fresh canvas dengan dunia + tokoh sama.
+- `ProjectCard.tsx`: dropdown menu diperpanjang dari 1 item (Hapus) jadi 3 (Ubah Target Bab + Spin-Off Clone + separator + Hapus). New optional callbacks `onSpinOff` + `onAdjustTarget` di props (both optional — backwards compat). `data-tour-step` attributes untuk tutorial highlight.
+- Created `src/services/chapter-protection.ts`: `isLocked(chapter)` returns true if `is_locked || prose || status === 'IMPORTED'`. `getLockedChaptersAbove(chapters, n)` + `validateTargetReduction(chapters, newTarget)` returns `{ ok, blockingChapters, minAllowed }` untuk preview UI dan adjuster guard. `countOutlineOnlyAbove` helper.
+- Created `src/services/target-chapters-adjuster.ts` (~210 lines):
+  - **GUARD**: `requireActiveAndNotCompleted` throws kalau project status COMPLETED.
+  - `expandTargetNewSeason(projectId, newTarget)` — sekedar bump target_chapters, outline lama tetap.
+  - `expandTargetStretch(projectId, newTarget)` — bump target lalu loop regenerateOutline untuk chapters yang tidak locked. Returns `{ regenerated, skipped }`.
+  - `shrinkTarget(projectId, newTarget)` — validateTargetReduction dulu, lalu DELETE outline-only chapters > newTarget (cascade chapter_summaries via DB), clamp `plot_threads.planted_at` + reset `resolved_at` ke null + status ACTIVE kalau di atas newTarget, clamp `mystery_layers.revealed_at_chapter` + filter breadcrumbs > newTarget, delete character_states `chapter_number > newTarget` (Supabase + local), update project.target_chapters. Returns `{ deleted, threadsClamped, mysteriesClamped, statesDeleted }`.
+  - `previewShrink(projectId, newTarget)` — read-only preview untuk modal.
+- Created `TargetChaptersAdjustmentModal.tsx` (~280 lines): COMPLETED guard render special state. Direction otomatis (`expand` / `shrink` / `same`). Expand mode: radio NEW_SEASON vs STRETCH. Shrink mode: side-effect preview cards (deleted/threads/mysteries/states) + 2-step "Saya mengerti operasi ini tidak bisa di-undo" checkbox confirmation. Submit button disabled kalau direction === same atau ada blocking locked atau confirm box belum dicentang. Feedback toast inline. prev-prop-during-render pattern untuk reset state on project change.
+- `Lobby.tsx`: handlers `handleSpinOff` (showConfirm dialog dengan suggested name → `cloneProjectAsSpinOff` → addToast → navigate ke project baru) + `handleAdjustTarget` (open modal). Mounted `<TargetChaptersAdjustmentModal>` di bottom.
+
+#### Phase 3 — Mimicry Engine
+- Migration: `ALTER TABLE projects ADD COLUMN IF NOT EXISTS voice_dna_project JSONB NOT NULL DEFAULT '{}'::jsonb;` di `supabase/schema.sql`. Idempotent. Project interface + database.types.ts + DUMMY_PROJECTS + createProject default semua di-update dengan `voice_dna_project: {}`.
+- Created `src/prompts/mimicry-engine.ts` — system prompt instruksi extract 8 fitur struktural (diction, sentence_rhythm, paragraph_density, dialogue_style, signature_phrasing, taboo_phrasing, pace_descriptor, emotional_color) JANGAN copy konten cerita / nama karakter / lokasi. User prompt embed sample dengan word count + warning kalau di bawah 300 kata.
+- `aiRouter.extractProjectVoiceDna(sample, signal?)` — Gemini Flash `geminiPool.generateContent` dengan JSON parsing + retry-resistant defensive normalization (string-coerce nested objects, drop null values).
+- Created `MimicryEngineCard.tsx` (~220 lines): single component dengan prop `placement: 'context-panel' | 'settings'` (compact vs full-width). Textarea max 5000 char dengan word counter + warning di bawah 300 kata, "🪄 Ekstrak Voice DNA" button, hasil JSON tampil sebagai key-value cards yang user bisa edit + save. Privacy disclaimer "🔒 Sample tidak disimpan ke server, hanya fitur struktural diekstrak.". Saved DNA preview shows top 3 (compact) atau 8 (settings) entries dengan opsi Hapus.
+- Wire ke prose generation: `prose-context.ts` include `projectVoiceDna: project.voice_dna_project ?? {}` (null-safe). `prose-writer.ts` inject block `[PROJECT VOICE STYLE]` dengan instruksi "Gabungkan dengan voice DNA per-karakter — voice karakter prioritas saat dialog, voice proyek prioritas saat narasi" — hanya muncul kalau dictionary non-empty.
+- Mounted di **dua tempat**: ContextPanel outline mode (placement="context-panel" — di bawah Lorebook), SettingsModal Tab "Writing" (placement="settings" — full width). Komponen sama, props beda.
+
+#### Phase 4 — Onboarding Tutorial + A11y Polish + Settings Re-organization
+- Created `OnboardingTour.tsx` (~250 lines): portal-based 5-step coach mark overlay. Steps: 1. Welcome center (no target), 2. Buat Proyek Baru (NewProjectCard), 3. Mode Switcher (Workspace), 4. Context Panel (sidebar), 5. Settings & API Keys (Lobby nav settings icon). Trigger pakai **lazy initial state** `localStorage.getItem('vn_onboarding_done_v1') === null` (no setState-in-effect, satisfies React 19 strict purity rule). Highlight target via `data-tour-step` selector + getBoundingClientRect → cutout ring dengan `box-shadow: 0 0 0 9999px` dim trick. Tooltip card auto-position (right of target → left → below → centered fallback). Step dots progress indicator. Lewati / Kembali / Lanjut → buttons. Respects `prefers-reduced-motion` via Framer's `useReducedMotion()` — fade-only, no scale/spring.
+- `data-tour-step` attributes ditambah di: `NewProjectCard`, `ModeSwitcher` root, `ContextPanel` aside, Lobby Settings icon button.
+- SettingsModal full refactor — sekarang **3 tabs** dengan Framer Motion `layoutId="settingsTabIndicator"` sliding underline:
+  - **🔑 Keys**: existing BYOK Gemini multi-key + OpenRouter. Indonesian privacy disclaimer di header.
+  - **✍ Writing**: theme toggle, Free Write toggle (custom switch component dengan accent), MimicryEngineCard placement="settings" (full-width, 8 fields preview).
+  - **🎓 Tutorial**: "Reset Onboarding" button (clears localStorage flag + addToast feedback), about/version section.
+- A11y polish:
+  - Created `useFocusTrap.ts` (~85 lines): trap Tab/Shift-Tab dengan FOCUSABLE_SELECTOR (a, button, input, select, textarea, [tabindex]), Escape calls onEscape callback, auto-focus first focusable on mount via requestAnimationFrame, restore focus to previously-focused element on cleanup. Applied to SettingsModal, BlueprintSelector, TargetChaptersAdjustmentModal.
+  - Created `SkipLink.tsx`: visually hidden anchor, `focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[200]`, anchor href `#main-content`. Mounted di Lobby + Workspace (top of return).
+  - Lobby + Workspace `<main id="main-content" role="main">` landmark. Lobby's `<nav>` already implicit landmark.
+  - Global `prefers-reduced-motion` CSS di index.css — disables animations + transitions + scroll-behavior untuk OS-level user preference.
+
+#### Phase 5 — Performance + Verification
+- `App.tsx`: `Workspace` di-lazy via `React.lazy(() => import('./pages/Workspace').then((m) => ({ default: m.Workspace })))`. Wrapped dalam `<Suspense fallback={<LoadingSplash />}>`. Created `LoadingSplash.tsx` — full-screen spinner + label, match Lobby loading style.
+- `vite.config.ts`: tambah `build.rollupOptions.output.codeSplitting.groups[]` (Vite 8 / Rolldown API, bukan deprecated `manualChunks`). 4 vendor groups: vendor-react (react+react-dom+react-router-dom+scheduler), vendor-supabase (@supabase/*), vendor-motion (framer-motion), vendor-store (zustand).
+
+### Verification Results
+- `npx tsc -b --noEmit` → **SUCCESS (Zero errors)** ✅
+- `npm run lint` → **SUCCESS (Zero errors, zero warnings)** ✅
+- `npm run build` → **SUCCESS (1.31s)** ✅
+
+### Bundle Size Wins (vs Sprint 8)
+| | Sprint 8 | Sprint 9 | Δ |
+|---|---|---|---|
+| Main entry (raw) | 920 KB | **259 KB** | **−72%** |
+| Main entry (gzip) | 259 KB | **77 KB** | **−70%** |
+
+Lazy chunks:
+- `Workspace`: 225 KB / 53 KB gzip — only loads when user opens project
+- `vendor-react`: 189 KB / 60 KB gzip — cached, app updates don't invalidate
+- `vendor-supabase`: 200 KB / 52 KB gzip — same
+- `vendor-motion`: 125 KB / 41 KB gzip — same
+- `vendor-store`: 2.6 KB / 1.3 KB gzip
+- Visualization chunks (4): unchanged from Sprint 8 (Recharts heavyweight tetap lazy)
+- PWA precache: 21 entries (2399 KiB)
+
+Total user pertama buka Lobby: ~570 KB (main + 4 vendor chunks) vs 920 KB monolith. Plus iterative app updates tidak invalidate vendor JS — huge bandwidth saving on iterative ships.
+
+### Files Created (13)
+| File | Lines | Description |
+|---|---|---|
+| `src/lib/genre-blueprints.ts` | ~620 | 6 blueprint entries + helpers |
+| `src/components/onboarding/BlueprintSelector.tsx` | ~290 | 2-step modal grid + preview |
+| `src/components/onboarding/OnboardingTour.tsx` | ~250 | 5-step coach mark portal |
+| `src/components/compass/MimicryEngineCard.tsx` | ~220 | Voice DNA extractor card |
+| `src/components/modals/TargetChaptersAdjustmentModal.tsx` | ~280 | Preview + 2-step shrink confirm |
+| `src/components/ui/SkipLink.tsx` | ~30 | A11y skip link |
+| `src/components/ui/LoadingSplash.tsx` | ~20 | Suspense fallback |
+| `src/services/blueprint-applier.ts` | ~120 | Substitute names + insert lorebook |
+| `src/services/project-cloner.ts` | ~140 | getNextSpinOffName + cloneProjectAsSpinOff |
+| `src/services/chapter-protection.ts` | ~80 | isLocked + validateTargetReduction |
+| `src/services/target-chapters-adjuster.ts` | ~210 | Expand/shrink dengan side-effect cleanup |
+| `src/prompts/mimicry-engine.ts` | ~50 | JSON schema 8 fields |
+| `src/hooks/useFocusTrap.ts` | ~85 | Tab cycle + Escape + restore focus |
+
+### Files Modified (16)
+| File | Change |
+|---|---|
+| `src/types/project.ts` | `voice_dna_project?: Record<string, unknown>` |
+| `src/lib/database.types.ts` | sync `voice_dna_project` |
+| `src/store/parts/projects.ts` | default `{}` di createProject + dummy projects |
+| `src/components/dashboard/ProjectCreationModal.tsx` | 3-CTA layout + Blueprint flow |
+| `src/components/dashboard/ProjectCard.tsx` | context menu Spin-Off + Adjust + onSpinOff/onAdjustTarget callbacks + tour data attrs |
+| `src/pages/Lobby.tsx` | derived genre filter + onboarding trigger + skip-link + Spin-Off/AdjustTarget handlers + landmark |
+| `src/pages/Workspace.tsx` | skip-link + main role + landmark |
+| `src/components/workspace/ContextPanel.tsx` | render MimicryEngineCard outline mode + tour data attr |
+| `src/components/workspace/ModeSwitcher.tsx` | tour data attr |
+| `src/services/ai/ai-router.ts` | `extractProjectVoiceDna` method |
+| `src/services/prose-context.ts` | include `projectVoiceDna` (null-safe) |
+| `src/services/ai/types.ts` | `projectVoiceDna?` di ProseGenerateInput |
+| `src/prompts/prose-writer.ts` | inject `[PROJECT VOICE STYLE]` block |
+| `src/components/modals/SettingsModal.tsx` | 3-tab refactor + Mimicry section + Reset Onboarding + theme/free-write toggle |
+| `src/App.tsx` | lazy Workspace route + Suspense |
+| `src/index.css` | `prefers-reduced-motion` global override |
+| `vite.config.ts` | `codeSplitting.groups[]` vendor chunks |
+| `supabase/schema.sql` | `ALTER TABLE projects ADD COLUMN voice_dna_project jsonb` |
+
+### Manual Verification Pending (User-Side)
+- Lobby → "Buat Proyek Baru" → "Pakai Blueprint" → pilih Drama RT → preview → rename "[Nama Protagonis]" → konfirmasi → masuk Workspace dengan compass auto-filled.
+- ProjectCard menu → "Spin-Off Clone" → confirm dialog → new project muncul tanpa chapters. Klik 2x → "Spin-Off (2)".
+- "Ubah Target Bab" → tambah 200→300 (Tambah Season) → verify project.target_chapters update + chapters lama tetap.
+- "Ubah Target Bab" → kurangi 200→50 dengan locked chapter di bab 60 → blocking dialog "min 60".
+- "Ubah Target Bab" pada project COMPLETED → modal disabled state.
+- Mimicry: paste 500 kata di Settings tab Writing → Ekstrak → 8 cards muncul → Simpan. Lalu di ContextPanel outline mode → MimicryEngineCard juga show data sama.
+- Generate prose 1 bab di project dengan voice_dna_project → cek output mimic style.
+- Onboarding: clear localStorage → reload → tour muncul → click through 5 steps → finish → reload → tour tidak muncul.
+- Settings → Tutorial tab → Reset Onboarding → reload → tour kembali muncul.
+- OS toggle reduced-motion → reload → semua scale/spring hilang, fade-only.
+- Lighthouse mobile preset audit (4 score targets: Perf ≥ 90, A11y ≥ 95, Best Practices ≥ 95, SEO ≥ 90).
+- Network tab: Workspace + vendor chunks lazy-loaded, hanya download saat navigate ke /project/:id.
+
+### Next Steps (Sprint 10 — Capacitor & Production)
+- Capacitor CLI setup, Android platform integration.
+- Splash screen, app icon, back button handling.
+- Performance optimization pass (Lighthouse audit + fixes).
+- Play Store preparation (signing, metadata, screenshots).
+- E2E testing — 10 chapter dari nol sampai final.
+
+
+---
+
+## Session: Sprint 9.5 — QA Hardening (Concurrency & Continuity Fixes)
+**Date**: 2026-05-24
+**Status**: ✅ COMPLETED — TypeScript, ESLint, and Production Build all zero errors
+
+### Background
+External QA audit (`systems_architecture_qa_report.md`) identified 7 concurrency / logical collision points. Cross-check against actual code revealed:
+
+- ✅ 4 valid issues — actionable fixes
+- ⚠️ 1 partially accurate — not critical
+- ❌ 2 inaccurate — Import Wizard "DB pollution" tidak terjadi (abort hanya cancel AI analyze, DB writes di handleConfirm setelah user setuju), "Cross-chapter contamination" overstated (closure correctly captures chapter.id)
+
+Sprint 9.5 fokus eksekusi 3 fix paling impactful tanpa schema migration.
+
+### What Was Done
+
+#### Fix #1 — Free Write Memory Blackhole Resolution
+- Created `src/services/chapter-reindexer.ts` (~250 lines): orchestrator service untuk re-run semua background AI tasks (state snapshot, plot radar, lore extraction, thread analysis, chapter summary) pada chapter yang punya prose tapi tidak punya artifacts.
+  - `detectMissingArtifacts(chapter)` returns flags per task (cheap proxy: chapter has prose + corresponding store entries don't exist)
+  - `reindexChapter(chapterId)` runs only missing tasks via `Promise.allSettled`, returns `{ chapterId, chapterNumber, succeeded[], failed[] }`
+  - `reindexChapters(ids, onProgress, signal)` sequential loop (Bab N+1 butuh state Bab N) dengan progress callback + AbortSignal honoring
+  - `findChaptersNeedingReindex()` scan project untuk chapters yang butuh sync, sorted by chapter_number
+- Created `src/components/modals/ReindexModal.tsx` (~270 lines): 3-state modal:
+  - **Idle preview**: list chapter yang butuh sync (max-height scrollable) + estimasi waktu + 2-action footer ("Nanti Saja" / "Mulai Sinkronisasi")
+  - **Running**: progress bar (animated bg-primary, atau bg-amber kalau partial), current chapter indicator, abort button
+  - **Done**: success/fail stat cards (emerald/rose), failed task details collapsible (max-height 160px scrollable), close button
+  - Empty state ramah ("Semua bab sudah tersinkronisasi ✓") kalau pendingIds kosong
+  - Focus trap via existing `useFocusTrap` hook
+- Created `src/components/onboarding/FreeWriteIndexerWatcher.tsx` (~50 lines): global watcher mounted di Workspace:
+  - `prevFreeWriteRef` track previous freeWriteMode value
+  - `useEffect` detect transition true → false → 800ms debounce → `findChaptersNeedingReindex` → auto-open ReindexModal kalau ada
+  - Manual trigger via `useUiStore.openModal('reindex')`
+- Wired manual trigger di `SettingsModal.tsx` Tutorial tab dalam section "Sinkronisasi Memori AI" dengan tombol "Buka Reindexer" (memory icon).
+- Mounted `<FreeWriteIndexerWatcher />` di `Workspace.tsx`.
+
+#### Fix #2 — Offline Reconnect AI Backfill
+- Modified `useBeatWriter.ts` reconnect sync flow:
+  - Track `syncedChapterIds: Set<string>` selama replay loop. Setiap successful sync push id ke set.
+  - Setelah `syncPendingDrafts` selesai dengan `synced > 0`, sequential loop call `reindexChapter(id)` untuk tiap chapter di set
+  - Best-effort: failures di-log via `console.warn`, partial reindex (some tasks failed) juga di-log dengan detail tasks yang gagal
+  - `cancelled` flag honored di between iterations untuk graceful unmount (cleanup function dari useEffect)
+- Hasil: chapter yang ditulis offline sekarang otomatis dapat AI artifacts saat user reconnect — tidak ada lagi gap context untuk Bab N+1.
+
+#### Fix #3 — Chat Approval Conflict Detection
+- Modified `useChatStore.updateMessageDraftStatus`:
+  - Helper functions: `findCharByName / findItemByName / findRuleByName` — case-insensitive name matching against current store
+  - Untuk type `character`, `item`, `world_rule`: cek existing entry SEBELUM call `addCharacter`/`addItem`/`addWorldRule`
+  - Kalau existing → call `useUiStore.addToast(message, 'warning', 7000)` dengan pesan spesifik: "Tokoh/Item/World rule [nama] sudah ada di Lorebook. Edit manual via Story Compass kalau mau update yang existing." Lalu return state tanpa add (skip the duplicate insert)
+  - Mystery layers + character_state + ending TIDAK terkena duplicate detection (intentional — mystery layers naturally additive, character states keyed by chapter, ending is updateProject)
+- Pendekatan duplicate-by-name lebih pragmatic dari full optimistic lock dengan `updated_at` timestamp — tidak butuh schema migration dan menangkap real-world stale-approval scenario yang QA report sebutkan.
+
+### Why Some QA Recommendations Were NOT Implemented
+
+| QA Recommendation | Decision | Reasoning |
+|---|---|---|
+| 3.1 Background Task Queue | ❌ Skip | Existing `geminiPool` already handles 429 + cooldown rotation transparently. Adding queue adds complexity without solving real bug. |
+| 1.1 Cross-chapter contamination | ❌ Skip | Code closure correctly captures `chapter.id` Bab 51, ref-guard `stateGenTriggeredRef` prevents re-trigger. False positive in QA report. |
+| 2.2 Import Wizard DB pollution | ❌ Skip | Verified: `cancelAnalysis()` only aborts AI analysis. DB writes happen in `handleConfirm` AFTER user clicks "Setujui Semua". Mid-analysis abort = zero pollution. QA misread the flow. |
+| 3.4 Optimistic Lock with `updated_at` | ❌ Replaced | Required schema migration to 3 tables. Replaced with duplicate-by-name detection — pragmatic MVP fix. Full lock can be added in Sprint 10 if needed. |
+
+### Verification Results
+- `npx tsc -b --noEmit` → **SUCCESS (Zero errors)** ✅
+- `npm run lint` → **SUCCESS (Zero errors, zero warnings)** ✅
+- `npm run build` → **SUCCESS (765ms)** ✅
+  - Main bundle: 260.24 KB / 77.44 KB gzipped (+0.9 KB / +0.18 KB gzip vs Sprint 9 — negligible)
+  - Workspace lazy chunk: 238.76 KB / 56.17 KB gzipped (+13.3 KB — reindexer modal + watcher + service)
+  - Lazy chunks unchanged (visualization, vendor, pdf, mammoth)
+  - PWA precache: 21 entries (2413.60 KiB)
+
+### Files Created (3)
+| File | Lines | Description |
+|---|---|---|
+| `src/services/chapter-reindexer.ts` | ~250 | Orchestrator: detectMissing + reindexChapter + reindexChapters + findChaptersNeedingReindex |
+| `src/components/modals/ReindexModal.tsx` | ~270 | 3-state modal (idle / running / done) dengan progress + results |
+| `src/components/onboarding/FreeWriteIndexerWatcher.tsx` | ~50 | Global watcher untuk Free Write toggle off |
+
+### Files Modified (4)
+| File | Change |
+|---|---|
+| `src/hooks/useBeatWriter.ts` | Sync flow track syncedChapterIds + reindex backfill loop |
+| `src/store/useChatStore.ts` | Duplicate-by-name detection untuk character/item/world_rule drafts |
+| `src/components/modals/SettingsModal.tsx` | "Sinkronisasi Memori AI" section di Tutorial tab |
+| `src/pages/Workspace.tsx` | Mount FreeWriteIndexerWatcher globally |
+
+### Manual Verification Pending (User-Side)
+- Toggle Free Write ON → tulis bab 5-10 raw → toggle OFF → ReindexModal auto-muncul → klik Mulai → progress muncul → semua bab dapat state snapshot + summary
+- Network → Offline → tulis prosa di beat editor → save terdraft di localStorage → Network → Online → console log "Synced N pending draft(s)" → reindexChapter triggered untuk chapter yang di-sync
+- Co-Author Chat: ajukan karakter "Kania" → sebelum approve, manual tambah karakter "Kania" via Story Compass → approve chat draft → toast warning muncul, tidak ada duplicate
+- Settings → Tutorial tab → "Buka Reindexer" → modal muncul terlepas dari Free Write state
+- Mobile (375px) ReindexModal responsive
+
+### Next Steps (Sprint 10 — Capacitor & Production)
+- Capacitor CLI setup, Android platform integration
+- Splash screen, app icon, back button handling
+- Lighthouse audit pass (Perf ≥ 90, A11y ≥ 95, Best Practices ≥ 95, SEO ≥ 90)
+- Play Store preparation (signing, metadata, screenshots)
+- E2E testing — 10 chapter dari nol sampai final
+- Optional follow-up: full optimistic lock dengan `updated_at` migration kalau MVP feedback menunjukkan stale approval masih jadi masalah

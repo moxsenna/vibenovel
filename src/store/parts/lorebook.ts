@@ -5,11 +5,13 @@ import type {
   Item,
   WorldRule,
   MysteryLayer,
-  PlotThread
+  PlotThread,
+  ChapterSummary
 } from '../../types/project'
 import type { ProjectStore } from '../useProjectStore'
 import type { Database } from '../../lib/database.types'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { findThreadByTitle } from '../../services/thread-tracker'
 
 type CharacterInsert = Database['public']['Tables']['characters']['Insert']
 type CharacterUpdate = Database['public']['Tables']['characters']['Update']
@@ -20,6 +22,9 @@ type WorldRuleUpdate = Database['public']['Tables']['world_rules']['Update']
 type CharacterStateInsert = Database['public']['Tables']['character_states']['Insert']
 type MysteryLayerInsert = Database['public']['Tables']['mystery_layers']['Insert']
 type MysteryLayerUpdate = Database['public']['Tables']['mystery_layers']['Update']
+type PlotThreadInsert = Database['public']['Tables']['plot_threads']['Insert']
+type PlotThreadUpdate = Database['public']['Tables']['plot_threads']['Update']
+type ChapterSummaryInsert = Database['public']['Tables']['chapter_summaries']['Insert']
 
 export interface ExtractedLorePayload {
   new_characters?: unknown[]
@@ -55,6 +60,27 @@ export interface LorebookPart {
   updateMysteryLayer: (id: string, data: Partial<MysteryLayer>) => Promise<void>
   deleteMysteryLayer: (id: string) => Promise<void>
 
+  // Plot Thread CRUD (Sprint 7)
+  addPlotThread: (thread: Omit<PlotThread, 'id'>) => Promise<string>
+  updatePlotThread: (id: string, data: Partial<PlotThread>) => Promise<void>
+  deletePlotThread: (id: string) => Promise<void>
+  /**
+   * Apply a thread tracker analysis result to the lorebook in one
+   * transaction-ish batch (optimistic local first, then sync each row).
+   */
+  applyThreadAnalysis: (
+    chapterNumber: number,
+    projectId: string,
+    result: import('../../services/thread-tracker').ThreadAnalysisResult
+  ) => Promise<void>
+
+  // Chapter Summary CRUD (Sprint 7 RAG)
+  chapterSummaries: ChapterSummary[]
+  loadChapterSummaries: (projectId: string) => Promise<void>
+  upsertChapterSummary: (
+    payload: Omit<ChapterSummary, 'id' | 'created_at'>
+  ) => Promise<void>
+
   extractedLore: ExtractedLorePayload | null
   setExtractedLore: (lore: ExtractedLorePayload | null) => void
   clearExtractedLore: () => void
@@ -77,6 +103,7 @@ export const lorebookPart: StateCreator<
   worldRules: [],
   mysteryLayers: [],
   plotThreads: [],
+  chapterSummaries: [],
 
   addCharacter: async (char) => {
     const tempId = crypto.randomUUID()
@@ -308,6 +335,171 @@ export const lorebookPart: StateCreator<
       }
     } catch (e) {
       console.error('Supabase deleteMysteryLayer error:', e)
+    }
+  },
+
+  // ── Plot Thread CRUD (Sprint 7) ─────────────────────────────────────
+  addPlotThread: async (thread) => {
+    const tempId = crypto.randomUUID()
+    const newThread: PlotThread = { id: tempId, ...thread }
+    set((state) => ({ plotThreads: [...state.plotThreads, newThread] }))
+
+    try {
+      if (isSupabaseConfigured()) {
+        const { data, error } = await supabase
+          .from('plot_threads')
+          .insert([thread as PlotThreadInsert])
+          .select()
+          .single()
+        if (error) throw error
+        if (data) {
+          const final = data as unknown as PlotThread
+          set((state) => ({
+            plotThreads: state.plotThreads.map((t) => (t.id === tempId ? final : t))
+          }))
+          return final.id
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase addPlotThread error, keeping locally:', e)
+    }
+    return tempId
+  },
+
+  updatePlotThread: async (id, data) => {
+    set((state) => ({
+      plotThreads: state.plotThreads.map((t) => (t.id === id ? { ...t, ...data } : t))
+    }))
+    try {
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase
+          .from('plot_threads')
+          .update(data as PlotThreadUpdate)
+          .eq('id', id)
+        if (error) throw error
+      }
+    } catch (e) {
+      console.error('Supabase updatePlotThread error:', e)
+    }
+  },
+
+  deletePlotThread: async (id) => {
+    set((state) => ({
+      plotThreads: state.plotThreads.filter((t) => t.id !== id)
+    }))
+    try {
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase.from('plot_threads').delete().eq('id', id)
+        if (error) throw error
+      }
+    } catch (e) {
+      console.error('Supabase deletePlotThread error:', e)
+    }
+  },
+
+  applyThreadAnalysis: async (chapterNumber, projectId, result) => {
+    const existing = get().plotThreads
+
+    // 1. Mark resolved threads
+    for (const title of result.resolvedThreadTitles) {
+      const match = findThreadByTitle(title, existing)
+      if (match && match.status !== 'RESOLVED') {
+        await get().updatePlotThread(match.id, {
+          status: 'RESOLVED',
+          resolved_at: chapterNumber
+        })
+      }
+    }
+
+    // 2. Update note-only changes for active threads
+    for (const upd of result.updatedThreadTitles) {
+      const match = findThreadByTitle(upd.title, get().plotThreads)
+      if (match && match.status !== 'RESOLVED') {
+        const mergedNotes = match.notes
+          ? `${match.notes}\n[Bab ${chapterNumber}] ${upd.notes}`
+          : upd.notes
+        await get().updatePlotThread(match.id, {
+          status: 'ACTIVE',
+          notes: mergedNotes
+        })
+      }
+    }
+
+    // 3. Insert new threads
+    for (const draft of result.newThreads) {
+      // Skip duplicates that look like an existing thread.
+      if (findThreadByTitle(draft.title, get().plotThreads)) continue
+      await get().addPlotThread({
+        project_id: projectId,
+        title: draft.title,
+        planted_at: chapterNumber,
+        status: 'PLANTED',
+        resolved_at: null,
+        urgency: draft.urgency,
+        related_characters: draft.relatedCharacters,
+        related_items: draft.relatedItems,
+        notes: draft.notes
+      })
+    }
+  },
+
+  // ── Chapter Summaries (Sprint 7 RAG) ────────────────────────────────
+  loadChapterSummaries: async (projectId) => {
+    try {
+      if (isSupabaseConfigured()) {
+        const { data, error } = await supabase
+          .from('chapter_summaries')
+          .select('*')
+          .eq('project_id', projectId)
+        if (error) throw error
+        if (data) {
+          set({ chapterSummaries: data as unknown as ChapterSummary[] })
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load chapter summaries:', e)
+    }
+  },
+
+  upsertChapterSummary: async (payload) => {
+    // Optimistic local update — replace any existing summary for the same
+    // chapter (1:1 relation) before persisting to Supabase.
+    const optimistic: ChapterSummary = {
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      ...payload
+    }
+    set((state) => {
+      const filtered = state.chapterSummaries.filter(
+        (s) => s.chapter_id !== payload.chapter_id
+      )
+      return { chapterSummaries: [...filtered, optimistic] }
+    })
+
+    try {
+      if (isSupabaseConfigured()) {
+        // Delete any existing row for this chapter (idempotent insert).
+        await supabase
+          .from('chapter_summaries')
+          .delete()
+          .eq('chapter_id', payload.chapter_id)
+        const { data, error } = await supabase
+          .from('chapter_summaries')
+          .insert([payload as ChapterSummaryInsert])
+          .select()
+          .single()
+        if (error) throw error
+        if (data) {
+          const final = data as unknown as ChapterSummary
+          set((state) => ({
+            chapterSummaries: state.chapterSummaries.map((s) =>
+              s.id === optimistic.id ? final : s
+            )
+          }))
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase upsertChapterSummary error, keeping locally:', e)
     }
   },
 

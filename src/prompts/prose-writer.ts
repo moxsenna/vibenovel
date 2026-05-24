@@ -107,6 +107,22 @@ export function buildProseUserPrompt(input: ProseGenerateInput): string {
     ? `\n[CHARACTER VOICE DNA — natural language brief]\n${voiceBriefs.join('\n')}\nMatch each character's voice exactly when they speak or think.`
     : ''
 
+  // Sprint 9 — Mimicry Engine: project-wide voice style block. Only included
+  // when project.voice_dna_project is non-empty.
+  let projectVoiceBlock = ''
+  if (input.projectVoiceDna && Object.keys(input.projectVoiceDna).length > 0) {
+    const lines: string[] = []
+    for (const [k, v] of Object.entries(input.projectVoiceDna)) {
+      if (v == null) continue
+      const value = typeof v === 'string' ? v : JSON.stringify(v)
+      if (!value.trim()) continue
+      lines.push(`- ${k}: ${value}`)
+    }
+    if (lines.length > 0) {
+      projectVoiceBlock = `\n[PROJECT VOICE STYLE — global writing voice for this novel]\nCermin gaya tulisan ini secara konsisten di seluruh narasi (deskripsi, ritme kalimat, paragraph density, dialog style):\n${lines.join('\n')}\n\nGabungkan dengan voice DNA per-karakter di atas — voice karakter prioritas saat dialog, voice proyek prioritas saat narasi.`
+    }
+  }
+
   // Build the prompt
   return `
 [STORY CONTEXT]
@@ -120,6 +136,7 @@ Overall Chapter Tone: ${input.emotionalTone}
 [LORE & ACTIVE ENTITIES]
 ${input.loreContext || 'None specified.'}
 ${voiceInstructions}
+${projectVoiceBlock}
 
 [CHAPTER OUTLINE]
 ${input.synopsis}

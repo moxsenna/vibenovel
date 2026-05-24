@@ -102,6 +102,12 @@ export interface ProseGenerateInput {
   loreContext?: string // Stringified relevant lore/characters/items
   characterStates?: string // Stringified Layer 2 dynamic character states
   voiceDna?: Record<string, Record<string, unknown>>
+  /**
+   * Sprint 9 — Mimicry Engine. Project-wide voice DNA extracted from a
+   * user-provided writing sample. Optional; if non-empty, prose-writer
+   * prompt injects a [PROJECT VOICE STYLE] block.
+   */
+  projectVoiceDna?: Record<string, unknown>
 }
 
 export interface ProseResponse {

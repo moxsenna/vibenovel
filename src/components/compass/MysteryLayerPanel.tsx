@@ -14,6 +14,7 @@
 import React, { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProjectStore } from '../../store/useProjectStore'
+import { useUiStore } from '../../store/useUiStore'
 import type { MysteryLayer } from '../../types/project'
 
 const STATUS_STYLE: Record<MysteryLayer['status'], { label: string; cls: string }> = {
@@ -142,6 +143,7 @@ const MysteryLayerCard: React.FC<CardProps> = ({
 }) => {
   const [expanded, setExpanded] = useState(false)
   const status = STATUS_STYLE[layer.status]
+  const showConfirm = useUiStore((s) => s.showConfirm)
 
   return (
     <motion.div
@@ -189,7 +191,14 @@ const MysteryLayerCard: React.FC<CardProps> = ({
           </button>
           <button
             onClick={() => {
-              if (confirm(`Hapus Layer ${layer.layer_number}?`)) onDelete()
+              showConfirm({
+                title: 'Hapus Layer Misteri?',
+                message: `Apakah Anda yakin ingin menghapus Layer Misteri L${layer.layer_number}? Seluruh data breadcrumb di dalamnya akan hilang secara permanen.`,
+                confirmText: 'Ya, Hapus',
+                cancelText: 'Batal',
+                severity: 'danger',
+                onConfirm: onDelete
+              })
             }}
             className="p-1 rounded text-on-surface-variant hover:text-error hover:bg-error/10 cursor-pointer"
             aria-label="Hapus layer"

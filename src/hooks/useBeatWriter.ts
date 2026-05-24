@@ -1,9 +1,13 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
+import { useUiStore } from '../store/useUiStore'
 import { aiRouter } from '../services/ai/ai-router'
 import { stateTracker } from '../services/state-tracker'
 import { buildProseInput, ensureBeatsForChapter } from '../services/prose-context'
+import { generateChapterSummary, buildSummaryUpsertPayload } from '../services/chapter-summary'
+import { analyzeChapterThreads } from '../services/thread-tracker'
+import { reindexChapter } from '../services/chapter-reindexer'
 import { usePlotRadar } from './usePlotRadar'
 import { useLoreExtractor } from './useLoreExtractor'
 import { useOfflineDraft } from './useOfflineDraft'
@@ -19,9 +23,14 @@ export function useBeatWriter(chapterId: string) {
     items,
     worldRules,
     getLatestStatesForChapter,
-    upsertCharacterStates
+    upsertCharacterStates,
+    plotThreads,
+    chapterSummaries,
+    applyThreadAnalysis,
+    upsertChapterSummary
   } = useProjectStore()
   const chapter = chapters.find((c) => c.id === chapterId)
+  const addToast = useUiStore((s) => s.addToast)
 
   const [currentBeatIndex, setCurrentBeatIndex] = useState(0)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -104,12 +113,59 @@ export function useBeatWriter(chapterId: string) {
     [chapter, activeProject, characters, getLatestStatesForChapter, upsertCharacterStates]
   )
 
+  /**
+   * Sprint 7 — Background thread analysis + chapter summary embedding.
+   * Runs alongside state snapshot. Both are independent (Promise.allSettled
+   * in caller) so a failure in one doesn't cancel the other.
+   */
+  const triggerThreadAnalysis = useCallback(
+    async (proseText: string) => {
+      if (!chapter || !activeProject) return
+      const chapterWithProse = { ...chapter, prose: proseText }
+      const prevSummaries = chapterSummaries
+        .filter((s) => s.chapter_id !== chapter.id)
+        .slice(-5)
+        .map((s) => s.summary)
+      try {
+        const result = await analyzeChapterThreads(
+          chapterWithProse,
+          plotThreads,
+          prevSummaries
+        )
+        await applyThreadAnalysis(chapter.chapter_number, activeProject.id, result)
+      } catch (err) {
+        console.error('Thread analysis failed:', err)
+      }
+    },
+    [chapter, activeProject, plotThreads, chapterSummaries, applyThreadAnalysis]
+  )
+
+  const triggerChapterSummary = useCallback(
+    async (proseText: string) => {
+      if (!chapter || !activeProject) return
+      const chapterWithProse = { ...chapter, prose: proseText }
+      const prevSummary = chapterSummaries
+        .filter((s) => s.chapter_id !== chapter.id)
+        .slice(-1)[0]?.summary
+      try {
+        const result = await generateChapterSummary(chapterWithProse, prevSummary)
+        await upsertChapterSummary(buildSummaryUpsertPayload(chapterWithProse, result))
+      } catch (err) {
+        console.error('Chapter summary failed:', err)
+      }
+    },
+    [chapter, activeProject, chapterSummaries, upsertChapterSummary]
+  )
+
   // ── Offline → Online sync ───────────────────────────────────────────
   // When connectivity returns, replay all pending drafts back into the store.
-  // Each successful sync clears its localStorage entry.
+  // Each successful sync clears its localStorage entry. Sprint 9.5 hardening:
+  // queue background AI tasks (state snapshot, plot radar, lore, thread,
+  // chapter summary) for synced chapters since they were skipped while offline.
   useEffect(() => {
     if (!isOnline) return
     let cancelled = false
+    const syncedChapterIds = new Set<string>()
     const run = async () => {
       try {
         const result = await syncPendingDrafts(async (d) => {
@@ -126,10 +182,30 @@ export function useBeatWriter(chapterId: string) {
             prose: fullProse,
             word_count: wordCount
           })
+          syncedChapterIds.add(d.chapterId)
           return true
         })
-        if (!cancelled && result.synced > 0) {
+        if (cancelled) return
+        if (result.synced > 0) {
           console.info(`[OfflineDraft] Synced ${result.synced} pending draft(s).`)
+
+          // Sprint 9.5 — Reconnection AI Backfill.
+          // Run reindex sequentially per chapter that just synced. Best-effort,
+          // failures logged but don't block UI.
+          for (const id of syncedChapterIds) {
+            if (cancelled) return
+            try {
+              const reindexResult = await reindexChapter(id)
+              if (reindexResult.failed.length > 0) {
+                console.warn(
+                  `[OfflineDraft] Reindex partial for chapter ${id}:`,
+                  reindexResult.failed
+                )
+              }
+            } catch (e) {
+              console.warn(`[OfflineDraft] Reindex failed for chapter ${id}:`, e)
+            }
+          }
         }
       } catch (e) {
         console.warn('[OfflineDraft] sync run failed:', e)
@@ -186,10 +262,12 @@ export function useBeatWriter(chapterId: string) {
           // choice to write without enforcement.
           if (isCompleted && isOnline && !freeWriteMode && !stateGenTriggeredRef.current) {
             stateGenTriggeredRef.current = true
-            Promise.all([
+            Promise.allSettled([
               triggerStateGeneration(fullProse),
               triggerPlotRadar(chapter.id, fullProse),
-              triggerLoreExtraction(fullProse)
+              triggerLoreExtraction(fullProse),
+              triggerThreadAnalysis(fullProse),
+              triggerChapterSummary(fullProse)
             ]).catch((err) =>
               console.error('Background generation tasks failed:', err)
             )
@@ -208,7 +286,9 @@ export function useBeatWriter(chapterId: string) {
       freeWriteMode,
       triggerStateGeneration,
       triggerPlotRadar,
-      triggerLoreExtraction
+      triggerLoreExtraction,
+      triggerThreadAnalysis,
+      triggerChapterSummary
     ]
   )
 
@@ -225,7 +305,7 @@ export function useBeatWriter(chapterId: string) {
     async (beatIndex: number) => {
       if (!chapter || !activeProject) return
       if (!chapter.beats || chapter.beats.length === 0) {
-        alert('Belum ada beats yang disiapkan. Pastikan Outline sudah di-generate.')
+        addToast('Belum ada beats yang disiapkan. Pastikan Outline sudah di-generate.', 'warning')
         return
       }
 
@@ -262,7 +342,7 @@ export function useBeatWriter(chapterId: string) {
         const err = e as { name?: string; message?: string }
         if (err.name !== 'AbortError') {
           console.error('Generation error:', e)
-          alert('Gagal generate prosa: ' + (err.message || 'Unknown Error'))
+          addToast('Gagal generate prosa: ' + (err.message || 'Unknown Error'), 'error')
         }
       } finally {
         setIsGenerating(false)
@@ -277,7 +357,8 @@ export function useBeatWriter(chapterId: string) {
       items,
       worldRules,
       getLatestStatesForChapter,
-      debouncedSaveBeat
+      debouncedSaveBeat,
+      addToast
     ]
   )
 

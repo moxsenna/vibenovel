@@ -1,10 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Login } from './pages/Login'
 import { Lobby } from './pages/Lobby'
-import { Workspace } from './pages/Workspace'
 import { useUiStore } from './store/useUiStore'
 import { useAuth } from './hooks/useAuth'
+import { PremiumConfirmModal } from './components/ui/PremiumConfirmModal'
+import { PremiumToastContainer } from './components/ui/PremiumToastContainer'
+import { LoadingSplash } from './components/ui/LoadingSplash'
+
+// Sprint 9 — Lazy-load Workspace route. ProseWriter, ContextPanel, modals,
+// and visualization chunks all load on demand when user opens a project.
+const Workspace = lazy(() =>
+  import('./pages/Workspace').then((m) => ({ default: m.Workspace }))
+)
 
 // Loading spinner while checking auth
 function AuthLoader() {
@@ -75,7 +83,9 @@ function App() {
           path="/project/:projectId"
           element={
             <ProtectedRoute>
-              <Workspace />
+              <Suspense fallback={<LoadingSplash />}>
+                <Workspace />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -83,8 +93,13 @@ function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {/* Global themed custom dialogs */}
+      <PremiumConfirmModal />
+      <PremiumToastContainer />
     </BrowserRouter>
   )
 }
 
 export default App
+

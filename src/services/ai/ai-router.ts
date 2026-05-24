@@ -51,6 +51,15 @@ import {
   type DirectorsCutInput,
   type InlineEditInput
 } from '../../prompts/rewrite'
+import {
+  buildRecapSystemInstruction,
+  buildRecapUserPrompt,
+  type RecapPromptInput
+} from '../../prompts/recap-generator'
+import {
+  buildMimicrySystemInstruction,
+  buildMimicryUserPrompt
+} from '../../prompts/mimicry-engine'
 
 interface CoAuthorDraft {
   type: 'character' | 'item' | 'world_rule' | 'ending' | 'mystery' | 'character_state'
@@ -450,6 +459,45 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
     return JSON.parse(cleaned) as VoiceDnaResult
   }
 
+  /**
+   * Sprint 9 — Mimicry Engine.
+   *
+   * Extract project-wide voice DNA from a writing sample. Returns a record
+   * with structural style features (diction, rhythm, density, dialogue
+   * style, signature/taboo phrasing, pace, emotional palette).
+   *
+   * Privacy: sample is sent to Gemini for inference only — not stored.
+   */
+  public async extractProjectVoiceDna(
+    sample: string,
+    signal?: AbortSignal
+  ): Promise<Record<string, string>> {
+    const systemInstruction = buildMimicrySystemInstruction()
+    const userPrompt = buildMimicryUserPrompt(sample)
+    const response = await geminiPool.generateContent(
+      userPrompt,
+      systemInstruction,
+      true,
+      'gemini-flash-latest',
+      signal
+    )
+    const cleaned = response.replace(/^```json\s*/i, '').replace(/```$/, '').trim()
+    const parsed = JSON.parse(cleaned)
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new Error('Mimicry: Output AI bukan objek JSON valid.')
+    }
+    // Normalize values to strings (defensive — Gemini sometimes returns nested objects).
+    const normalized: Record<string, string> = {}
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof v === 'string') {
+        normalized[k] = v
+      } else if (v != null) {
+        normalized[k] = JSON.stringify(v)
+      }
+    }
+    return normalized
+  }
+
   // ── Director's Cut + Inline Edit ────────────────────────────────────────
 
   /**
@@ -492,6 +540,26 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
       'gemini-flash-latest',
       signal
     )
+  }
+
+  /**
+   * Sprint 7 — Recap generator. Produces a "Sebelumnya..." recap for a
+   * chapter range using Gemini Flash (cheap, story summary task).
+   */
+  public async generateRecap(
+    input: RecapPromptInput,
+    signal?: AbortSignal
+  ): Promise<string> {
+    const systemInstruction = buildRecapSystemInstruction()
+    const userPrompt = buildRecapUserPrompt(input)
+    const raw = await geminiPool.generateContent(
+      userPrompt,
+      systemInstruction,
+      false,
+      'gemini-2.0-flash',
+      signal
+    )
+    return raw.trim()
   }
 }
 

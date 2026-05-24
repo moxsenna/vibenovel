@@ -6,9 +6,16 @@ import { useUiStore } from '../store/useUiStore'
 import { ProjectCard, NewProjectCard, ArchiveCard } from '../components/dashboard/ProjectCard'
 import { StatsBar } from '../components/dashboard/StatsBar'
 import { ProjectCreationModal } from '../components/dashboard/ProjectCreationModal'
+import type { BlueprintSelection } from '../components/dashboard/ProjectCreationModal'
 import { SettingsModal } from '../components/modals/SettingsModal'
+import { TargetChaptersAdjustmentModal } from '../components/modals/TargetChaptersAdjustmentModal'
+import { OnboardingTour } from '../components/onboarding/OnboardingTour'
 import { BottomNavBar } from '../components/ui/BottomNavBar'
+import { SkipLink } from '../components/ui/SkipLink'
 import type { Project, GenesisMode } from '../types/project'
+import { applyBlueprint } from '../services/blueprint-applier'
+import { cloneProjectAsSpinOff, getNextSpinOffName } from '../services/project-cloner'
+import { getAllGenreNames } from '../lib/genre-blueprints'
 
 export const Lobby: React.FC = () => {
   const navigate = useNavigate()
@@ -21,6 +28,8 @@ export const Lobby: React.FC = () => {
   const [sortBy, setSortBy] = useState('Terbaru')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [adjustTargetProject, setAdjustTargetProject] = useState<Project | null>(null)
+  const [cloningProjectId, setCloningProjectId] = useState<string | null>(null)
 
   useEffect(() => { loadProjects() }, [loadProjects])
 
@@ -48,9 +57,29 @@ export const Lobby: React.FC = () => {
     navigate(`/project/${project.id}`)
   }
 
-  const handleCreate = async (title: string, genre: string, targetChapters: number, wordCount: number, mode: GenesisMode) => {
+  const handleCreate = async (
+    title: string,
+    genre: string,
+    targetChapters: number,
+    wordCount: number,
+    mode: GenesisMode,
+    blueprintSelection?: BlueprintSelection
+  ) => {
     try {
       const created = await createProject(title, genre, targetChapters, wordCount, mode)
+      // Sprint 9: kalau user pilih blueprint, apply lorebook dari template.
+      if (mode === 'FRESH_BLUEPRINT' && blueprintSelection) {
+        try {
+          await applyBlueprint(
+            created,
+            blueprintSelection.blueprint,
+            blueprintSelection.customNames
+          )
+        } catch (err) {
+          console.error('Blueprint apply failed:', err)
+          alert('Proyek dibuat, tapi blueprint gagal di-apply. Bisa diisi manual via Brainstorm.')
+        }
+      }
       setIsCreateModalOpen(false)
       setActiveProject(created)
       navigate(`/project/${created.id}`)
@@ -59,8 +88,48 @@ export const Lobby: React.FC = () => {
     }
   }
 
+  const showConfirm = useUiStore((s) => s.showConfirm)
+  const addToast = useUiStore((s) => s.addToast)
+
   const handleDelete = (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus proyek ini?')) deleteProject(id)
+    showConfirm({
+      title: 'Hapus Proyek?',
+      message: 'Apakah Anda yakin ingin menghapus proyek ini? Seluruh data bab, outline, dan lorebook di dalamnya akan dihapus secara permanen.',
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+      severity: 'danger',
+      onConfirm: () => deleteProject(id)
+    })
+  }
+
+  const handleSpinOff = (project: Project) => {
+    const suggested = getNextSpinOffName(project.title, projects)
+    showConfirm({
+      title: '🪞 Buat Spin-Off Clone?',
+      message: `Akan dibuat proyek baru "${suggested}" dengan dunia, tokoh, dan lore yang sama. Tidak ada bab yang ikut di-copy — fresh canvas untuk cerita baru.`,
+      confirmText: 'Ya, Clone',
+      cancelText: 'Batal',
+      severity: 'info',
+      onConfirm: async () => {
+        if (cloningProjectId) return
+        setCloningProjectId(project.id)
+        try {
+          const created = await cloneProjectAsSpinOff(project.id, suggested)
+          addToast(`Spin-Off "${created.title}" berhasil dibuat.`, 'success')
+          setActiveProject(created)
+          navigate(`/project/${created.id}`)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          addToast(`Gagal Spin-Off: ${msg}`, 'error')
+        } finally {
+          setCloningProjectId(null)
+        }
+      }
+    })
+  }
+
+  const handleAdjustTarget = (project: Project) => {
+    setAdjustTargetProject(project)
   }
 
   // Mock project-specific data
@@ -93,6 +162,7 @@ export const Lobby: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background text-on-background">
+      <SkipLink />
       {/* === Top NavBar (Fixed) === */}
       <nav className="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/20 shadow-[0_0_15px_rgba(232,160,191,0.15)] flex justify-between items-center px-5 md:px-16 py-4 h-16">
         <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
@@ -104,6 +174,7 @@ export const Lobby: React.FC = () => {
             onClick={() => setIsSettingsOpen(true)}
             className="text-on-surface-variant hover:opacity-80 transition-opacity p-2 rounded-full hover:bg-surface-container-high"
             aria-label="Settings"
+            data-tour-step="settings"
           >
             <span className="material-symbols-outlined text-[24px]">settings</span>
           </button>
@@ -131,7 +202,11 @@ export const Lobby: React.FC = () => {
       </nav>
 
       {/* === Main Content === */}
-      <main className="pt-24 pb-32 px-5 md:px-16 max-w-[1440px] mx-auto">
+      <main
+        id="main-content"
+        role="main"
+        className="pt-24 pb-32 px-5 md:px-16 max-w-[1440px] mx-auto"
+      >
         {/* Header */}
         <header className="mb-6">
           <h1 className="text-display-lg text-on-background mb-2">Selamat malam, Bima ✨</h1>
@@ -165,9 +240,11 @@ export const Lobby: React.FC = () => {
               className="bg-surface-container-highest inner-glow px-6 py-2 rounded-full text-label-lg text-on-background border-none cursor-pointer focus:outline-none"
             >
               <option value="Semua">Semua</option>
-              <option value="Drama Rumah Tangga">Drama RT</option>
-              <option value="Romance Office">Romance</option>
-              <option value="Fantasi Kerajaan">Fantasi</option>
+              {getAllGenreNames(projects.map((p) => p.genre)).map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
             </select>
             <select
               value={sortBy}
@@ -211,6 +288,8 @@ export const Lobby: React.FC = () => {
                     lastActivity={meta.lastActivity}
                     onOpen={() => handleOpen(project)}
                     onDelete={() => handleDelete(project.id)}
+                    onSpinOff={() => handleSpinOff(project)}
+                    onAdjustTarget={() => handleAdjustTarget(project)}
                   />
                 </motion.div>
               )
@@ -270,6 +349,12 @@ export const Lobby: React.FC = () => {
         onCreate={handleCreate}
       />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <TargetChaptersAdjustmentModal
+        isOpen={adjustTargetProject !== null}
+        project={adjustTargetProject}
+        onClose={() => setAdjustTargetProject(null)}
+      />
+      <OnboardingTour />
     </div>
   )
 }

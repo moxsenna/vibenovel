@@ -290,6 +290,69 @@ class GeminiPool {
       ? lastError
       : new Error('Failed to generate stream after exhausting keys')
   }
+
+  /**
+   * Embed text via Gemini `text-embedding-004` (768 dimensions, free tier).
+   * Used for the RAG semantic search over chapter summaries.
+   */
+  public async embedContent(
+    text: string,
+    signal?: AbortSignal,
+    model = 'text-embedding-004'
+  ): Promise<number[]> {
+    let retries = Math.max(3, this.keyStatuses.length)
+    let lastError: unknown = null
+
+    while (retries > 0) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      const key = this.getNextKey()
+      if (!key) throw new Error('No Gemini API keys configured. Please add keys in Settings.')
+
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${key}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: { parts: [{ text }] }
+            }),
+            signal
+          }
+        )
+
+        if (response.status === 429) {
+          this.reportRateLimit(key)
+          retries--
+          continue
+        }
+
+        if (!response.ok) {
+          const errText = await response.text()
+          throw new Error(`Gemini Embed API Error (${response.status}): ${errText}`)
+        }
+
+        const data = await response.json()
+        const values: number[] | undefined = data?.embedding?.values
+        if (!Array.isArray(values) || values.length === 0) {
+          throw new Error('Invalid embedding response from Gemini')
+        }
+
+        this.reportSuccess(key)
+        return values
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') throw error
+        console.error(`Embedding error with Gemini ${keyLabel(this.keyStatuses, key)}:`, error)
+        this.reportError(key, error)
+        lastError = error
+        retries--
+      }
+    }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('Failed to embed content after exhausting keys')
+  }
 }
 
 export const geminiPool = new GeminiPool()

@@ -6,9 +6,10 @@ interface ProseToolbarProps {
   wordCount: number
   saveStatus: 'idle' | 'saving' | 'saved'
   stateGenStatus?: 'idle' | 'generating' | 'done' | 'error'
+  onOpenRecap?: () => void
 }
 
-export const ProseToolbar: React.FC<ProseToolbarProps> = ({ wordCount, saveStatus, stateGenStatus }) => {
+export const ProseToolbar: React.FC<ProseToolbarProps> = ({ wordCount, saveStatus, stateGenStatus, onOpenRecap }) => {
   const { activeProseModel, setActiveProseModel, freeWriteMode, setFreeWriteMode } = useSettingsStore()
 
   const models: { value: ProseModelChoice, label: string, icon: string }[] = [
@@ -55,6 +56,18 @@ export const ProseToolbar: React.FC<ProseToolbarProps> = ({ wordCount, saveStatu
           </span>
           {freeWriteMode ? 'Free Write' : 'Strict'}
         </button>
+
+        {onOpenRecap && (
+          <button
+            type="button"
+            onClick={onOpenRecap}
+            title="Generate recap 'Sebelumnya...' untuk pembaca"
+            className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg border bg-surface-container text-on-surface-variant border-outline-variant/40 hover:border-primary/30 cursor-pointer transition-colors"
+          >
+            <span className="material-symbols-outlined text-[14px]">auto_stories</span>
+            Sebelumnya...
+          </button>
+        )}
       </div>
 
       {/* Right: Stats & Status */}

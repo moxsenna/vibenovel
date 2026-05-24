@@ -12,6 +12,7 @@
  */
 
 import type { Character, Item, WorldRule, MysteryLayer } from '../types/project'
+import { getArcPosition } from '../lib/kbm-pacing'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -254,18 +255,6 @@ JSON Output Schema (output RAW JSON only, no markdown):
 }
 
 // ── Helper: Arc Position Description ───────────────────────────────────────
-
-function getArcPosition(chapterNumber: number, totalChapters: number): string {
-  const ratio = chapterNumber / totalChapters
-
-  if (ratio <= 0.05) return 'OPENING — Perkenalan dunia dan karakter. Hook kuat!'
-  if (ratio <= 0.15) return 'SETUP — Bangun character investment. Tunjukkan vulnerability.'
-  if (ratio <= 0.25) return 'INCITING INCIDENT — Konflik utama mulai muncul.'
-  if (ratio <= 0.40) return 'RISING ACTION — Eskalasi konflik, stakes naik.'
-  if (ratio <= 0.50) return 'MIDPOINT — Twist besar atau false resolution.'
-  if (ratio <= 0.65) return 'COMPLICATIONS — Konsekuensi dari midpoint. Tekanan bertambah.'
-  if (ratio <= 0.75) return 'CRISIS — Momen paling gelap. Semua tampak mustahil.'
-  if (ratio <= 0.85) return 'CLIMAX APPROACH — Persiapan klimaks. Resolusi misteri terakhir.'
-  if (ratio <= 0.95) return 'CLIMAX — Pertarungan/konfrontasi besar. Emosi puncak.'
-  return 'RESOLUTION — Penutupan. Jawaban terakhir. Epilog.'
-}
+// `getArcPosition` is now exported from `src/lib/kbm-pacing.ts` so it can be
+// re-used by Timeline View (Sprint 8) — see `computeArcBands` for the
+// structured equivalent.

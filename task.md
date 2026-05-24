@@ -1,210 +1,94 @@
-# Sprint 7 — Thread Tracker & RAG (VibeNovel v2)
+# Sprint 9.5 — QA Hardening (VibeNovel v2) ✅ DONE
 
 ## 🎯 Goal
-Novel 200+ bab tidak kehilangan thread. Tiga deliverable:
-1. **Thread Tracker fungsional** — auto-detect dari prosa (background task), manual CRUD, dangling alert per N bab
-2. **RAG / Semantic Search** — chapter summaries + embeddings (Gemini text-embedding-004) di Supabase pgvector, query memunculkan top-K relevant chapters
-3. **Recap Generator** — "Sebelumnya..." modal yang merangkum range bab untuk pembaca / writer onboarding
+Address 3 valid concurrency / continuity gaps identified by external QA audit (`systems_architecture_qa_report.md`):
+
+1. ✅ **Free Write Memory Blackhole** — Lazy reindexer triggers when user toggles Free Write OFF, sweeps chapters with prose tapi tanpa AI artifacts.
+2. ✅ **Offline Reconnect AI Backfill** — Sync flow setelah reconnection sekarang queue background AI tasks untuk synced chapters (state snapshot, summary, threads, lore, plot radar).
+3. ✅ **Stale Chat Approval Conflict Detection** — Duplicate-by-name detection sebelum addCharacter/Item/WorldRule. Warning toast kalau sudah ada entry dengan nama sama, blokir doubling.
+
+QA findings yang **TIDAK** dieksekusi:
+- ❌ "Background Task Queue" (Mitigation 3.1) — overkill, existing `geminiPool` sudah handle 429 + cooldown rotation
+- ❌ "Cross-chapter contamination" (1.1 overstated) — code closure correctly captures chapter.id, ref-guard mencegah re-trigger
+- ❌ "Import Wizard DB pollution" (2.2 inaccurate) — abort hanya cancel AI analyze, DB writes terjadi di handleConfirm setelah user setuju
+- ❌ "Optimistic Lock with updated_at" (3.4) — butuh schema migration untuk 3 tables, deferred ke Sprint 10. Replaced dengan duplicate-by-name detection sebagai pragmatic fix.
 
 ---
 
-## 🧭 Audit Kondisi Saat Ini
+## 📋 Checklist — ALL DONE
 
-| Komponen | Status | Catatan |
-|---|---|---|
-| `plot_threads` table di Supabase | ✅ exists | Schema lengkap dengan urgency + status |
-| `ThreadTrackerPanel` placeholder | ✅ Sprint 3B | Read-only, empty state CTA mention "Sprint 7" |
-| `chapter_summaries` table + pgvector | ✅ exists | Schema sudah ada extension `vector`, kolom `vector(768)`, index ivfflat |
-| `chapter_summaries` writer code | ❌ | Belum ada — kosong di DB |
-| Embedding generation | ❌ | Gemini text-embedding-004 belum diintegrasi |
-| Thread auto-detect prompt | ❌ | Belum ada |
-| `useBeatWriter` background tasks | ✅ trigger state + plot radar + lore | Tinggal tambah thread detect + chapter summary |
-| `BatchGenerator.runBackgroundTasks` | ⚠️ State only | Perlu opsional thread+summary |
-| Recap generator prompt | ❌ | Belum ada |
-| RecapModal component | ❌ | Belum ada |
+### Fix #1 — Free Write Reindexer ✅
+- [x] **STEP 1**: `src/services/chapter-reindexer.ts` (~250 lines):
+  - `detectMissingArtifacts(chapter)` — returns flags untuk state snapshot, plot radar, lore extraction, thread analysis, chapter summary
+  - `reindexChapter(chapterId)` — runs only missing tasks via `Promise.allSettled`, returns succeeded/failed lists
+  - `reindexChapters(ids, onProgress, signal)` — sequential loop dengan progress callback + abort
+  - `findChaptersNeedingReindex()` — scan project untuk chapters yang punya prose tapi tidak punya artifacts
+- [x] **STEP 2**: `src/components/modals/ReindexModal.tsx` (~270 lines):
+  - 3 states: idle preview, running progress bar + current chapter, done summary cards
+  - Empty state ramah saat semua sudah tersinkronisasi
+  - Failed task details collapsible
+  - Abort controller dengan focus trap
+- [x] **STEP 3**: `src/components/onboarding/FreeWriteIndexerWatcher.tsx` (~50 lines):
+  - Mount global di Workspace
+  - Detect freeWriteMode true → false transition via ref + 800ms debounce
+  - Auto-open ReindexModal kalau `findChaptersNeedingReindex()` non-empty
+  - Manual trigger via `useUiStore.openModal('reindex')`
+- [x] **STEP 4**: Wire manual trigger di `SettingsModal.tsx` Tutorial tab — section "Sinkronisasi Memori AI" dengan tombol "Buka Reindexer"
+- [x] **STEP 5**: Mount `<FreeWriteIndexerWatcher />` di `Workspace.tsx`
 
----
+### Fix #2 — Offline Reconnect AI Backfill ✅
+- [x] **STEP 6**: Modify `useBeatWriter.ts` reconnect sync flow:
+  - Track `syncedChapterIds: Set<string>` selama replay loop
+  - Setelah `syncPendingDrafts` selesai, sequential loop call `reindexChapter(id)` untuk tiap chapter yang baru di-sync
+  - Best-effort: failures di-log, tidak block UI
+  - `cancelled` flag honored di between iterations untuk graceful unmount
 
-## ✅ Design Decisions yang Perlu Konfirmasi User
+### Fix #3 — Chat Approval Conflict Detection ✅
+- [x] **STEP 7**: Modify `useChatStore.updateMessageDraftStatus`:
+  - Helper `findCharByName/findItemByName/findRuleByName` — case-insensitive lookup
+  - Untuk character/item/world_rule drafts: jika existing entry dengan nama sama ditemukan, show warning toast (7 detik) dan SKIP `addCharacter`/`addItem`/`addWorldRule`
+  - Pesan toast spesifik per type, mengarahkan user ke "edit manual via Story Compass"
+  - Mystery layers + character_state + ending tidak terkena duplicate detection (acceptable — intentional add patterns)
 
-5 pertanyaan kecil:
-
-1. **Embedding storage**: chapter_summaries di-embed pakai Gemini `text-embedding-004` (768-dim, gratis up to 1500 RPM)?
-   - Saran: **Ya**, schema sudah `vector(768)`. Free tier cukup.
-
-2. **Thread auto-detect timing**: jalan otomatis sebagai background task setelah chapter DRAFT (sama dengan state tracker), atau manual button saja?
-   - Saran: **Auto** (background, fire-and-forget) supaya zero friction. Manual button tetap ada di ThreadTrackerPanel.
-
-3. **Dangling thread alert**: muncul di mana?
-   - Saran: **ThreadTrackerPanel + BatchSuccessModal warnings** + **header chip di Workspace** saat ada CRITICAL/HIGH urgency thread yang dangling >10 bab.
-
-4. **Recap entry point**: tombol di mana?
-   - Saran: **ProseToolbar** + **ContextPanel write mode** (tombol "📝 Sebelumnya..."). User pilih range, klik generate, modal show recap.
-
-5. **RAG search UI**: Sprint 7 fokus ke service layer + autocomplete behind-the-scenes (context injector pakai semantic search), atau juga UI search bar?
-   - Saran: **Service layer + context injector enhancement saja** untuk Sprint 7 (manfaatnya immediate: prose writer dapat top-3 relevant chapter summaries di context). UI search bar dedicated bisa ditunda ke Sprint 8 visualization.
-
----
-
-## 📋 Checklist (5 Phases)
-
-### Phase 1 — Embedding Service + Chapter Summaries
-
-- [ ] **STEP 1: Embedding API Method** — Modify `src/services/ai/gemini-pool.ts`
-  - [ ] `embedContent(text: string, signal?: AbortSignal): Promise<number[]>` calling Gemini `text-embedding-004` endpoint
-  - [ ] Pakai key rotation (sama dengan generateContent)
-  - [ ] Handle 429 dengan cooldown
-  - [ ] Output 768-dim float array
-
-- [ ] **STEP 2: Chapter Summary Prompt** — Create `src/prompts/chapter-summary.ts`
-  - [ ] `buildChapterSummarySystemInstruction()` — terse, factual, 2-3 sentence summary
-  - [ ] `buildChapterSummaryUserPrompt(chapter, prevSummary)` — input bab prosa + ringkasan bab sebelumnya untuk continuity
-  - [ ] Output JSON: `{ summary: string, key_facts: string[] }`
-
-- [ ] **STEP 3: Chapter Summary Service** — Create `src/services/chapter-summary.ts`
-  - [ ] `generateChapterSummary(project, chapter, prevSummary?, signal?): Promise<{ summary, key_facts, embedding }>`
-  - [ ] Steps: AI summary → embedContent(summary) → return both
-  - [ ] Save via `lorebook.upsertChapterSummary` (new method)
-
-- [ ] **STEP 4: Chapter Summary CRUD in Store** — Modify `src/store/parts/lorebook.ts`
-  - [ ] State: `chapterSummaries: ChapterSummary[]`
-  - [ ] Type: `ChapterSummary { id, chapter_id, project_id, summary, key_facts, embedding?, created_at? }`
-  - [ ] `loadChapterSummaries(projectId)`
-  - [ ] `upsertChapterSummary(payload)` — INSERT or UPDATE if existing
-  - [ ] Wire ke `loadProjectData` (chapters.ts)
-
-- [ ] **STEP 5: Type & DB Types** — Modify `src/types/project.ts` + `database.types.ts`
-  - [ ] Add `ChapterSummary` type matching DB schema
-  - [ ] Verify `embedding: number[] | null` matches the existing DB shape
-
-### Phase 2 — RAG Service & Context Injector Enhancement
-
-- [ ] **STEP 6: RAG Service** — Create `src/services/rag-service.ts`
-  - [ ] `searchSimilarChapters(projectId, query, topK=3): Promise<ChapterSummary[]>` — embed query → Supabase RPC for cosine similarity
-  - [ ] Need a Supabase RPC function `match_chapter_summaries(project_id, query_embedding, match_count)` — provide as SQL migration in `schema.sql`
-  - [ ] Fallback: `searchByKeywords` if pgvector unavailable (filter `key_facts` JSONB)
-
-- [ ] **STEP 7: Schema Migration** — Modify `supabase/schema.sql`
-  - [ ] Add idempotent migration block dengan:
-    ```sql
-    CREATE OR REPLACE FUNCTION match_chapter_summaries(
-      p_project_id UUID,
-      p_query_embedding vector(768),
-      p_match_count INT DEFAULT 3
-    ) RETURNS TABLE(...) ...
-    ```
-  - [ ] Comment block: "Run after Sprint 7 deploy"
-
-- [ ] **STEP 8: Context Injector RAG Mode** — Modify `src/services/ai/context-injector.ts`
-  - [ ] New optional `useRag: boolean` parameter pada `injectContext()`
-  - [ ] If true + chapter has synopsis: call `ragService.searchSimilarChapters(projectId, synopsis, 3)`
-  - [ ] Append matched summaries sebagai "RELATED CHAPTER MEMORY" block ke loreContext
-
-### Phase 3 — Thread Tracker
-
-- [ ] **STEP 9: Thread Detect Prompt** — Create `src/prompts/thread-tracker.ts`
-  - [ ] `buildThreadTrackerSystemInstruction()` — extract / detect plot threads (planted vs. resolved) from prosa + existing thread list
-  - [ ] `buildThreadTrackerUserPrompt(chapter, prosa, existingThreads, prevChapterSummaries)`
-  - [ ] Output JSON: `{ new_threads: [{ title, planted_at, urgency, related_characters, notes }], resolved_thread_ids: string[], updated_threads: [{ id, status, notes }] }`
-
-- [ ] **STEP 10: Thread Tracker Service** — Create `src/services/thread-tracker.ts`
-  - [ ] `analyzeChapterThreads(project, chapter, existingThreads, prevSummaries, signal?): Promise<ThreadAnalysisResult>`
-  - [ ] `mergeThreadAnalysis(state, result)` — apply new + resolved + updated to lorebook state
-
-- [ ] **STEP 11: Thread CRUD** — Modify `src/store/parts/lorebook.ts`
-  - [ ] Plot threads sudah ada di state (Sprint 3B), tambahkan:
-  - [ ] `addPlotThread(payload): Promise<string>` (returns id)
-  - [ ] `updatePlotThread(id, partial): Promise<void>`
-  - [ ] `deletePlotThread(id): Promise<void>`
-  - [ ] `applyThreadAnalysis(result): Promise<void>` — bulk apply
-
-- [ ] **STEP 12: Wire Background Task** — Modify `src/hooks/useBeatWriter.ts` + `src/services/batch-generator.ts`
-  - [ ] After chapter transit ke DRAFT, fire-and-forget thread analysis (sama pattern dengan state tracker)
-  - [ ] Plus chapter summary generation
-  - [ ] Promise.allSettled to keep tasks independent
-
-- [ ] **STEP 13: ThreadTrackerPanel Full Implementation** — Modify `src/components/compass/ThreadTrackerPanel.tsx`
-  - [ ] Sprint 3B placeholder → full CRUD: add/edit/delete threads, urgency picker, status select, notes textarea, dangling alert badge
-  - [ ] "Auto-detect" button calls `threadTracker.analyzeChapterThreads` dengan chapter aktif
-
-- [ ] **STEP 14: Dangling Alert** — Modify `src/lib/kbm-pacing.ts`
-  - [ ] `validateDanglingThreads(threads, currentChapter)` — warn if PLANTED/ACTIVE thread `planted_at` >10 bab dari current dan belum resolved
-  - [ ] Hook into outline batch flow (sudah ada pattern di Sprint 5)
-
-### Phase 4 — Recap Generator
-
-- [ ] **STEP 15: Recap Prompt** — Create `src/prompts/recap-generator.ts`
-  - [ ] `buildRecapSystemInstruction()` — friendly "Sebelumnya..." voice, 2-4 paragraph max
-  - [ ] `buildRecapUserPrompt(chapters, range)` — chapters list dengan synopsis + key_events
-
-- [ ] **STEP 16: Recap Method in AI Router** — Modify `src/services/ai/ai-router.ts`
-  - [ ] `generateRecap(input, signal): Promise<string>` — uses Gemini Flash (cheap, story summary task)
-
-- [ ] **STEP 17: RecapModal** — Create `src/components/modals/RecapModal.tsx`
-  - [ ] Range picker (start/end bab)
-  - [ ] Generate button → streaming recap text
-  - [ ] Copy to clipboard
-  - [ ] Save to `recaps` table di Supabase (schema already exists)
-
-- [ ] **STEP 18: Recap Entry Points**
-  - [ ] Modify `src/components/prose/ProseToolbar.tsx` — tombol "📝 Sebelumnya..."
-  - [ ] Modify `src/components/workspace/ContextPanel.tsx` — Write mode "Recap" CTA
-
-### Phase 5 — Verification
-
-- [ ] **STEP 19: TypeScript** — `npx tsc -b --noEmit` zero errors
-- [ ] **STEP 20: ESLint** — `npm run lint` zero errors
-- [ ] **STEP 21: Production Build** — `npm run build` zero errors
-- [ ] **STEP 22: Manual Test** (user-side):
-  - [ ] Generate prose untuk 1 bab → setelah DRAFT, chapter_summary auto-tersimpan
-  - [ ] Generate 5 bab → ThreadTrackerPanel populated dengan auto-detected threads
-  - [ ] Bab 11 mention thread yang ditebar bab 1 → tetap visible di panel sebagai ACTIVE
-  - [ ] Outline batch warning: "3 thread dangling di Bab X"
-  - [ ] Klik "Sebelumnya..." → modal show 3-paragraph recap
-  - [ ] RAG: outline bab 30 dengan reference ke kejadian bab 5 → context injector pull summary bab 5
+### Verification ✅
+- [x] **STEP 8**: TypeScript `npx tsc -b --noEmit` zero errors
+- [x] **STEP 9**: ESLint `npm run lint` zero errors
+- [x] **STEP 10**: Production Build `npm run build` zero errors
 
 ---
 
 ## 📐 File Summary
 
-### NEW (5 files)
-- `src/prompts/chapter-summary.ts` (~80 lines)
-- `src/prompts/thread-tracker.ts` (~110 lines)
-- `src/prompts/recap-generator.ts` (~70 lines)
-- `src/services/chapter-summary.ts` (~120 lines)
-- `src/services/thread-tracker.ts` (~140 lines)
-- `src/services/rag-service.ts` (~100 lines)
-- `src/components/modals/RecapModal.tsx` (~250 lines)
+### NEW (3 files)
+- `src/services/chapter-reindexer.ts` — reindex orchestrator (250 lines)
+- `src/components/modals/ReindexModal.tsx` — UI dengan progress + results (270 lines)
+- `src/components/onboarding/FreeWriteIndexerWatcher.tsx` — global watcher (50 lines)
 
-### MODIFY (10 files)
-- `src/services/ai/gemini-pool.ts` — `embedContent` method (text-embedding-004)
-- `src/services/ai/ai-router.ts` — `generateRecap` + `analyzeChapterThreads` + `summarizeChapter`
-- `src/services/ai/context-injector.ts` — RAG fallback option
-- `src/types/project.ts` — `ChapterSummary` type
-- `src/lib/database.types.ts` — verify chapter_summaries shape
-- `src/lib/kbm-pacing.ts` — `validateDanglingThreads`
-- `src/store/parts/lorebook.ts` — chapter_summaries CRUD + plot_threads CRUD + apply analysis
-- `src/store/parts/chapters.ts` — load chapter_summaries di loadProjectData
-- `src/hooks/useBeatWriter.ts` — fire thread analysis + summary background tasks
-- `src/services/batch-generator.ts` — same in `runBackgroundTasks`
-- `src/components/compass/ThreadTrackerPanel.tsx` — full CRUD
-- `src/components/prose/ProseToolbar.tsx` — Recap button
-- `supabase/schema.sql` — `match_chapter_summaries` RPC migration
+### MODIFIED (4 files)
+- `src/hooks/useBeatWriter.ts` — sync flow extended dengan reindex backfill
+- `src/store/useChatStore.ts` — duplicate detection helpers + warning paths
+- `src/components/modals/SettingsModal.tsx` — Sinkronisasi Memori AI section
+- `src/pages/Workspace.tsx` — mount FreeWriteIndexerWatcher
 
-### NO INSTALL needed
+### NO INSTALL (zero new deps)
 
 ---
 
-## 🔑 Notes & Risks
+## 📊 Bundle Impact
 
-- **Embedding cost**: `text-embedding-004` is FREE up to 1500 RPM on Gemini free tier. Cocok untuk batch + per-chapter background.
-- **pgvector RPC**: `match_chapter_summaries` butuh PL/pgSQL function. Saya tulis idempotent migration di `schema.sql`. User yang belum deploy akan dapat warning di RAG fallback.
-- **Thread detection accuracy**: AI prompt akan menerima existing threads list untuk avoid duplicates. Heuristic: title similarity threshold di service layer untuk dedup.
-- **Recap saved**: tabel `recaps` di Supabase punya schema. Ringkasan disimpan untuk reuse.
-- **Background task chain**: useBeatWriter sekarang sudah jalan state + radar + lore. Tambah thread detect + chapter summary akan jadi 5 task per chapter. Pakai `Promise.allSettled` agar 1 task gagal tidak block lainnya.
-- **Token impact prose-writer**: RAG context injection tambah ~200-500 char per call. Negligible.
+| | Sprint 9 | Sprint 9.5 | Δ |
+|---|---|---|---|
+| Main entry (raw) | 259.34 KB | 260.24 KB | +0.9 KB |
+| Main entry (gzip) | 77.26 KB | 77.44 KB | +0.18 KB |
+| Workspace lazy | 225.42 KB | 238.76 KB | +13.3 KB (reindexer + modal) |
+
+Negligible cost untuk significant continuity hardening.
 
 ---
 
-## 📅 Estimasi
-~3 hari sesuai sprint plan. Phase 1+2 (embedding + RAG infra) ~1.5 hari. Phase 3 (thread tracker) ~1 hari. Phase 4 (recap) ~0.5 hari. Phase 5 verify ringan.
+## 🔑 Notes & Observations
+
+- **No schema migration**: Stale chat approval fix dipakai pendekatan duplicate-by-name detection daripada `updated_at` optimistic lock. Lebih pragmatic untuk MVP, tapi kalau di masa depan butuh true conflict resolution dengan diff merge, schema migration tetap bisa dilakukan di Sprint 10.
+- **Reindexer is sequential**: Bab N+1 butuh state Bab N untuk context, jadi tidak bisa diparallelkan. Warning di UI: "Estimasi N-2N menit untuk N bab".
+- **Pragmatic skip on missing detector**: `detectMissingArtifacts` pakai cheap proxy (state snapshot + summary as anchor). Lore extraction tidak punya per-chapter detector — di-rerun kalau anchor data missing. Acceptable tradeoff vs adding `last_indexed_at` column.
+- **Free Write watcher uses `useEffect`, bukan store subscribe**: simpler implementation, sufficient since watcher is always mounted in Workspace.

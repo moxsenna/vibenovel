@@ -6,6 +6,7 @@ import { StoryCompassPreview } from '../compass/StoryCompassPreview'
 import { StateTimeline } from '../compass/StateTimeline'
 import { MysteryLayerPanel } from '../compass/MysteryLayerPanel'
 import { VoiceDNAEditor } from '../compass/VoiceDNAEditor'
+import { MimicryEngineCard } from '../compass/MimicryEngineCard'
 import { stateTracker } from '../../services/state-tracker'
 
 export const ContextPanel: React.FC = () => {
@@ -129,6 +130,7 @@ export const ContextPanel: React.FC = () => {
       animate="visible"
       exit="exit"
       className="h-full border-r border-surface-variant/20 bg-surface-container-low flex flex-col flex-shrink-0 overflow-hidden hidden md:flex"
+      data-tour-step="context-panel"
     >
       <div className="w-[360px] h-full flex flex-col justify-between overflow-hidden">
         {/* Scrollable Contents */}
@@ -300,6 +302,9 @@ export const ContextPanel: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Sprint 9 — Mimicry Engine project-wide voice DNA */}
+                <MimicryEngineCard placement="context-panel" />
               </motion.div>
             )}
 

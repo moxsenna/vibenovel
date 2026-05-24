@@ -7,7 +7,8 @@ const MODES = [
   { id: 'brainstorm', label: '💬 Brainstorm' },
   { id: 'outline', label: '📋 Outline' },
   { id: 'write', label: '✍ Menulis' },
-  { id: 'review', label: '📊 Review' }
+  { id: 'review', label: '📊 Review' },
+  { id: 'visualize', label: '🌌 Visualisasi' }
 ] as const
 
 export const ModeSwitcher: React.FC = () => {
@@ -15,7 +16,10 @@ export const ModeSwitcher: React.FC = () => {
   const setMode = useUiStore((s) => s.setMode)
 
   return (
-    <div className="flex justify-center space-x-2 overflow-x-auto scrollbar-hide py-1 w-full max-w-full">
+    <div
+      className="flex justify-center space-x-2 overflow-x-auto scrollbar-hide py-1 w-full max-w-full"
+      data-tour-step="mode-switcher"
+    >
       <div className="flex bg-surface-container-low p-1 rounded-full border border-surface-variant/10">
         {MODES.map((mode) => {
           const isActive = activeMode === mode.id

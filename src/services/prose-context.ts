@@ -122,7 +122,9 @@ export function buildProseInput(args: BuildProseInputArgs): ProseGenerateInput {
     slidingWindowPrevChapter,
     loreContext,
     characterStates: characterStatesContext,
-    voiceDna
+    voiceDna,
+    // Sprint 9 — null-safe project-wide voice DNA from Mimicry Engine.
+    projectVoiceDna: project.voice_dna_project ?? {}
   }
 }
 

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useProjectStore } from './useProjectStore'
 import { useSettingsStore } from './useSettingsStore'
+import { useUiStore } from './useUiStore'
 import { aiRouter } from '../services/ai/ai-router'
 import {
   buildCoAuthorSystemInstruction,
@@ -341,6 +342,7 @@ export const useChatStore = create<ChatStore>()(
                 ? editedData
                 : msg.draftData.data) as Record<string, unknown>
               const projectStore = useProjectStore.getState()
+              const uiStore = useUiStore.getState()
 
               const str = (k: string): string => {
                 const v = dataToUse[k]
@@ -359,39 +361,87 @@ export const useChatStore = create<ChatStore>()(
                 return typeof v === 'boolean' ? v : fallback
               }
 
+              // Sprint 9.5 — Conflict detection helpers.
+              // Match by case-insensitive name. If user already manually
+              // edited an entry with the same name (after AI proposed the
+              // draft), warn instead of blindly creating a duplicate.
+              const findCharByName = (name: string) =>
+                projectStore.characters.find(
+                  (c) => c.name.toLowerCase() === name.toLowerCase()
+                )
+              const findItemByName = (name: string) =>
+                projectStore.items.find(
+                  (i) => i.name.toLowerCase() === name.toLowerCase()
+                )
+              const findRuleByName = (name: string) =>
+                projectStore.worldRules.find(
+                  (r) => r.name.toLowerCase() === name.toLowerCase()
+                )
+
               if (msg.draftData.type === 'character') {
+                const name = str('name') || 'Tanpa Nama'
+                const existing = findCharByName(name)
+                if (existing) {
+                  // Warn about potential dirty write — let the user resolve.
+                  uiStore.addToast(
+                    `⚠️ Tokoh "${name}" sudah ada di Lorebook. Setujui draft ini akan menggandakan. Edit manual via Story Compass kalau mau update tokoh existing.`,
+                    'warning',
+                    7000
+                  )
+                  return { messages: { ...state.messages, [projectId]: updatedMsgs } }
+                }
                 projectStore.addCharacter({
                   project_id: projectId,
-                  name: str('name') || 'Tanpa Nama',
+                  name,
                   role: (str('role') as Character['role']) || 'SUPPORTING',
                   description: str('description'),
                   voice_dna: (dataToUse.voice_dna as Record<string, unknown>) || {},
                   activation_keys: arr('activation_keys').length
                     ? arr('activation_keys')
-                    : [str('name')],
+                    : [name],
                   priority: num('priority', 5),
                   is_locked: bool('is_locked', false),
                   genesis: (str('genesis') as Character['genesis']) || 'BRAINSTORMED'
                 })
               } else if (msg.draftData.type === 'item') {
+                const name = str('name') || 'Tanpa Nama'
+                const existing = findItemByName(name)
+                if (existing) {
+                  uiStore.addToast(
+                    `⚠️ Item "${name}" sudah ada di Lorebook. Edit manual kalau mau update yang existing.`,
+                    'warning',
+                    7000
+                  )
+                  return { messages: { ...state.messages, [projectId]: updatedMsgs } }
+                }
                 projectStore.addItem({
                   project_id: projectId,
-                  name: str('name') || 'Tanpa Nama',
+                  name,
                   category: (str('category') as Item['category']) || 'OTHER',
                   description: str('description'),
                   significance: str('significance'),
                   activation_keys: arr('activation_keys').length
                     ? arr('activation_keys')
-                    : [str('name')],
+                    : [name],
                   current_owner: str('current_owner'),
                   priority: num('priority', 5),
                   genesis: (str('genesis') as Item['genesis']) || 'BRAINSTORMED'
                 })
               } else if (msg.draftData.type === 'world_rule') {
+                const name = str('name') || 'Tanpa Nama'
+                const existing = findRuleByName(name)
+                if (existing) {
+                  uiStore.addToast(
+                    `⚠️ World rule "${name}" sudah ada. Edit manual kalau mau update.`,
+                    'warning',
+                    7000
+                  )
+                  return { messages: { ...state.messages, [projectId]: updatedMsgs } }
+                }
                 projectStore.addWorldRule({
                   project_id: projectId,
                   category: (str('category') as WorldRule['category']) || 'OTHER',
-                  name: str('name') || 'Tanpa Nama',
+                  name,
                   description: str('description'),
                   priority: num('priority', 5),
                   activation_keys: arr('activation_keys'),

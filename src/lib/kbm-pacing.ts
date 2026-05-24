@@ -240,10 +240,45 @@ export function validateFalseResolution(
 }
 
 /**
- * Warns if the project's Hook Chain isn't populated even though the user is
- * already past the Compass setup phase. Series Hook is the single open
- * question that powers the whole novel.
+ * Sprint 7 — Dangling thread alert
+ *
+ * Warns about threads that are PLANTED or ACTIVE and have been open
+ * for more than `staleAfter` chapters. CRITICAL/HIGH urgency surfaces a
+ * stronger message; lower urgencies are gentler reminders.
  */
+export interface DanglingThreadInput {
+  threads: Array<{
+    title: string
+    planted_at: number
+    status: 'PLANTED' | 'ACTIVE' | 'RESOLVED' | 'ABANDONED'
+    urgency: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  }>
+  currentChapter: number
+  staleAfter?: number // default 10
+}
+
+export function validateDanglingThreads(
+  input: DanglingThreadInput
+): PacingValidationResult {
+  const staleAfter = input.staleAfter ?? 10
+  const warnings: string[] = []
+  for (const t of input.threads) {
+    if (t.status === 'RESOLVED' || t.status === 'ABANDONED') continue
+    const age = input.currentChapter - t.planted_at
+    if (age < staleAfter) continue
+
+    if (t.urgency === 'CRITICAL' || t.urgency === 'HIGH') {
+      warnings.push(
+        `🪝 Thread ${t.urgency} "${t.title}" sudah ${age} bab tanpa resolusi (planted bab ${t.planted_at}). Pembaca akan kecewa kalau tidak ada gerakan segera.`
+      )
+    } else {
+      warnings.push(
+        `Thread "${t.title}" tergantung sejak bab ${t.planted_at} (${age} bab silam). Pertimbangkan resolusi atau update.`
+      )
+    }
+  }
+  return { valid: warnings.length === 0, warnings }
+}
 export interface HookChainCoverageInput {
   seriesHook: string | null | undefined
   seasonHooks: string[] | null | undefined
@@ -268,4 +303,79 @@ export function validateHookChainCoverage(
     valid: warnings.length === 0,
     warnings
   }
+}
+
+
+// ── Sprint 8 — Story Arc Helpers ──────────────────────────────────────────
+
+export interface ArcBand {
+  /** Stable id e.g. "opening", "setup", ... */
+  id: string
+  /** Display label including emoji + name. */
+  label: string
+  /** Inclusive lower bound (1-indexed chapter number). */
+  startChapter: number
+  /** Inclusive upper bound (1-indexed chapter number). */
+  endChapter: number
+  /** One-line description for tooltips. */
+  description: string
+}
+
+const ARC_BAND_PROFILE: Array<{
+  id: string
+  emoji: string
+  name: string
+  ratioEnd: number
+  description: string
+}> = [
+  { id: 'opening', emoji: '🎬', name: 'Opening', ratioEnd: 0.05, description: 'Perkenalan dunia + karakter. Hook kuat.' },
+  { id: 'setup', emoji: '🌱', name: 'Setup', ratioEnd: 0.15, description: 'Bangun character investment + vulnerability.' },
+  { id: 'inciting', emoji: '⚡', name: 'Inciting Incident', ratioEnd: 0.25, description: 'Konflik utama mulai muncul.' },
+  { id: 'rising', emoji: '📈', name: 'Rising Action', ratioEnd: 0.40, description: 'Eskalasi konflik, stakes naik.' },
+  { id: 'midpoint', emoji: '🎯', name: 'Midpoint', ratioEnd: 0.50, description: 'Twist besar atau false resolution.' },
+  { id: 'complications', emoji: '🌪', name: 'Complications', ratioEnd: 0.65, description: 'Konsekuensi midpoint. Tekanan bertambah.' },
+  { id: 'crisis', emoji: '🌑', name: 'Crisis', ratioEnd: 0.75, description: 'Momen paling gelap. Semua tampak mustahil.' },
+  { id: 'climax-approach', emoji: '🌗', name: 'Climax Approach', ratioEnd: 0.85, description: 'Persiapan klimaks. Resolusi misteri.' },
+  { id: 'climax', emoji: '🌟', name: 'Climax', ratioEnd: 0.95, description: 'Pertarungan/konfrontasi besar. Emosi puncak.' },
+  { id: 'resolution', emoji: '🌅', name: 'Resolution', ratioEnd: 1.0, description: 'Penutupan. Jawaban terakhir. Epilog.' }
+]
+
+/**
+ * Returns the arc-band classification for a single chapter (text form).
+ * This is the legacy helper kept for outline-engine prompt compat.
+ */
+export function getArcPosition(chapterNumber: number, totalChapters: number): string {
+  const ratio = chapterNumber / Math.max(totalChapters, 1)
+  for (const band of ARC_BAND_PROFILE) {
+    if (ratio <= band.ratioEnd) {
+      return `${band.emoji} ${band.name.toUpperCase()} — ${band.description}`
+    }
+  }
+  return `${ARC_BAND_PROFILE[ARC_BAND_PROFILE.length - 1].emoji} RESOLUTION — Penutupan.`
+}
+
+/**
+ * Build the full ordered list of arc bands for a project. Used by
+ * Timeline View to render section dividers grouping chapters.
+ */
+export function computeArcBands(totalChapters: number): ArcBand[] {
+  const total = Math.max(totalChapters, 1)
+  let cursor = 1
+  const bands: ArcBand[] = []
+  ARC_BAND_PROFILE.forEach((band, idx) => {
+    const isLast = idx === ARC_BAND_PROFILE.length - 1
+    const ceilEnd = Math.max(cursor, Math.ceil(band.ratioEnd * total))
+    const endChapter = isLast ? total : Math.min(total, ceilEnd)
+    if (endChapter < cursor) return // skip empty
+    bands.push({
+      id: band.id,
+      label: `${band.emoji} ${band.name}`,
+      startChapter: cursor,
+      endChapter,
+      description: band.description
+    })
+    cursor = endChapter + 1
+    if (cursor > total) return
+  })
+  return bands
 }

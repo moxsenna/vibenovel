@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useChatStore } from '../../store/useChatStore'
+import type { ChatMessage } from '../../store/useChatStore'
 import { useProjectStore } from '../../store/useProjectStore'
 import { AiMessageBubble } from './AiMessageBubble'
+import { EditDraftModal } from '../modals/EditDraftModal'
 
 interface CoAuthorChatProps {
   projectId: string
@@ -11,6 +13,9 @@ interface CoAuthorChatProps {
 export const CoAuthorChat: React.FC<CoAuthorChatProps> = ({ projectId }) => {
   const [chatInput, setChatInput] = useState('')
   const chatBottomRef = useRef<HTMLDivElement>(null)
+
+  // Local state for EditDraftModal
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null)
 
   // Chat Store hooks
   const chatMessages = useChatStore((s) => s.getProjectMessages(projectId))
@@ -111,22 +116,7 @@ export const CoAuthorChat: React.FC<CoAuthorChatProps> = ({ projectId }) => {
                 <AiMessageBubble
                   message={msg}
                   onApprove={() => updateMessageDraftStatus(projectId, msg.id, 'approved')}
-                  onEdit={() => {
-                    const draftRecord = msg.draftData?.data
-                    const currentName =
-                      typeof draftRecord?.name === 'string' ? draftRecord.name : undefined
-                    const currentEnding =
-                      typeof draftRecord?.target_ending === 'string'
-                        ? draftRecord.target_ending
-                        : undefined
-                    const editedText = prompt('Edit draf data:', currentName ?? currentEnding ?? '')
-                    if (editedText !== null && draftRecord) {
-                      const updatedData: Record<string, unknown> = currentName !== undefined
-                        ? { ...draftRecord, name: editedText }
-                        : { ...draftRecord, target_ending: editedText }
-                      updateMessageDraftStatus(projectId, msg.id, 'edited', updatedData)
-                    }
-                  }}
+                  onEdit={() => setEditingMessage(msg)}
                   onReject={() => updateMessageDraftStatus(projectId, msg.id, 'rejected')}
                 />
               </motion.div>
@@ -229,6 +219,19 @@ export const CoAuthorChat: React.FC<CoAuthorChatProps> = ({ projectId }) => {
           VibeNovel AI dapat membuat kesalahan. Cek kembali ide penting ceritamu.
         </p>
       </div>
+
+      {/* Premium themed Edit Draft Modal */}
+      <EditDraftModal
+        isOpen={editingMessage !== null}
+        onClose={() => setEditingMessage(null)}
+        draftType={editingMessage?.draftData?.type || ''}
+        initialData={editingMessage?.draftData?.data || {}}
+        onSave={(updatedData) => {
+          if (editingMessage) {
+            updateMessageDraftStatus(projectId, editingMessage.id, 'edited', updatedData)
+          }
+        }}
+      />
     </div>
   )
 }

@@ -18,6 +18,8 @@
 import { aiRouter } from './ai/ai-router'
 import { stateTracker } from './state-tracker'
 import { buildProseInput, ensureBeatsForChapter } from './prose-context'
+import { analyzeChapterThreads } from './thread-tracker'
+import { generateChapterSummary, buildSummaryUpsertPayload } from './chapter-summary'
 import type {
   BatchOptions,
   BatchProgress,
@@ -396,24 +398,78 @@ export class BatchGenerator {
   ): Promise<void> {
     const { activeProject } = snapshot
     if (!activeProject) return
-    try {
-      const prevStates = snapshot.getLatestStatesForChapter(chapter.chapter_number)
-      const prevContext =
-        prevStates.length > 0
-          ? stateTracker.formatStatesForContext(prevStates, snapshot.characters)
-          : undefined
-      const states = await stateTracker.generateStateSnapshot(
-        activeProject,
-        { ...chapter, prose: fullProse },
-        snapshot.characters,
-        prevContext
-      )
-      if (states.length > 0) {
-        await snapshot.upsertCharacterStates(chapter.chapter_number, states)
-      }
-    } catch (e) {
-      console.warn('[Batch] state snapshot failed:', e)
-    }
+
+    const tasks: Promise<unknown>[] = []
+
+    // ── Layer 2: character state snapshot ───────────────────────────
+    tasks.push(
+      (async () => {
+        try {
+          const prevStates = snapshot.getLatestStatesForChapter(chapter.chapter_number)
+          const prevContext =
+            prevStates.length > 0
+              ? stateTracker.formatStatesForContext(prevStates, snapshot.characters)
+              : undefined
+          const states = await stateTracker.generateStateSnapshot(
+            activeProject,
+            { ...chapter, prose: fullProse },
+            snapshot.characters,
+            prevContext
+          )
+          if (states.length > 0) {
+            await snapshot.upsertCharacterStates(chapter.chapter_number, states)
+          }
+        } catch (e) {
+          console.warn('[Batch] state snapshot failed:', e)
+        }
+      })()
+    )
+
+    // ── Sprint 7: thread analysis ───────────────────────────────────
+    tasks.push(
+      (async () => {
+        try {
+          const prevSummaries = snapshot.chapterSummaries
+            .filter((s) => s.chapter_id !== chapter.id)
+            .slice(-5)
+            .map((s) => s.summary)
+          const result = await analyzeChapterThreads(
+            { ...chapter, prose: fullProse },
+            snapshot.plotThreads,
+            prevSummaries
+          )
+          await snapshot.applyThreadAnalysis(
+            chapter.chapter_number,
+            activeProject.id,
+            result
+          )
+        } catch (e) {
+          console.warn('[Batch] thread analysis failed:', e)
+        }
+      })()
+    )
+
+    // ── Sprint 7: chapter summary + embedding ───────────────────────
+    tasks.push(
+      (async () => {
+        try {
+          const prevSummary = snapshot.chapterSummaries
+            .filter((s) => s.chapter_id !== chapter.id)
+            .slice(-1)[0]?.summary
+          const result = await generateChapterSummary(
+            { ...chapter, prose: fullProse },
+            prevSummary
+          )
+          await snapshot.upsertChapterSummary(
+            buildSummaryUpsertPayload({ ...chapter, prose: fullProse }, result)
+          )
+        } catch (e) {
+          console.warn('[Batch] chapter summary failed:', e)
+        }
+      })()
+    )
+
+    await Promise.allSettled(tasks)
   }
 
   // ── Progress helpers ─────────────────────────────────────────────────
