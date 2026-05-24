@@ -9,6 +9,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUiStore } from '../../store/useUiStore'
+import { useSettingsStore } from '../../store/useSettingsStore'
 import { useBatchGenerator } from '../../hooks/useBatchGenerator'
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
@@ -19,6 +20,8 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
 export const BatchProgressPanel: React.FC = () => {
   const progress = useUiStore((s) => s.batchProgress)
   const showConfirm = useUiStore((s) => s.showConfirm)
+  const deepThinkEnabled = useSettingsStore((s) => s.deepThinkEnabled)
+  const deepThinkInBatch = useSettingsStore((s) => s.deepThinkInBatch)
   const { pauseBatch, resumeBatch, abortBatch } = useBatchGenerator()
 
   // Tick once per second so the elapsed-time stat refreshes without
@@ -66,6 +69,16 @@ export const BatchProgressPanel: React.FC = () => {
             {progress.current}/{progress.total} · {pct}%
           </span>
         </header>
+
+        {/* Sprint 9.7 — Deep Think active label */}
+        {deepThinkEnabled && deepThinkInBatch && (
+          <div className="px-4 py-1.5 bg-purple-500/8 border-b border-purple-500/15 flex items-center gap-1.5">
+            <span className="text-xs">🧠</span>
+            <span className="text-[10px] font-medium text-purple-300/90">
+              Deep Think aktif — adegan dirancang dulu sebelum ditulis
+            </span>
+          </div>
+        )}
 
         <div className="px-4 py-3 space-y-3">
           {/* Progress bar */}

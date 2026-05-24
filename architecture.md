@@ -46,60 +46,73 @@ graph TB
 | Layer | Teknologi | Versi | Alasan |
 |---|---|---|---|
 | Build | Vite | 6.x | Fast HMR, static export native |
-| UI | React | 19.x | Ecosystem terluas |
+| UI | React | 19.x | Ecosystem terluas, concurrency support |
 | Language | TypeScript | 5.x | Type safety |
 | Routing | React Router | 7.x | SPA routing |
-| State | Zustand | 5.x | Minimal boilerplate, devtools bagus |
-| Styling | Tailwind CSS | 4.x | Utility-first, responsive cepat |
+| State | Zustand | 5.x | Minimal boilerplate, devtools bagus, persisted middleware |
+| Styling | Tailwind CSS | 4.x | Utility-first, responsive cepat, CSS variables variables |
 | Animation | Framer Motion | 12.x | Declarative animations |
-| Charts | Recharts | 2.x | Emotional Arc Heatmap |
-| Graph | D3.js | 7.x | Constellation Map |
+| Charts | Recharts | 2.x | Emotional Arc Heatmap & Word Count Analytics (Lazy-loaded) |
+| Graph | D3.js (Scoped) | 7.x | d3-force, d3-selection, d3-scale for Constellation Map (Lazy-loaded) |
+| PWA | Vite PWA Plugin | 1.x / latest | Service Workers for offline availability and update notifications |
+| Doc Reader | Mammoth & PDF.js | latest | Lazy-loaded document parsing for manuscript imports (.docx, .pdf, .txt) |
 
 ### Component Hierarchy
 
 ```
-App.tsx
+App.tsx (Global mounts: PwaUpdatePrompt, PremiumConfirmModal, PremiumToastContainer, CommandPalette, GlobalKeybinds)
 ├── pages/
 │   ├── Lobby.tsx (Dashboard)
 │   │   ├── StatsBar
 │   │   ├── ProjectCard (× N)
 │   │   │   └── DualProgressBar
 │   │   ├── ProjectCreationModal
-│   │   │   ├── BlueprintSelector
-│   │   │   └── ImportWizard (4 steps)
+│   │   │   ├── BlueprintSelector (FRESH_BLUEPRINT picker)
+│   │   │   └── ImportWizard (4-step manuscript processor)
 │   │   └── SearchAndFilter
 │   │
-│   └── Workspace.tsx (Mode-Based)
-│       ├── TopBar (project title + progress)
-│       ├── ModeSwitcher (4 tabs)
-│       ├── ContextPanel (left 30%)
+│   └── Workspace.tsx (Mode-Based SPA Canvas)
+│       ├── Header (Conditional: Slim Header [Focus Mode] or Full Header)
+│       │   ├── HoverModeRevealer (reveals ModeSwitcher on top edge mouse hover)
+│       │   ├── ModeSwitcher (5 tabs / modes)
+│       │   └── Command Palette quick-action trigger (Ctrl/Cmd+K)
+│       ├── ContextPanel (left 30%, hidden in Focus Mode unless toggled)
 │       │   ├── [Brainstorm] StoryCompassPreview + GapDetector
-│       │   ├── [Outline]   StoryCompassPanel (tabs: Tokoh/Item/Dunia)
-│       │   ├── [Write]     ChapterOutlineView + StateSnapshot
-│       │   └── [Review]    PlotRadarPanel + ThreadTracker
+│       │   ├── [Outline]   StoryCompassPanel (Tokoh/Item/Dunia) + MimicryEngineCard (Project Voice DNA)
+│       │   ├── [Write]     ChapterOutlineView + StateTimeline (10-field Layer 2 character states)
+│       │   └── [Review]    PlotRadarPanel + ThreadTrackerPanel (lifespan tracking) + EmotionalArcPreview (tone indexes)
 │       │
 │       └── MainCanvas (right 70%)
 │           ├── [Brainstorm] CoAuthorChat
 │           │   ├── AiMessageBubble
-│           │   ├── ApprovalCard (Setuju/Edit/Tolak)
+│           │   ├── ApprovalCard (Optimistic duplicate name warning & manual edit trigger)
 │           │   └── ChatInput
 │           ├── [Outline]   SeasonArchitectPanel
 │           │   ├── SeasonAccordion
 │           │   ├── SubArcGroup
-│           │   └── ChapterOutlineCard
-│           ├── [Write]     ProseCanvasPanel
-│           │   ├── BeatEditor
+│           │   └── ChapterOutlineCard (Story Compass safeguards warning banner & bypass blocks)
+│           ├── [Write]     ProseWriterPanel
+│           │   ├── BeatEditor (Interactive beat canvas with notion-style SelectionToolbar)
 │           │   ├── BeatIndicator
-│           │   └── ProseToolbar
-│           └── [Review]    ProseReader + EmotionalArcHeatmap
+│           │   ├── FreeWriteEditor (Plain canvas mode for unguided writing)
+│           │   └── ProseToolbar (Auto-save status, ProseModelChoice dropdown, Free Write toggle)
+│           ├── [Review]    ReviewPanel (3-column layout: ProseReader, QALogs, Context)
+│           │   └── QaSeverityFilter (Tab chip severity filter with Framer Motion layoutId transition)
+│           └── [Visualize] VisualizationPanel (2x2 lazy container)
+│               ├── EmotionalArcHeatmap (Multi-lens tiles: Tone/Cliffhanger/Filler/WordCount/Status)
+│               ├── ConstellationMap (D3 force simulation or mobile list fallback with chapter range filters)
+│               ├── TimelineView (10 dynamic arc bands with sticky lifespan bars)
+│               └── WordCountAnalytics (Recharts ComposedChart with quick-navigate callbacks)
 │
 ├── modals/
-│   ├── SettingsModal (AI Engine)
-│   ├── DirectorsCutModal
-│   ├── LoreDiffModal
-│   ├── BatchSuccessModal
-│   ├── RecapModal
-│   └── TargetChangeModal
+│   ├── SettingsModal (Keys, Writing [Mimicry], Tutorial [Reindexer trigger] tabs)
+│   ├── DirectorsCutModal (3-variant stream generator and abort manager)
+│   ├── LoreDiffModal (Interactive diff viewer for AI extracted entities)
+│   ├── BatchSuccessModal (Autopilot stats)
+│   ├── RecapModal ("Sebelumnya..." generator range picker)
+│   ├── TargetChaptersAdjustmentModal (Target expand/shrink with thread/mystery clamping)
+│   ├── EditDraftModal (Multi-mode form modal for Co-Author drafts)
+│   └── ReindexModal (Sequential background AI reindexing panel)
 │
 └── ui/ (shared primitives)
     ├── Button, Toast, Spinner
@@ -235,6 +248,16 @@ Untuk mencegah kedipan layar putih saat refresh di Dark Mode (karena LocalStorag
 </head>
 ```
 
+### 5. Themed Custom Dialog & Notification Engine
+
+Seluruh interaksi dialog konfirmasi dan toast pemberitahuan di dalam aplikasi telah beralih dari bawaan native browser (`window.alert`, `window.confirm`, `window.prompt`) ke sistem kustom dinamis yang terintegrasi secara visual dengan variabel tema aktif (`Malam Kreatif` dan `Jurnal Cantik`):
+- **`PremiumConfirmModal`**: Render glassmorphism (`backdrop-blur-sm bg-black/60`) dengan animasi spring halus dari Framer Motion. Modal ini mendukung skema pewarnaan berbasis tingkat keparahan (severity-tinting):
+  - *Danger-red*: Warna aksen merah menyala untuk operasi hapus data (proyek, adegan, thread).
+  - *Warning-amber*: Warna oranye peringatan untuk penulisan ulang outline (overwrite) atau auto-pilot batch.
+  - *Info-pink/purple*: Warna ungu/merah jambu untuk pemberitahuan info umum.
+- **`PremiumToastContainer`**: Barisan notifikasi melayang di pojok kanan bawah layar dengan penghapusan otomatis berbasis durasi (auto-expiry) dan efek transisi slide-in/slide-out yang responsif.
+- **`EditDraftModal`**: Form editing interaktif khusus untuk draft revisi yang diusulkan oleh Co-Author AI, mendukung layout adaptif untuk masing-masing tipe data (`character`, `item`, `world_rule`, `ending`, `mystery`, dan `character_state`).
+
 ---
 
 ## AI Architecture
@@ -352,8 +375,15 @@ type CoreTask =
   | 'filler_detect'
   | 'thread_detect'
   | 'recap'
-  | 'import_analyze';
+  | 'import_analyze'
+  | 'project_voice_dna';
 ```
+
+> [!NOTE]
+> **Gemini Multi-Key Pool Hardening**:
+> 1. **Key Logging Protection (BYOK Guard)**: Guna memenuhi aturan keamanan `#3` (AGENTS.md), `gemini-pool.ts` telah diubah untuk menghindari logging substring potongan karakter riil dari API Key (seperti `key.substring(0,8)`) ke console error/warn. Pool menggunakan helper `keyLabel(pool, key)` yang memetakan kunci ke label indeks anonim (`key #0`, `key #1`, dst).
+> 2. **AbortSignal Integration**: Pool mendukung pembatalan asinkron via `AbortSignal` di method generation. Jika abort dipicu, pool langsung menghentikan request HTTP dan melempar error `AbortError`, bukan meluncurkan retry rate limit gratisan.
+> 3. **pgvector Embedding Support**: Pool menyediakan method `embedContent(text, signal)` berbasis model `text-embedding-004` yang merender vektor 768-dimensi float array untuk keperluan pencarian semantik (RAG) di Supabase.
 
 ---
 
@@ -400,56 +430,41 @@ graph TD
 
 ### Context Assembly Flow
 
-```
-Saat generate Beat 3 dari Bab 51:
+Pemuatan konteks dijalankan secara terarah (deterministic keyword pruning) untuk menghemat token dan menghindari kebingungan model (AI amnesia). Saat menulis adegan (beat) tertentu, alur berikut dieksekusi:
 
-1. SELALU inject:
-   - Narrative Constitution (priority 10)
-   - KBM Melodrama Protocol (priority 9)
-   - Target Ending (priority 8)
-   - Active Mystery Layers (priority 7)
+1. **Layer 1: Static Lorebook (Pangkas Kata Kunci)**:
+   - **Selalu dimasukkan**: *Narrative Constitution* (Konstitusi Narasi), *KBM Melodrama Protocol* (Protokol Melodrama), *Target Ending*, dan *Lapisan Misteri* yang aktif.
+   - **Dimasukkan secara kondisional**: Hanya tokoh, item, dan aturan dunia yang namanya/kunci aktivasinya cocok secara literal dengan teks arahan adegan berjalan (pruned by literal keyword matching). Ini menghemat hingga 80% token dibanding memasukkan seluruh Lorebook.
 
-2. KEYWORD-TRIGGERED inject:
-   Beat outline: "Kania bertemu Pria Tua di pasar malam"
-   → Extract: ["Kania", "Pria Tua", "pasar malam"]
-   → Match Lorebook:
-     ✅ Kania → profile + Voice DNA
-     ✅ Pria Tua → profile (activation key match)
-     ✅ Pasar Malam → world rule (activation key match)
-     ✅ Jam Saku → item (activation key "Pria Tua" match)
-     ❌ Ardan → not mentioned, SKIP
-     ❌ Kafe Anggrek → not triggered, SKIP
-   → ~60-80% token savings vs dumping everything
+2. **Layer 2: Dynamic State (10-Field Character States)**:
+   - Mengambil status tokoh/item yang relevan berdasarkan Bab sebelum berjalan. Status tokoh melacak 10 field komprehensif guna mencegah plot hole:
+     - *Wajib (3)*: `knowledge_state` (apa yang dia tahu di titik ini), `active_goal` (target aktif saat ini), `secrets` (rahasia yang dia sembunyikan).
+     - *Fisik & Sosial (7)*: `location` (📍 lokasi presisi), `emotional_state` (🎭 emosi aktif), `physical_condition` (💊 kondisi badan/luka), `inventory` (barang bawaan), `relationships` (relasi), `appearance_notes` (perubahan fisik/penyamaran), `alliances` (sekutu aktif).
+   - Status ini diekstrak otomatis oleh asisten latar belakang saat transisi bab selesai ke status `DRAFT`, dan dapat dibangun ulang secara manual via *Reindex Memory*.
 
-3. STATE inject:
-   - Character states for Kania and Pria Tua only
-   - Item states for Jam Saku only
+3. **Layer 3: RAG Long-Term Memory (Pencarian Semantik pgvector & Fallback)**:
+   - Vektor pencarian semantik (768 dimensi hasil bentukan `text-embedding-004`) dicocokkan dengan summary bab-bab lampau di database melalui query `match_chapter_summaries` (menggunakan cosine distance `<=>`).
+   - **Keyword Fallback**: Jika database offline atau API mengalami limitasi, sistem menjalankan pencarian kata kunci berbasis memori (in-memory token-overlap) menggunakan stopword filter Bahasa Indonesia (Jakarta connectors) dan penghitungan pembobotan normalisasi panjang teks untuk menyaring 3 bab paling relevan.
 
-4. RAG query (if chapter > 30):
-   Semantic search: "Kania Pria Tua pasar malam jam saku"
-   → Top 3 relevant chapter summaries
-
-5. SLIDING WINDOW:
-   - Last 500 words of Bab 50
-   - Bab 51 outline (full)
-   - Beat 1 + Beat 2 text (already generated)
-   - Bab 52-53 outlines (read-only fence)
-```
+4. **Layer 4: Sliding Window (Immediate Context)**:
+   - Mengambil 500 kata terakhir dari prosa bab sebelumnya (jika ada) untuk menjamin kesinambungan gaya bahasa, nada bicara, serta alur kalimat langsung.
+   - Menyertakan outline berjalan dan adegan-adegan yang telah ditulis sebelumnya pada bab aktif.
+   - Pagar pembatas (*read-only fence*) berupa outline 2 bab ke depan agar AI mengerti arah tujuan cerita tanpa melompati pembabakan.
 
 ### Token Budget
 
 ```
 Target: ~8000 tokens input per beat generation
 
-Layer 1 (Static Lorebook, pruned):    ~1500 tokens
-Layer 2 (Dynamic State, relevant): ~500 tokens
-Layer 3 (RAG, top 3 summaries):    ~600 tokens
-Layer 4 (Sliding Window):          ~2000 tokens
-System Prompt + Instructions:      ~1500 tokens
-Beat Outline + Direction:          ~400 tokens
-─────────────────────────────────
-Total:                             ~6500 tokens
-Buffer:                            ~1500 tokens
+Layer 1 (Static Lorebook, pruned):   ~1500 tokens
+Layer 2 (Dynamic State, 10-Field):   ~500 tokens
+Layer 3 (RAG, top 3 summaries):      ~600 tokens
+Layer 4 (Sliding Window & Fences):   ~2000 tokens
+System Prompt + Rules & Style:       ~1500 tokens
+Beat Outline + Direction:             ~400 tokens
+──────────────────────────────────────────────────
+Total Target:                        ~6500 tokens
+Buffer Sisa:                         ~1500 tokens
 ```
 
 ---
@@ -486,38 +501,72 @@ sequenceDiagram
     Chat->>User: "5/5 lengkap! ✅ [Generate Outline]"
 ```
 
-### Flow 2: Outline Generation
+### Flow 2: Outline Generation (Story Compass Safeguarded)
 
 ```mermaid
 sequenceDiagram
     actor User
     participant OE as Outline Engine
+    participant OS as Outlines Store Safeguard
     participant AI as Gemini (Core)
     participant CI as Context Injector
     participant DB as Supabase
 
-    User->>OE: "Generate Outline Bab 1-20"
+    User->>OE: Click "Generate Outline Bab 1-20"
+    OE->>OS: Validate Story Compass completeness
     
-    loop For each chapter 1-20
-        OE->>CI: getContextForOutline(chapterN)
-        CI->>DB: Fetch Story Compass + prev outlines
-        CI->>OE: Assembled context
-        
-        OE->>AI: outlinePrompt + context + retention rules
-        AI->>OE: Rich outline JSON (synopsis, events, cliffhanger, etc.)
-        
-        OE->>OE: Validate emotional pattern (rollercoaster check)
-        OE->>OE: Inject mystery breadcrumbs if applicable
-        OE->>OE: Set dopamine_beat flag if cycle matches
-        
-        OE->>DB: INSERT into chapters (outline fields)
-        OE->>DB: INSERT into emotional_patterns
+    alt Story Compass is INCOMPLETE
+        OS-->>User: Display disabled button + warning tooltip + deep links in SeasonArchitect
+    else Story Compass is COMPLETE (premise, genre, protagonist, antagonist, ending, mystery)
+        loop For each chapter 1-20
+            OE->>CI: getContextForOutline(chapterN)
+            CI->>DB: Fetch Story Compass + prev outlines
+            CI->>OE: Assembled context
+            
+            OE->>AI: outlinePrompt + context + retention rules
+            AI->>OE: Rich outline JSON (synopsis, events, cliffhanger, etc.)
+            
+            OE->>OE: Validate emotional pattern (rollercoaster check)
+            OE->>OE: Inject mystery breadcrumbs if applicable
+            OE->>OE: Set dopamine_beat flag if cycle matches
+            
+            OE->>DB: INSERT into chapters (outline fields)
+            OE->>DB: INSERT into emotional_patterns
+        end
+        OE->>User: "20 outline selesai! ✅"
     end
-    
-    OE->>User: "20 outline selesai! ✅"
 ```
 
-### Flow 3: Beat-by-Beat Prose Generation
+### Deep Outline Mode (Sprint 9.8)
+
+Non-streaming reasoning untuk Outline Engine. Sama prinsipnya dengan Deep Think tapi pada surface yang berbeda — outline pakai JSON-mode call, bukan SSE stream.
+
+**API method**: `geminiPool.generateContentV2()` non-streaming yang return `Promise<{ text: string; thoughtSummary?: string }>`. Compatible dengan `responseMimeType: 'application/json'` + `thinkingConfig` simultaneously.
+
+**Behavior**:
+- `thoughtSummary` di-discard — outline = analytical task, user tidak perlu lihat reasoning
+- Retry mechanism preserved sebagai defense-in-depth (Deep Outline mengurangi retry rate, bukan menggantikan)
+- `aiRouter.generateChapterOutline(input, options?)` accepts `{ thinkingBudget?, signal? }`
+
+**Default behavior matrix**:
+
+| Mode | Master ON (default) | Master OFF |
+|------|---------------------|------------|
+| Single regenerate | 🧠 Thinking aktif (1024) | ❌ Direct |
+| Batch (sub-toggle OFF, default) | ❌ Direct (avoid 200×3s penalty) | ❌ Direct |
+| Batch (sub-toggle ON) | 🧠 Thinking per bab | ❌ Direct |
+
+**Quality benefits**:
+- JSON parse retry rate turun dari ~15% ke ~3% (estimated)
+- Mystery breadcrumb placement lebih cerdas (model evaluate target_chapter optimal)
+- Cliffhanger variety lebih bervariasi (kurangi 3 bab REVELATION berturut)
+- Emotional arc consistency (model konsultasi history sebelum pilih tone)
+- False resolution placement optimal (identifikasi sub-arc yang tepat)
+- Hook chain weaving (series_hook + season_hooks lebih natural)
+
+**UI**: Collapsible "⚙️ Pengaturan Outline" panel di SeasonArchitectPanel dengan master toggle (purple), 4-preset budget selector, sub-toggle untuk batch (amber), warning text untuk batch impact.
+
+### Flow 3: Beat-by-Beat Prose Generation & Background AI Pipeline
 
 ```mermaid
 sequenceDiagram
@@ -526,40 +575,115 @@ sequenceDiagram
     participant BW as Beat Writer
     participant CI as Context Injector
     participant AI as AI Provider (Gemini/OpenRouter)
-    participant ST as State Tracker
-    participant LE as Lore Extractor
     participant DB as Supabase
+    participant BG as Background Task Chain (Promise.allSettled)
 
-    User->>Canvas: Click "✨ Tulis!" on Bab 51
+    User->>Canvas: Click "✨ Tulis!" on Bab 51 adegan 1
     
-    loop For each beat (1-4)
+    loop For each adegan/beat (1-4)
         Canvas->>BW: generateBeat(chapter51, beatN)
         BW->>CI: assembleContext(chapter51, beatN)
-        CI->>DB: Fetch layers 1-4
+        CI->>DB: Fetch layers 1-4 (deterministically pruned)
         CI->>BW: Pruned context (~6500 tokens)
         
-        BW->>AI: prosePrompt + context + beat outline
-        AI-->>Canvas: Stream text (real-time display)
+        BW->>AI: prosePrompt + context + beat outline + thinkingBudget (Sprint 9.7)
         
-        Canvas->>User: Display generated text + edit option
-        User->>Canvas: [Accept] or [Edit manually]
+        opt Deep Think active (thinkingBudget > 0)
+            AI-->>Canvas: Stream THOUGHT chunks (type: 'thought')
+            Canvas->>User: Render "🧠 Merancang adegan..." badge + collapsible thought panel
+        end
+        
+        AI-->>Canvas: Stream PROSE chunks (type: 'text')
+        Canvas->>User: Live text rendering in textarea
+        
+        Note over Canvas,User: Strict filter — only TEXT chunks accumulate to saved buffer
+        Note over Canvas,User: Debounced auto-save (2s) persists prose to localStorage/Supabase
     end
     
-    Note over Canvas,DB: Chapter complete
+    Note over Canvas,DB: Chapter completed (prose status -> 'DRAFT')
     
-    Canvas->>ST: generateStateSnapshot(chapter51)
-    ST->>AI: statePrompt + chapter51 prose
-    AI->>ST: New character states JSON
-    ST->>DB: UPSERT character_states WHERE chapter=51
+    Canvas->>BG: Trigger background analysis pipeline (Promise.allSettled)
     
-    Canvas->>LE: extractLore(chapter51)
-    LE->>AI: lorePrompt + chapter51 prose
-    AI->>LE: New entities detected
-    LE->>User: LoreDiff Modal [Approve/Reject each]
+    par State Snapshot Extraction
+        BG->>AI: Analyze prose for Layer 2 character states
+        AI-->>BG: Character state updates JSON
+        BG->>DB: UPSERT character_states
+    and Plot QA Radar Scan
+        BG->>AI: Analyze prose for QA violations (Plot Hole, Filler, Chekhov, Emotion)
+        AI-->>BG: Returns QaLog array
+        BG->>DB: UPDATE chapters set qa_logs
+    and Automatic Lore Extraction
+        BG->>AI: Extract new characters/items/world rules
+        AI-->>BG: Returns extracted entity array
+        BG-->>User: Pop up LoreDiff Modal [User edits, approves, or rejects]
+        User->>DB: INSERT approved entities
+    and Chapter Summary & Embedding (RAG)
+        BG->>AI: Generate factual JSON summary & embed via text-embedding-004
+        AI-->>BG: 768-dim float array
+        BG->>DB: INSERT chapter_summaries
+    and Thread Tracker Analysis
+        BG->>AI: Track resolution/emergence of plot threads
+        AI-->>BG: Plot threads status updates
+        BG->>DB: UPSERT plot_threads
+    end
     
-    Canvas->>DB: INSERT chapter_summary + embedding (RAG)
-    Canvas->>DB: UPDATE chapter SET status='DRAFT'
+    BG-->>User: Background indexing successfully completed! ✅
 ```
+
+### Deep Think Mode (Sprint 9.7)
+
+Two-phase streaming engine yang memberi model "ruang berpikir" sebelum men-generate prosa final:
+
+**Provider matrix**:
+
+| Provider | Mechanism | Activation |
+|----------|-----------|------------|
+| Gemini 2.5 Flash | `generationConfig.thinkingConfig: { thinkingBudget, includeThoughts: true }` | `generateContentStreamV2` di gemini-pool |
+| Claude Sonnet 4.6 (OpenRouter) | `body.reasoning: { max_tokens: thinkingBudget }` | `generateContentStreamV2` di openrouter-adapter |
+| DeepSeek V4 Flash (free) / V4 Pro | Same OpenRouter `reasoning.max_tokens` | OpenRouter unified endpoint |
+
+**Streaming response shape**:
+```typescript
+interface ThinkingChunk {
+  type: 'thought' | 'text'
+  content: string
+}
+```
+
+**SSE parsing rules**:
+- **Gemini**: iterate `candidates[0].content.parts[]`, tag chunk by `part.thought === true`
+- **OpenRouter primary**: `delta.reasoning_details[]` array dengan filter `type === 'reasoning.text' | 'reasoning.summary'`
+- **OpenRouter fallback 1**: `delta.reasoning_content` (legacy alias string)
+- **OpenRouter fallback 2**: `delta.reasoning` (legacy raw string)
+- **Final prose**: `delta.content` di OpenRouter atau `part.text` (with `thought !== true`) di Gemini
+
+**Token budget table**:
+
+| Budget | Use Case | Latency Impact |
+|--------|----------|----------------|
+| 512 | Light planning | +1 detik |
+| **1024 (default)** | Sweet spot — subtext + cliffhanger | +1-2 detik |
+| 2048 | Deep planning untuk Director's Cut quality | +2-4 detik |
+| 4096 | Maximum reasoning depth | +4-8 detik |
+
+**Default behavior matrix**:
+
+| Surface | Master ON (default) | Master OFF |
+|---------|---------------------|------------|
+| Prose Writer (interactive single beat) | 🧠 Thinking aktif (1024) | ❌ Direct prose |
+| Prose Writer (Auto-Pilot, sub OFF default) | ❌ Direct prose (avoid 200×2s penalty) | ❌ Direct prose |
+| Prose Writer (Auto-Pilot, sub ON) | 🧠 Thinking per beat | ❌ Direct prose |
+
+**Privacy & persistence**:
+- Thought tokens HANYA state lokal hook (`useBeatWriter`)
+- TIDAK pernah masuk Zustand persist, localStorage, atau Supabase
+- TIDAK masuk ke `chapter.beats[].prose` (strict filter di stream loop)
+- Hilang saat refresh browser — by design
+
+**Backward compatibility**:
+- Existing `generateContentStream()` (V1) tidak diubah
+- Director's Cut, recap, inline edit, dll tetap pakai V1 stream lama
+- Hanya `generateProseBeatStream` yang upgrade ke V2 (`AsyncGenerator<ThinkingChunk>`)
 
 ### Flow 4: Import Manuscript
 
@@ -602,7 +726,7 @@ sequenceDiagram
     IW->>User: "Import selesai! Generate outline bab 48-200?"
 ```
 
-### Flow 5: Target Chapter Change
+### Flow 5: Target Chapter Change (Expand / Shrink Safeguarded)
 
 ```mermaid
 sequenceDiagram
@@ -611,32 +735,53 @@ sequenceDiagram
     participant OE as Outline Engine
     participant DB as Supabase
 
-    User->>Modal: Change target 200 → 150
+    User->>Modal: Change target 200 → 150 (Shrink)
     
-    Modal->>DB: Query max chapter with prose
+    Modal->>DB: Query max chapter containing written prose
     DB->>Modal: Last prose chapter = 80
     
-    alt Target < last prose chapter
-        Modal->>User: "❌ Tidak bisa. Bab ditulis sampai 80."
-    else Target >= last prose chapter
-        Modal->>User: "Outline bab 151-200 akan diarsipkan. Lanjut?"
-        User->>Modal: [Konfirmasi]
+    alt Target < last prose chapter (50 < 80)
+        Modal->>User: "❌ Tidak bisa. Bab sudah ditulis sampai 80."
+    else Target >= last prose chapter (150 >= 80)
+        Modal-->>User: Show side-effect preview (chapter outlines to delete, thread clamping warning)
+        User->>Modal: Check "Saya mengerti" box & confirm
         
-        Modal->>DB: Archive outlines 151-200 → archived_outlines
+        Modal->>DB: DELETE outline-only chapters > 150
+        Modal->>DB: Clamp plot_threads resolution targets & planted states
+        Modal->>DB: Clamp mystery_layers revealed chapters & slice breadcrumbs > 150
+        Modal->>DB: DELETE character_states where chapter_number > 150
         Modal->>DB: UPDATE project SET target_chapters = 150
         
-        Modal->>OE: redistributePacing(project, newTarget=150)
-        OE->>DB: Fetch outline-only chapters (81-150)
-        
-        loop For each outline-only chapter
-            OE->>OE: Recalculate arc_position
-            OE->>OE: Adjust emotional_tone pattern
-            OE->>OE: Move climax earlier
-            OE->>DB: UPDATE chapter outline fields
-        end
-        
-        Modal->>User: "Target diubah! Outline disesuaikan. ✅"
+        Modal->>User: "Target berhasil diubah & outline berhasil disusutkan! ✅"
     end
+```
+
+### Flow 6: Free Write Reindexing & Offline Reconnect Syncing
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Editor as FreeWriteEditor/Watcher
+    participant Reindex as ReindexModal
+    participant DB as Supabase
+    participant AI as Gemini (Core)
+
+    Note over User,Editor: User toggles Free Write Mode ON
+    User->>Editor: Type prose manually (Unguided Free Write Canvas)
+    Editor->>DB: Save raw prose to database (Automatic background AI pipeline is SKIPPED)
+    
+    Note over User,Editor: User toggles Free Write Mode OFF (Watcher detects missing artifacts)
+    Editor->>Reindex: Auto-open reindexing modal (found chapters without summaries/states)
+    Reindex->>User: Display chapters needing backfill + ETA estimation
+    
+    User->>Reindex: Click "Mulai Sinkronisasi"
+    loop For each unsynced chapter sequentially
+        Reindex->>DB: Fetch chapter prose and cumulative preceding states
+        Reindex->>AI: Generate State Snapshot, QA logs, Lore, summary & threads (Promise.allSettled)
+        AI-->>Reindex: Returns structured JSON artifacts
+        Reindex->>DB: UPSERT character_states, thread statuses, summaries & qa_logs
+    end
+    Reindex->>User: Reindexing successfully completed! ✅
 ```
 
 ---
@@ -697,6 +842,10 @@ erDiagram
         text status
         text narrative_constitution
         text target_ending
+        text theme_and_tone
+        text series_hook
+        text[] season_hooks
+        jsonb voice_dna_project
     }
 
     CHARACTERS {
@@ -706,6 +855,8 @@ erDiagram
         text role
         jsonb voice_dna
         text[] activation_keys
+        int priority
+        bool is_locked
         text genesis
     }
 
@@ -717,6 +868,19 @@ erDiagram
         text significance
         text current_owner
         text[] activation_keys
+        int priority
+        text genesis
+    }
+
+    WORLD_RULES {
+        uuid id PK
+        uuid project_id FK
+        text category
+        text name
+        text description
+        int priority
+        text[] activation_keys
+        text genesis
     }
 
     CHAPTERS {
@@ -735,6 +899,39 @@ erDiagram
         text outline_source
         text prose_source
         bool is_locked
+        bool false_resolution
+        jsonb qa_logs
+    }
+
+    CHARACTER_STATES {
+        uuid id PK
+        uuid character_id FK
+        int chapter_number
+        text location
+        text physical_condition
+        text emotional_state
+        text[] inventory
+        jsonb relationships
+        text last_action
+        text[] knowledge_state
+        text active_goal
+        text[] secrets
+        text appearance_notes
+        text[] alliances
+        text source
+    }
+
+    PLOT_THREADS {
+        uuid id PK
+        uuid project_id FK
+        text title
+        int planted_at
+        text status
+        int resolved_at
+        text urgency
+        text[] related_characters
+        text[] related_items
+        text notes
     }
 
     MYSTERY_LAYERS {
@@ -752,6 +949,7 @@ erDiagram
     CHAPTER_SUMMARIES {
         uuid id PK
         uuid chapter_id FK
+        uuid project_id FK
         text summary
         vector embedding
         jsonb key_facts
@@ -844,43 +1042,74 @@ graph LR
 ```
 
 // src/store/useSettingsStore.ts
-// Manages: API keys, provider selection, user preferences
+// Manages: API keys, provider selection, user preferences, and writing modes
 // Persisted to localStorage (NEVER sent to server)
 interface SettingsStore {
   geminiKeys: string[];
   openRouterKey: string | null;
   openRouterModel: string;
   defaultProseProvider: 'gemini' | 'openrouter';
+  activeProseModel: string; // Persisted chosen model
+  freeWriteMode: boolean;    // Toggle unguided free write mode
   wordCountDefault: number;
   
   addGeminiKey(key: string): void;
   removeGeminiKey(index: number): void;
   setOpenRouterKey(key: string): void;
+  toggleFreeWriteMode(): void;
 }
 
 // src/store/useChatStore.ts
-// Manages: Co-Author chat history per project
+// Manages: Co-Author chat history per project and draft data validation
 interface ChatStore {
   messages: Map<string, ChatMessage[]>;  // projectId → messages
   coAuthorMode: 'SETUP' | 'CONSULTATION' | 'REVISION';
   
   addMessage(projectId: string, msg: ChatMessage): void;
   clearHistory(projectId: string): void;
+  updateMessageDraftStatus(projectId: string, msgId: string, status: 'approved' | 'rejected', editedData?: any): void; // Handles name duplicate-by-name detection
 }
 
 // src/store/useUiStore.ts
-// Manages: UI state (active mode, panel visibility, modals, theme)
+// Manages: UI state (active mode, focus mode, global modals, toasts queue, and confirm triggers)
+interface Toast {
+  id: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  duration?: number;
+}
+
+interface ConfirmOptions {
+  title: string;
+  message: string;
+  severity: 'info' | 'warning' | 'danger';
+  onConfirm: () => void;
+  onCancel?: () => void;
+}
+
 interface UiStore {
-  activeMode: 'brainstorm' | 'outline' | 'write' | 'review';
+  activeMode: 'brainstorm' | 'outline' | 'write' | 'review' | 'visualize';
   contextPanelOpen: boolean;
   activeModal: string | null;
   activeChapter: number;
   theme: 'light' | 'dark';
+  focusMode: boolean;         // Persisted focus mode (default true)
+  paletteOpen: boolean;       // Transient command palette (Cmd+K) state
+  toasts: Toast[];            // Global toast queue
+  confirmOptions: ConfirmOptions | null; // Global confirmation state
+  batchProgress: BatchProgress | null;   // Autopilot progress tracker
   
   setMode(mode: string): void;
   toggleContextPanel(): void;
   openModal(name: string): void;
   toggleTheme(): void;
+  setFocusMode(focus: boolean): void;
+  toggleFocusMode(): void;
+  setPaletteOpen(open: boolean): void;
+  addToast(message: string, type: Toast['type'], duration?: number): void;
+  removeToast(id: string): void;
+  showConfirm(options: ConfirmOptions): void;
+  hideConfirm(): void;
 }
 ```
 
@@ -939,16 +1168,24 @@ graph TD
 | Service | Tanggung Jawab | AI Engine |
 |---|---|---|
 | **ai-router.ts** | Route request ke Gemini atau OpenRouter | — |
-| **gemini-pool.ts** | Multi-key rotation, cooldown, rate limit handling | Gemini |
+| **gemini-pool.ts** | Multi-key rotation, cooldown, rate limit handling, embeddings, AbortSignal handling | Gemini |
 | **openrouter-adapter.ts** | Adapter untuk Claude/Deepseek via OpenRouter | OpenRouter |
-| **context-injector.ts** | Assemble 4-layer context, keyword matching, token budgeting | — (deterministic) |
-| **state-tracker.ts** | Generate + update character/item state setelah setiap chapter | Gemini |
+| **context-injector.ts** | Assemble 4-layer context, keyword matching, token budgeting, pgvector RAG injection | — (deterministic) |
+| **state-tracker.ts** | Generate + update 10-field character/item state setelah setiap chapter | Gemini |
 | **lore-extractor.ts** | Auto-detect karakter/lokasi/item baru dari prose | Gemini |
 | **thread-tracker.ts** | Auto-detect plot threads, health check, dangling alerts | Gemini |
-| **filler-detector.ts** | Pre-generation outline check + post-generation prose check | Gemini |
-| **batch-generator.ts** | Orchestrate sequential multi-chapter generation | User choice |
-| **import-analyzer.ts** | Extract entities dari imported manuscript | Gemini |
-| **rag-service.ts** | Semantic search chapter summaries via pgvector | — |
+| **filler-detector.ts** | Pre-generation check + post-generation prose check | Gemini |
+| **batch-generator.ts** | Orchestrate sequential multi-chapter autopilot prose generation | User choice |
+| **import-analyzer.ts** | Tier-1 (Quick Scan) & Tier-2 (Deep Analysis) orchestrator for imported manuscript | Gemini |
+| **rag-service.ts** | Semantic search chapter summaries via pgvector RPC or local token-overlap keyword search fallback | — |
+| **chapter-reindexer.ts** | Sequential reindexing utility to backfill missing AI states, summaries, and thread analysis | Gemini |
+| **chapter-protection.ts** | Guardrail logic validating written prose or locked states before reduction or deletion | — (deterministic) |
+| **target-chapters-adjuster.ts** | Executes project chapter target stretching (outline generation) or shrinking (outline removal, thread clamping) | — / Gemini |
+| **project-cloner.ts** | Clones all key metadata, settings, and unrevealed lore assets to create clean spin-offs | — (deterministic) |
+| **blueprint-applier.ts** | Subsitutes bracketed placeholders and seeds FRESH_BLUEPRINT archetypes automatically | — (deterministic) |
+| **manuscript-reader.ts** | Dynamic importer for raw .txt, mammoth .docx, and pdfjs-dist .pdf text extraction | — (deterministic) |
+| **manuscript-parser.ts** | Sub-arc chapter splitter, capitalized token entity seeder, and API-cost and token estimator | — (deterministic) |
+| **import-cache.ts** | LocalStorage analysis cache using SHA-256 hashes of manuscript text to bypass API calls | — (deterministic) |
 
 ---
 
@@ -1087,48 +1324,61 @@ AI Data Flow:
 
 ### Lazy Loading Strategy
 
-```typescript
-// Heavy components loaded on demand
-const ConstellationMap = lazy(() => import('./visualization/ConstellationMap'));
-const EmotionalArcHeatmap = lazy(() => import('./visualization/EmotionalArcHeatmap'));
-const ImportWizard = lazy(() => import('./onboarding/ImportWizard'));
-const DirectorsCutModal = lazy(() => import('./modals/DirectorsCutModal'));
-```
+Guna menjaga performa pemuatan awal yang optimal (Lighthouse score ≥ 90), komponen berat dan dependensi besar di-load secara malas (*lazy loading*) hanya ketika dibutuhkan:
+1. **Visualization Panel Components**: `<VisualizationPanel />` bertindak sebagai wrapper malas. Keempat komponen visualisasi di dalamnya di-render malas menggunakan `React.lazy()` dengan `<Suspense>` boundary terpisah sehingga Recharts dan D3 hanya diunduh saat mode Visualisasi dibuka:
+   - `EmotionalArcHeatmap` (~6.5 KB)
+   - `TimelineView` (~7.3 KB)
+   - `ConstellationMap` (~27.5 KB)
+   - `WordCountAnalytics` (~377 KB - pembawa Recharts yang berat)
+2. **Onboarding & Writing Modals**:
+   - `ImportWizard` (~225 KB - Mammoth.js dan PDF.js hanya di-download saat mengimpor naskah)
+   - `DirectorsCutModal` / `EditDraftModal` / `ReindexModal`
+
+### Dynamic Code Splitting (Vite Advanced Chunks)
+
+Konfigurasi `vite.config.ts` mengadopsi Rolldown `codeSplitting.groups[]` API untuk memecah bundle monolitik menjadi 4 vendor groups utama:
+- `vendor-react`: Mengelompokkan `react`, `react-dom`, dan `react-router` (~189 KB).
+- `vendor-supabase`: Mengelompokkan `@supabase/supabase-js` dan client adapter (~200 KB).
+- `vendor-motion`: Mengelompokkan `framer-motion` (~125 KB).
+- `vendor-store`: Mengelompokkan `zustand` (~2.6 KB).
+
+Hasil pemecahan ini menurunkan ukuran entry point utama sebesar **72%** (dari **920 KB** monolitik ke **259 KB** initial load / **77 KB gzipped**), mempercepat *Time to Interactive (TTI)* secara drastis bagi pengguna baru di halaman Lobby.
 
 ### Virtual Scrolling
 
 ```
-Outline view with 200+ chapters → react-window / @tanstack/virtual
 Chapter list in Season Architect → virtualized (render only visible)
 Chat history → virtualized (keep last 50 in DOM)
 ```
 
-### Offline-First Draft
+### Offline-First Draft & Auto-Save
 
 ```
 Prose writing flow:
-  1. User types / AI generates → saved to localStorage immediately
-  2. Background sync to Supabase every 5 seconds (debounced)
-  3. If offline → queue in localStorage → sync when online
-  4. Conflict resolution: last-write-wins (single user per project)
+  1. User types / AI generates → saved to localStorage immediately via debounced auto-save (2s)
+  2. If online: Background sync to Supabase.
+  3. If offline: Cached locally under `vn_draft_{chapterId}_{beatIndex}`
+  4. Sync on Reconnect: useOfflineDraft watcher triggers automatic flush to Supabase when network is restored, followed by sequential background reindexing.
 ```
 
 ### Bundle Size Budget
 
 ```
-Target: < 500KB initial load (gzipped)
+Target: < 300KB initial load (gzipped)
 
-Core:     React + Router + Zustand       ~80KB
-Styling:  Tailwind (purged)              ~20KB
-Supabase: Client SDK                     ~40KB
-AI:       Adapter code                   ~10KB
-UI:       Components                     ~50KB
-────────────────────────────────────────
-Initial:                                 ~200KB ✅
+Initial (Lobby):
+- Main Entry (routing, context)     ~77KB (gzipped)
+- vendor-react                      ~60KB (gzipped)
+- vendor-supabase                   ~52KB (gzipped)
+- vendor-motion                     ~41KB (gzipped)
+- vendor-store                      ~1.3KB (gzipped)
+────────────────────────────────────────────────────
+Total Initial Load:                 ~231KB (gzipped) ✅
 
-Lazy:     D3.js                          ~100KB (loaded on Review tab)
-Lazy:     Recharts                       ~80KB (loaded on Review tab)
-Lazy:     Framer Motion                  ~50KB
+Lazy Loaded Chunks:
+- Recharts (WordCountAnalytics)     ~109KB (gzipped, loaded only in Visualize mode)
+- D3.js (ConstellationMap)          ~10KB (gzipped, loaded only in Visualize mode)
+- Mammoth & PDF.js (ImportWizard)   ~900KB (gzipped, loaded only in Import mode)
 ```
 
 ---
@@ -1158,9 +1408,24 @@ xl:  1440px  /* Desktops — optional 3-column */
 
 ```
 Phase 3 (PWA):
-  vite-plugin-pwa → manifest.json + service worker
-  → Install to home screen
-  → Offline draft via localStorage
+  Sistem VibeNovel v2 di-build menggunakan `vite-plugin-pwa` dengan mode `registerType: 'autoUpdate'` guna memperbarui service worker secara instan di latar belakang.
+  
+  **Workbox Runtime Caching Strategies**:
+  - Google Fonts CSS → `StaleWhileRevalidate` (Cached for 7 days)
+  - Google Fonts files (woff2) → `CacheFirst` (Cached for 1 year)
+  - Supabase REST API & RPC → `NetworkFirst` (10s timeout, fallback to 1-day stale cache when offline)
+  - Supabase Auth SDK → `NetworkFirst` (5s timeout, 5 min fallback cache)
+  - Gemini & OpenRouter APIs → `NetworkOnly` (Sengaja tidak pernah di-cache karena data bersifat kontekstual/real-time)
+  - Gambar & Aset Lokal → `CacheFirst` (Cached for 30 days)
+
+  **Offline Draft Fallback Queue (`useOfflineDraft.ts`)**:
+  - Menyediakan penanganan offline otomatis. Ketika navigator mendeteksi status `offline`, penulisan prosa di BeatEditor secara otomatis disimpan ke LocalStorage dengan namespace khusus (`vn_draft_{chapterId}_{beatIndex}`) lengkap dengan stempel waktu (timestamp).
+  - Ketika browser kembali mendeteksi status `online`, watcher secara otomatis melakukan sinkronisasi ulang (syncing) mengunggah seluruh draft antrean ke database Supabase dan menjalankan reindexing asisten AI secara berurutan.
+  
+  **Dynamic SW Update Prompt (`PwaUpdatePrompt.tsx`)**:
+  - Modal melayang beranimasi Framer Motion di pojok kanan bawah yang muncul otomatis saat Service Worker mendeteksi file revisi bundle baru di server ("Versi Baru Tersedia — Reload") atau memberikan konfirmasi siap offline ("Aplikasi Siap Dipakai Offline").
+
+  → Installable: Berhasil lolos audit manifest chrome desktop/mobile untuk penambahan shortcut instalasi PWA ke Home Screen.
   → Push notifications (optional)
 
 Phase 10 (Capacitor):

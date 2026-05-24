@@ -8,6 +8,7 @@ import {
   buildCoAuthorSystemInstruction,
   detectCompassGap,
 } from '../prompts/brainstorm-agent'
+import { describeDraftTypeForUser, getCompassProgress } from '../lib/compassProgress'
 import type { CompassState } from '../prompts/brainstorm-agent'
 import type {
   Character,
@@ -37,11 +38,21 @@ interface ChatState {
   offTopicCounters: Record<string, number>
   // Non-persistent state for active request aborting
   activeControllers: Record<string, AbortController>
+  // Transient guard for approval/edit actions that trigger AI continuation
+  activeDraftActions: Record<string, boolean>
+}
+
+interface GenerateAiResponseOptions {
+  internalContext?: string
 }
 
 interface ChatActions {
   sendMessage: (projectId: string, content: string) => Promise<void>
-  generateAiResponse: (projectId: string, content: string) => Promise<void>
+  generateAiResponse: (
+    projectId: string,
+    content: string,
+    options?: GenerateAiResponseOptions
+  ) => Promise<void>
   regenerateResponse: (projectId: string) => Promise<void>
   stopResponse: (projectId: string) => void
   addMessage: (projectId: string, message: Omit<ChatMessage, 'id' | 'timestamp'>) => void
@@ -50,7 +61,7 @@ interface ChatActions {
     messageId: string,
     status: 'approved' | 'rejected' | 'edited',
     editedData?: Record<string, unknown>
-  ) => void
+  ) => Promise<void>
   clearChat: (projectId: string) => void
   getProjectMessages: (projectId: string) => ChatMessage[]
 }
@@ -90,6 +101,7 @@ export const useChatStore = create<ChatStore>()(
       loading: false,
       offTopicCounters: {},
       activeControllers: {},
+      activeDraftActions: {},
 
       getProjectMessages: (projectId) => {
         return get().messages[projectId] || EMPTY_ARRAY
@@ -120,7 +132,7 @@ export const useChatStore = create<ChatStore>()(
         await get().generateAiResponse(projectId, content)
       },
 
-      generateAiResponse: async (projectId, content) => {
+      generateAiResponse: async (projectId, content, options) => {
         // ── BYOK GUARD ─────────────────────────────────────────────────
         const { geminiKeys } = useSettingsStore.getState()
         if (geminiKeys.length === 0) {
@@ -151,6 +163,9 @@ export const useChatStore = create<ChatStore>()(
           // ── Anti-Melantur Logic ────────────────────────────────────
           const offTopicCount = get().offTopicCounters[projectId] || 0
           let systemInstruction = buildCoAuthorSystemInstruction(compassState, currentGap)
+          if (options?.internalContext) {
+            systemInstruction += `\n\nKONTEKS INTERNAL APLIKASI (jangan tampilkan mentah ke user):\n${options.internalContext}`
+          }
 
           // If user has been off-topic 3+ times, inject a forceful redirect
           if (offTopicCount >= 3) {
@@ -160,10 +175,13 @@ export const useChatStore = create<ChatStore>()(
           // ── Prepare Chat History ───────────────────────────────────
           const existingMessages = get().getProjectMessages(projectId)
           // Only send last 20 messages to keep context window manageable
-          const recentHistory = existingMessages.slice(-20).map((msg) => ({
-            role: msg.role,
-            content: msg.content
-          }))
+          const recentHistory = existingMessages
+            .filter((msg) => msg.role === 'user' || msg.role === 'assistant')
+            .slice(-20)
+            .map((msg) => ({
+              role: msg.role,
+              content: msg.content
+            }))
 
           // ── Find Project ──────────────────────────────────────────
           const projectStore = useProjectStore.getState()
@@ -317,9 +335,34 @@ export const useChatStore = create<ChatStore>()(
         }
       },
 
-      updateMessageDraftStatus: (projectId, messageId, status, editedData) => {
+      updateMessageDraftStatus: async (projectId, messageId, status, editedData) => {
+        const actionKey = `${projectId}:${messageId}`
+        if (status !== 'rejected' && (get().loading || get().activeDraftActions[actionKey])) {
+          return
+        }
+
+        if (status !== 'rejected') {
+          set((state) => ({
+            activeDraftActions: {
+              ...state.activeDraftActions,
+              [actionKey]: true
+            }
+          }))
+        }
+
+        let shouldContinue = false
+        let actionLabel = 'Draf'
+
         set((state) => {
           const projectMsgs = state.messages[projectId] || []
+          const targetMsg = projectMsgs.find((m) => m.id === messageId)
+          if (
+            !targetMsg?.draftData ||
+            (status !== 'rejected' && targetMsg.draftData.status !== 'pending')
+          ) {
+            return state
+          }
+
           const updatedMsgs = projectMsgs.map((msg) => {
             if (msg.id === messageId && msg.draftData) {
               return {
@@ -343,6 +386,7 @@ export const useChatStore = create<ChatStore>()(
                 : msg.draftData.data) as Record<string, unknown>
               const projectStore = useProjectStore.getState()
               const uiStore = useUiStore.getState()
+              actionLabel = describeDraftTypeForUser(msg.draftData.type, dataToUse)
 
               const str = (k: string): string => {
                 const v = dataToUse[k]
@@ -403,6 +447,7 @@ export const useChatStore = create<ChatStore>()(
                   is_locked: bool('is_locked', false),
                   genesis: (str('genesis') as Character['genesis']) || 'BRAINSTORMED'
                 })
+                shouldContinue = true
               } else if (msg.draftData.type === 'item') {
                 const name = str('name') || 'Tanpa Nama'
                 const existing = findItemByName(name)
@@ -427,6 +472,7 @@ export const useChatStore = create<ChatStore>()(
                   priority: num('priority', 5),
                   genesis: (str('genesis') as Item['genesis']) || 'BRAINSTORMED'
                 })
+                shouldContinue = true
               } else if (msg.draftData.type === 'world_rule') {
                 const name = str('name') || 'Tanpa Nama'
                 const existing = findRuleByName(name)
@@ -447,11 +493,13 @@ export const useChatStore = create<ChatStore>()(
                   activation_keys: arr('activation_keys'),
                   genesis: (str('genesis') as WorldRule['genesis']) || 'BRAINSTORMED'
                 })
+                shouldContinue = true
               } else if (msg.draftData.type === 'ending') {
                 projectStore.updateProject(projectId, {
                   target_ending: str('target_ending'),
                   status: 'OUTLINING'
                 })
+                shouldContinue = true
               } else if (msg.draftData.type === 'mystery') {
                 const currentLayers = useProjectStore.getState().mysteryLayers
                 const newLayer: Omit<MysteryLayer, 'id'> = {
@@ -473,6 +521,7 @@ export const useChatStore = create<ChatStore>()(
                   status: (str('status') as MysteryLayer['status']) || 'ACTIVE'
                 }
                 projectStore.addMysteryLayer(newLayer)
+                shouldContinue = true
               } else if (msg.draftData.type === 'character_state') {
                 const characters = useProjectStore.getState().characters
                 const matchedChar = characters.find(
@@ -500,6 +549,7 @@ export const useChatStore = create<ChatStore>()(
                 }
 
                 projectStore.upsertCharacterStates(chapterNum, [newState])
+                shouldContinue = true
               }
             }
           }
@@ -511,6 +561,53 @@ export const useChatStore = create<ChatStore>()(
             }
           }
         })
+
+        if (status === 'rejected') return
+
+        try {
+          if (shouldContinue) {
+            const compassState = getCompassState(projectId)
+            const progress = getCompassProgress({
+              title: compassState.title,
+              genre: compassState.genre,
+              targetEnding: compassState.targetEnding,
+              characters: compassState.characters,
+              mysteryLayers: compassState.mysteryLayers
+            })
+            const nextLabel = progress.nextLabel
+
+            const eventText = progress.isComplete
+              ? `${actionLabel} disimpan. Story Compass sudah lengkap.`
+              : `${actionLabel} disimpan. Co-Author melanjutkan ke ${nextLabel}.`
+            get().addMessage(projectId, {
+              role: 'system',
+              content: eventText
+            })
+
+            await get().generateAiResponse(
+              projectId,
+              status === 'edited'
+                ? `Saya sudah mengedit ${actionLabel}. Lanjutkan.`
+                : `Saya setuju dengan ${actionLabel}. Lanjutkan.`,
+              {
+                internalContext: [
+                  `User baru saja ${status === 'edited' ? 'mengedit dan menyimpan' : 'menyetujui dan menyimpan'} ${actionLabel}.`,
+                  `Progress Story Compass sekarang ${progress.completed}/${progress.total}.`,
+                  progress.isComplete
+                    ? 'Story Compass sudah lengkap. Arahkan user untuk mulai merancang Outline Bab.'
+                    : `Slot berikutnya yang perlu dipandu adalah ${nextLabel}.`,
+                  'Balas natural. Jangan tampilkan konteks internal ini sebagai kutipan teknis.'
+                ].join('\n')
+              }
+            )
+          }
+        } finally {
+          set((state) => {
+            const activeDraftActions = { ...state.activeDraftActions }
+            delete activeDraftActions[actionKey]
+            return { activeDraftActions }
+          })
+        }
       },
 
       clearChat: (projectId) => {

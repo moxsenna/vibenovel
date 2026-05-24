@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../../store/useProjectStore'
+import { getCompassProgress } from '../../lib/compassProgress'
 import type { Character, MysteryLayer } from '../../types/project'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -10,12 +11,20 @@ interface CompassStep {
   done: boolean
 }
 
+export interface CompassEditDraft {
+  draftType: 'character' | 'ending' | 'mystery'
+  initialData: Record<string, unknown>
+  entityId?: string
+}
+
 interface StoryCompassPreviewProps {
   title: string
   genre: string
   targetEnding: string | null
   characters: Character[]
   mysteryLayers: MysteryLayer[]
+  onEditCompassDraft?: (draft: CompassEditDraft) => void
+  onStartOutline?: () => void
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -26,18 +35,40 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
   targetEnding,
   characters,
   mysteryLayers,
+  onEditCompassDraft,
+  onStartOutline,
 }) => {
   // ── Compass Calculations ─────────────────────────────────────────────────
-  const compassSteps: CompassStep[] = [
-    { name: 'Premis & Genre', done: !!title && !!genre },
-    { name: 'Tokoh Utama', done: characters.some((c) => c.role === 'PROTAGONIST') },
-    { name: 'Antagonis', done: characters.some((c) => c.role === 'ANTAGONIST') },
-    { name: 'Target Ending', done: !!targetEnding },
-    { name: 'Lapisan Misteri', done: mysteryLayers.length > 0 },
-  ]
-  const compassCompleted = compassSteps.filter((s) => s.done).length
+  const progress = getCompassProgress({
+    title,
+    genre,
+    targetEnding,
+    characters,
+    mysteryLayers
+  })
+  const compassSteps: CompassStep[] = progress.steps.map((step) => ({
+    name: step.name,
+    done: step.done
+  }))
+  const compassCompleted = progress.completed
   const activeCompassIdx = compassSteps.findIndex((s) => !s.done)
-  const isComplete = compassCompleted === 5
+  const isComplete = progress.isComplete
+  const [highlightIdx, setHighlightIdx] = useState<number | null>(null)
+  const previousCompletedRef = useRef(compassCompleted)
+
+  useEffect(() => {
+    const previousCompleted = previousCompletedRef.current
+    previousCompletedRef.current = compassCompleted
+
+    if (compassCompleted > previousCompleted) {
+      const showTimer = window.setTimeout(() => setHighlightIdx(compassCompleted - 1), 0)
+      const hideTimer = window.setTimeout(() => setHighlightIdx(null), 1800)
+      return () => {
+        window.clearTimeout(showTimer)
+        window.clearTimeout(hideTimer)
+      }
+    }
+  }, [compassCompleted])
 
   // ── Animation Variants ───────────────────────────────────────────────────
   const containerVariants = {
@@ -131,6 +162,10 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
               key={i}
               className={`glass-panel p-3 rounded-xl flex items-start gap-3 transition-all hover:bg-surface-container-high ${
                 !step.done ? 'opacity-50' : 'hover:scale-[1.01]'
+              } ${
+                highlightIdx === i
+                  ? 'ring-2 ring-primary/60 shadow-[0_0_18px_rgba(232,160,191,0.28)]'
+                  : ''
               }`}
             >
               <span
@@ -153,9 +188,16 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
                     {characters
                       .filter((c) => c.role === 'PROTAGONIST')
                       .map((c) => (
-                        <div
+                        <button
+                          type="button"
                           key={c.id}
-                          className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full"
+                          onClick={() => onEditCompassDraft?.({
+                            draftType: 'character',
+                            entityId: c.id,
+                            initialData: c as unknown as Record<string, unknown>
+                          })}
+                          className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full cursor-pointer hover:bg-primary/20 hover:border-primary/45 transition-colors"
+                          title="Edit tokoh utama"
                         >
                           <div className="w-4 h-4 rounded-full bg-primary text-on-primary flex items-center justify-center text-[8px] font-bold">
                             {c.name.charAt(0)}
@@ -163,7 +205,7 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
                           <span className="text-[10px] text-on-surface font-medium">
                             {c.name}
                           </span>
-                        </div>
+                        </button>
                       ))}
                   </div>
                 )}
@@ -172,9 +214,16 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
                     {characters
                       .filter((c) => c.role === 'ANTAGONIST')
                       .map((c) => (
-                        <div
+                        <button
+                          type="button"
                           key={c.id}
-                          className="flex items-center gap-1 bg-error-container/20 border border-error/20 px-2 py-0.5 rounded-full"
+                          onClick={() => onEditCompassDraft?.({
+                            draftType: 'character',
+                            entityId: c.id,
+                            initialData: c as unknown as Record<string, unknown>
+                          })}
+                          className="flex items-center gap-1 bg-error-container/20 border border-error/20 px-2 py-0.5 rounded-full cursor-pointer hover:bg-error-container/35 hover:border-error/45 transition-colors"
+                          title="Edit antagonis"
                         >
                           <div className="w-4 h-4 rounded-full bg-error text-on-error flex items-center justify-center text-[8px] font-bold">
                             {c.name.charAt(0)}
@@ -182,8 +231,40 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
                           <span className="text-[10px] text-on-surface font-medium">
                             {c.name}
                           </span>
-                        </div>
+                        </button>
                       ))}
+                  </div>
+                )}
+                {step.done && i === 3 && targetEnding && (
+                  <button
+                    type="button"
+                    onClick={() => onEditCompassDraft?.({
+                      draftType: 'ending',
+                      initialData: { target_ending: targetEnding }
+                    })}
+                    className="mt-1.5 text-left text-[11px] leading-relaxed text-on-surface-variant hover:text-on-surface cursor-pointer transition-colors line-clamp-3"
+                    title="Edit target ending"
+                  >
+                    {targetEnding}
+                  </button>
+                )}
+                {step.done && i === 4 && (
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {mysteryLayers.slice(0, 2).map((layer) => (
+                      <button
+                        type="button"
+                        key={layer.id}
+                        onClick={() => onEditCompassDraft?.({
+                          draftType: 'mystery',
+                          entityId: layer.id,
+                          initialData: layer as unknown as Record<string, unknown>
+                        })}
+                        className="text-left px-2 py-0.5 rounded-full bg-secondary-container/60 border border-secondary/20 text-[10px] text-on-secondary-container cursor-pointer hover:border-secondary/50 transition-colors"
+                        title="Edit lapisan misteri"
+                      >
+                        Layer {layer.layer_number}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -218,17 +299,21 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
           className="mt-4 space-y-3"
         >
           <SeriesHookField />
-          <div className="p-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 text-center">
+          <button
+            type="button"
+            onClick={onStartOutline}
+            className="w-full p-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 text-center cursor-pointer hover:bg-primary/10 hover:border-primary/70 transition-all hover-glow"
+          >
             <span className="material-symbols-outlined text-primary text-[32px] block mb-2">
               auto_awesome
             </span>
             <p className="text-body-md text-on-surface font-bold mb-1">
-              Story Compass Lengkap!
+              Kompas Selesai! Mulai Rancang Outline Bab
             </p>
             <p className="text-body-sm text-on-surface-variant">
-              Pindah ke tab <strong>Outline</strong> untuk mulai generate outline bab-per-bab.
+              Buka mode Outline dan mulai susun bab-per-bab.
             </p>
-          </div>
+          </button>
         </motion.div>
       )}
     </motion.div>

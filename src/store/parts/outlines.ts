@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand'
 import type { OutlineProgress, Chapter } from '../../types/project'
 import type { ProjectStore } from '../useProjectStore'
 import { aiRouter } from '../../services/ai/ai-router'
+import { useSettingsStore } from '../useSettingsStore'
 import { validatePacing, validateFalseResolution, validateHookChainCoverage, validateDanglingThreads } from '../../lib/kbm-pacing'
 import type { OutlineResponse } from '../../services/ai/types'
 
@@ -152,6 +153,13 @@ export const outlinesPart: StateCreator<
         const pacingResult = validatePacing(emotionalHistory, [])
         const pacingWarnings = pacingResult.warnings
 
+        // Sprint 9.8 — Deep Outline gating in batch mode. Master AND batch
+        // toggle must both be ON; default OFF for batch since 200 bab × 2-3s
+        // adds ~10 minutes total.
+        const settings = useSettingsStore.getState()
+        const effectiveOutlineBudget =
+          settings.deepOutlineEnabled && settings.deepOutlineInBatch ? settings.deepOutlineBudget : 0
+
         try {
           const outline: OutlineResponse = await aiRouter.generateChapterOutline({
             title: activeProject.title,
@@ -191,7 +199,7 @@ export const outlinesPart: StateCreator<
             pacingWarnings,
             seriesHook: activeProject.series_hook,
             seasonHooks: activeProject.season_hooks
-          })
+          }, { thinkingBudget: effectiveOutlineBudget })
 
           const chapterData: Omit<Chapter, 'id'> = {
             project_id: activeProject.id,
@@ -307,6 +315,12 @@ export const outlinesPart: StateCreator<
     const emotionalHistory = priorChapters.map((ch) => ch.emotional_tone || '').filter(Boolean).slice(-5)
     const pacingResult = validatePacing(emotionalHistory, [])
 
+    // Sprint 9.8 — Single regenerate uses master toggle directly. Default
+    // ON since user regenerates because they're not happy with previous —
+    // boost quality is justified.
+    const settings = useSettingsStore.getState()
+    const effectiveOutlineBudget = settings.deepOutlineEnabled ? settings.deepOutlineBudget : 0
+
     try {
       const outline: OutlineResponse = await aiRouter.generateChapterOutline({
         title: activeProject.title,
@@ -338,7 +352,7 @@ export const outlinesPart: StateCreator<
         pacingWarnings: pacingResult.warnings,
         seriesHook: activeProject.series_hook,
         seasonHooks: activeProject.season_hooks
-      })
+      }, { thinkingBudget: effectiveOutlineBudget })
 
       await get().updateChapter(chapterId, {
         title: outline.title,

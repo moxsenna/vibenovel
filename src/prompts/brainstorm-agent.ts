@@ -1,4 +1,6 @@
 import type { Character, Item, WorldRule, MysteryLayer } from '../types/project'
+import { COMPASS_SLOT_LABELS, getCompassProgress } from '../lib/compassProgress'
+import type { CompassSlot } from '../lib/compassProgress'
 
 // ─── Compass State Interface ─────────────────────────────────────────────────
 
@@ -15,23 +17,18 @@ export interface CompassState {
   mysteryLayers: MysteryLayer[]
 }
 
-export type CompassGap =
-  | 'PREMISE'
-  | 'PROTAGONIST'
-  | 'ANTAGONIST'
-  | 'ENDING'
-  | 'MYSTERY'
-  | 'COMPLETE'
+export type CompassGap = CompassSlot
 
 // ─── Gap Detection ───────────────────────────────────────────────────────────
 
 export function detectCompassGap(state: CompassState): CompassGap {
-  if (!state.title || !state.genre) return 'PREMISE'
-  if (!state.characters.some((c) => c.role === 'PROTAGONIST')) return 'PROTAGONIST'
-  if (!state.characters.some((c) => c.role === 'ANTAGONIST')) return 'ANTAGONIST'
-  if (!state.targetEnding) return 'ENDING'
-  if (state.mysteryLayers.length === 0) return 'MYSTERY'
-  return 'COMPLETE'
+  return getCompassProgress({
+    title: state.title,
+    genre: state.genre,
+    targetEnding: state.targetEnding,
+    characters: state.characters,
+    mysteryLayers: state.mysteryLayers
+  }).nextSlot
 }
 
 // ─── Co-Author Mode ──────────────────────────────────────────────────────────
@@ -273,6 +270,16 @@ export function buildCoAuthorSystemInstruction(
   currentGap: CompassGap
 ): string {
   const mode = getCoAuthorMode(currentGap)
+  const progress = getCompassProgress({
+    title: compassState.title,
+    genre: compassState.genre,
+    targetEnding: compassState.targetEnding,
+    characters: compassState.characters,
+    mysteryLayers: compassState.mysteryLayers
+  })
+  const progressLines = progress.steps
+    .map((step) => `${step.done ? 'TERISI' : 'BELUM'} - ${step.name}`)
+    .join('\n')
 
   return `Kamu adalah **Co-Author**, asisten penulis novel KBM (Kisah Bersambung Mobile) berbahasa Indonesia yang berpengalaman dan penuh empati. Kamu bekerja bersama user untuk merancang novel web yang adiktif, emosional, dan siap monetisasi di platform seperti NovelMe, Dreame, GoodNovel, dll.
 
@@ -283,6 +290,11 @@ MODE OPERASI: ${mode}
 Novel: "${compassState.title || '(Belum ada judul)'}"
 Genre: ${compassState.genre || '(Belum ditentukan)'}
 Target: ${compassState.targetChapters} Bab
+Progress Compass: ${progress.completed}/${progress.total}
+Slot berikutnya yang harus dipandu: ${COMPASS_SLOT_LABELS[currentGap]}
+
+STATUS STORY COMPASS:
+${progressLines}
 
 ${getGapGuidance(currentGap, compassState)}
 
@@ -311,5 +323,6 @@ ATURAN KOMUNIKASI (WAJIB DIPATUHI)
    Jika user melantur 3x berturut-turut, langsung ajukan draf sendiri berdasarkan konteks yang sudah ada tanpa menunggu arahan user lagi.
 7. **PROAKTIF**: Jangan hanya bertanya terus. Setelah 2-3 pertanyaan, BERANI ajukan draf konkret untuk ditinjau user. Jangan takut salah — user bisa menolak atau mengedit.
 8. **JANGAN HALUSINASI**: Jangan mengarang elemen yang bertentangan dengan Pustaka Lore yang sudah disimpan di atas. Jika ada konflik, tanyakan ke user dulu.
-9. **JSON VALID**: Pastikan JSON di dalam blok DRAFT_DATA selalu valid dan bisa di-parse. Gunakan tanda kutip ganda untuk string. Jangan gunakan trailing comma.`
+9. **JSON VALID**: Pastikan JSON di dalam blok DRAFT_DATA selalu valid dan bisa di-parse. Gunakan tanda kutip ganda untuk string. Jangan gunakan trailing comma.
+10. **CONVERSATIONAL BRIDGE**: Jangan biarkan obrolan berhenti setelah menyodorkan draf. Setiap pesan yang mengandung DRAFT_DATA wajib menutup bagian yang terlihat user dengan arahan aksi yang jelas: "Klik Setuju! jika sudah pas, atau Edit Dulu kalau ingin mengubah." Jika sebuah elemen baru saja disetujui atau diedit oleh user, akui singkat lalu langsung tuntun ke slot Compass berikutnya: ${progress.isComplete ? 'Story Compass sudah lengkap, arahkan user ke Outline.' : progress.nextLabel}. Jika user sudah menyebut bahan untuk slot berikutnya di percakapan sebelumnya, jangan bertanya dari nol; rumuskan draf konfirmasi berdasarkan bahan itu.`
 }

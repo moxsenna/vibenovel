@@ -36,6 +36,14 @@ interface UiState {
   runningQa: boolean
   /** Sprint 6 — Auto-Pilot batch progress (transient, never persisted). */
   batchProgress: BatchProgress | null
+  /**
+   * Sprint 9.6 — UX Polish.
+   * When true, header is slim, ModeSwitcher hidden, sidebar collapsed.
+   * Reveals via Cmd+K palette, hover top edge, or ≡ toggle. Persisted.
+   */
+  focusMode: boolean
+  /** Sprint 9.6 — Cmd+K command palette open state (transient). */
+  paletteOpen: boolean
   
   // Custom dialogs states
   toasts: Toast[]
@@ -52,6 +60,10 @@ interface UiActions {
   setQaLogs: (logs: QaLogs | null) => void
   setRunningQa: (running: boolean) => void
   setBatchProgress: (progress: BatchProgress | null) => void
+  /** Sprint 9.6 — Focus Mode actions */
+  toggleFocusMode: () => void
+  setFocusMode: (focusMode: boolean) => void
+  setPaletteOpen: (open: boolean) => void
   
   // Custom dialogs actions
   addToast: (message: string, type: Toast['type'], duration?: number) => void
@@ -74,6 +86,10 @@ export const useUiStore = create<UiStore>()(
       qaLogs: null,
       runningQa: false,
       batchProgress: null,
+      // Sprint 9.6 — Focus Mode default ON for Notion-grade calm.
+      // User existing: shock-mitigated via 6s onboarding toast pertama load.
+      focusMode: true,
+      paletteOpen: false,
       toasts: [],
       confirmOptions: null,
 
@@ -86,6 +102,9 @@ export const useUiStore = create<UiStore>()(
       setQaLogs: (qaLogs) => set({ qaLogs }),
       setRunningQa: (runningQa) => set({ runningQa }),
       setBatchProgress: (batchProgress) => set({ batchProgress }),
+      toggleFocusMode: () => set((state) => ({ focusMode: !state.focusMode })),
+      setFocusMode: (focusMode) => set({ focusMode }),
+      setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
       
       addToast: (message, type, duration = 4000) => {
         const id = crypto.randomUUID()
@@ -128,7 +147,10 @@ export const useUiStore = create<UiStore>()(
     }),
     {
       name: 'vibenovel-ui-state',
-      partialize: (state) => ({ theme: state.theme }), // Only persist the theme key
+      partialize: (state) => ({
+        theme: state.theme,
+        focusMode: state.focusMode
+      }), // Persist theme + focus mode preference
     }
   )
 )

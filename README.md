@@ -1,73 +1,39 @@
-# React + TypeScript + Vite
+# VibeNovel v2
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+VibeNovel v2 is a premium, 100% Client-Side (SPA/PWA) digital novel writing and AI Co-Authoring workspace. It is designed to provide authors with a rich, aesthetic, and immersive creative environment backed by powerful structural tools and AI integrations.
 
-Currently, two official plugins are available:
+## 🌟 Key Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Story Compass & Lorebook Engine**: Define characters (with Voice DNA), world rules, mystery layers, and items within a structured, highly visual workspace.
+- **Beat-by-Beat Prose Writer**: AI-assisted prose generation with a sophisticated 4-layer Context Pruning & memory system (Static Lorebook, Dynamic State Object, RAG, and Sliding Window).
+- **Bring Your Own Key (BYOK) Security**: All user AI keys (Gemini, OpenRouter) are strictly stored locally in the browser's persistent storage. No keys are ever sent to or logged on an external backend.
+- **100% Client-Side Architecture**: Designed to be PWA-ready and seamlessly bundled via Capacitor for Android/iOS, with zero server-side rendering required. Data synchronization is handled directly from the client to Supabase.
+- **Premium Themes & Visuals**: Enjoy "Malam Kreatif" (Dark) and "Jurnal Cantik" (Light) themes with dynamic, anti-flicker synchronization and smooth micro-animations powered by Framer Motion.
+- **Visualization Mode**: Built-in data visualization for story pacing (Emotional Arc Heatmaps) and character relationships (Constellation Maps).
 
-## React Compiler
+## 🛠️ Development Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+This project is built using React 19, TypeScript, Vite, TailwindCSS (v4), and Zustand for state management.
 
-## Expanding the ESLint configuration
+```bash
+# Install dependencies
+npm install
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+# Start the local development server
+npm run dev
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+# Build the production PWA bundle
+npm run build
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Run type-checking & linting
+npx tsc -b --noEmit && npm run lint
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 📜 Architecture & Contribution Guidelines
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+All developers and AI agents must strictly adhere to the project's foundational documents:
+- `implementation_plan_v3.md`: Master Sprint Plan & Roadmap.
+- `architecture.md`: Core systems and database architecture.
+- `AGENTS.md`: Mandatory coding rules (e.g., `verbatimModuleSyntax: true`, BYOK policy, UI aesthetic guidelines).
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+> **Important**: Do not modify the database architecture or Zustand state structures without cross-reviewing and aligning with `architecture.md`.

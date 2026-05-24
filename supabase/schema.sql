@@ -301,14 +301,18 @@ CREATE OR REPLACE TRIGGER chapters_updated_at
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================================
+-- Idempotent: every CREATE POLICY is preceded by DROP POLICY IF EXISTS,
+-- so this whole file can be safely re-run on existing databases.
 
 -- PROJECTS — direct user ownership
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "projects_owner_policy" ON projects;
 CREATE POLICY "projects_owner_policy" ON projects
   FOR ALL USING (auth.uid() = user_id);
 
 -- CHARACTERS — via project ownership
 ALTER TABLE characters ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "characters_owner_policy" ON characters;
 CREATE POLICY "characters_owner_policy" ON characters
   FOR ALL USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
@@ -316,6 +320,7 @@ CREATE POLICY "characters_owner_policy" ON characters
 
 -- ITEMS
 ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "items_owner_policy" ON items;
 CREATE POLICY "items_owner_policy" ON items
   FOR ALL USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
@@ -323,6 +328,7 @@ CREATE POLICY "items_owner_policy" ON items
 
 -- WORLD_RULES
 ALTER TABLE world_rules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "world_rules_owner_policy" ON world_rules;
 CREATE POLICY "world_rules_owner_policy" ON world_rules
   FOR ALL USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
@@ -330,6 +336,7 @@ CREATE POLICY "world_rules_owner_policy" ON world_rules
 
 -- SEASONS
 ALTER TABLE seasons ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "seasons_owner_policy" ON seasons;
 CREATE POLICY "seasons_owner_policy" ON seasons
   FOR ALL USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
@@ -337,6 +344,7 @@ CREATE POLICY "seasons_owner_policy" ON seasons
 
 -- SUB_ARCS
 ALTER TABLE sub_arcs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "sub_arcs_owner_policy" ON sub_arcs;
 CREATE POLICY "sub_arcs_owner_policy" ON sub_arcs
   FOR ALL USING (
     season_id IN (
@@ -348,6 +356,7 @@ CREATE POLICY "sub_arcs_owner_policy" ON sub_arcs
 
 -- CHAPTERS
 ALTER TABLE chapters ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "chapters_owner_policy" ON chapters;
 CREATE POLICY "chapters_owner_policy" ON chapters
   FOR ALL USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
@@ -355,6 +364,7 @@ CREATE POLICY "chapters_owner_policy" ON chapters
 
 -- CHARACTER_STATES
 ALTER TABLE character_states ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "character_states_owner_policy" ON character_states;
 CREATE POLICY "character_states_owner_policy" ON character_states
   FOR ALL USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
@@ -362,6 +372,7 @@ CREATE POLICY "character_states_owner_policy" ON character_states
 
 -- MYSTERY_LAYERS
 ALTER TABLE mystery_layers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "mystery_layers_owner_policy" ON mystery_layers;
 CREATE POLICY "mystery_layers_owner_policy" ON mystery_layers
   FOR ALL USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
@@ -369,6 +380,7 @@ CREATE POLICY "mystery_layers_owner_policy" ON mystery_layers
 
 -- PLOT_THREADS
 ALTER TABLE plot_threads ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "plot_threads_owner_policy" ON plot_threads;
 CREATE POLICY "plot_threads_owner_policy" ON plot_threads
   FOR ALL USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
@@ -376,6 +388,7 @@ CREATE POLICY "plot_threads_owner_policy" ON plot_threads
 
 -- CHAPTER_SUMMARIES
 ALTER TABLE chapter_summaries ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "chapter_summaries_owner_policy" ON chapter_summaries;
 CREATE POLICY "chapter_summaries_owner_policy" ON chapter_summaries
   FOR ALL USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
@@ -383,6 +396,7 @@ CREATE POLICY "chapter_summaries_owner_policy" ON chapter_summaries
 
 -- EMOTIONAL_PATTERNS
 ALTER TABLE emotional_patterns ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "emotional_patterns_owner_policy" ON emotional_patterns;
 CREATE POLICY "emotional_patterns_owner_policy" ON emotional_patterns
   FOR ALL USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
@@ -390,6 +404,7 @@ CREATE POLICY "emotional_patterns_owner_policy" ON emotional_patterns
 
 -- ARCHIVED_OUTLINES
 ALTER TABLE archived_outlines ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "archived_outlines_owner_policy" ON archived_outlines;
 CREATE POLICY "archived_outlines_owner_policy" ON archived_outlines
   FOR ALL USING (
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())

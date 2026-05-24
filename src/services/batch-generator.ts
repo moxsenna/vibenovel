@@ -20,6 +20,7 @@ import { stateTracker } from './state-tracker'
 import { buildProseInput, ensureBeatsForChapter } from './prose-context'
 import { analyzeChapterThreads } from './thread-tracker'
 import { generateChapterSummary, buildSummaryUpsertPayload } from './chapter-summary'
+import { useSettingsStore } from '../store/useSettingsStore'
 import type {
   BatchOptions,
   BatchProgress,
@@ -323,14 +324,27 @@ export class BatchGenerator {
       })
 
       this.abortController = new AbortController()
-      const stream = aiRouter.generateProseBeatStream(project, input)
+      // Sprint 9.7 — Deep Think gating in batch mode. Master toggle AND
+      // batch sub-toggle must both be ON. Defaults to OFF for batch since
+      // 200 chapters × +2-3s per beat would add ~10 minutes total.
+      const settings = useSettingsStore.getState()
+      const effectiveThinkingBudget =
+        settings.deepThinkEnabled && settings.deepThinkInBatch ? settings.deepThinkBudget : 0
+      const stream = aiRouter.generateProseBeatStream(project, input, {
+        thinkingBudget: effectiveThinkingBudget,
+        signal: this.abortController.signal
+      })
 
       let acc = ''
       let lastSave = Date.now()
       try {
         for await (const chunk of stream) {
           if (this.abortController.signal.aborted) break
-          acc += chunk
+          // Strict filter: thought chunks are silently dropped in batch
+          // mode — they exist only to improve model output quality, never
+          // touching the persisted prose buffer.
+          if (chunk.type !== 'text') continue
+          acc += chunk.content
 
           // Throttle UI updates so we don't flood callbacks.
           const now = Date.now()

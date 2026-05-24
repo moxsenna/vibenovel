@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useUiStore } from '../../store/useUiStore'
 import { useProjectStore } from '../../store/useProjectStore'
 import { StoryCompassPreview } from '../compass/StoryCompassPreview'
+import type { CompassEditDraft } from '../compass/StoryCompassPreview'
+import { EditDraftModal } from '../modals/EditDraftModal'
 import { StateTimeline } from '../compass/StateTimeline'
 import { MysteryLayerPanel } from '../compass/MysteryLayerPanel'
 import { VoiceDNAEditor } from '../compass/VoiceDNAEditor'
@@ -12,9 +14,11 @@ import { stateTracker } from '../../services/state-tracker'
 export const ContextPanel: React.FC = () => {
   // Store hooks
   const activeMode = useUiStore((s) => s.activeMode)
+  const setMode = useUiStore((s) => s.setMode)
   const activeChapterNumber = useUiStore((s) => s.activeChapter)
   const setActiveChapterNumber = useUiStore((s) => s.setActiveChapter)
   const qaLogs = useUiStore((s) => s.qaLogs)
+  const addToast = useUiStore((s) => s.addToast)
 
   const {
     activeProject,
@@ -25,6 +29,9 @@ export const ContextPanel: React.FC = () => {
     worldRules,
     mysteryLayers,
     addCharacter,
+    updateCharacter,
+    updateProject,
+    updateMysteryLayer,
     getLatestStatesForChapter,
     upsertCharacterStates
   } = useProjectStore()
@@ -37,6 +44,7 @@ export const ContextPanel: React.FC = () => {
 
   // State generation tracking
   const [localStateGenStatus, setLocalStateGenStatus] = useState<'idle' | 'generating' | 'done' | 'error'>('idle')
+  const [editingCompassDraft, setEditingCompassDraft] = useState<CompassEditDraft | null>(null)
 
   if (!activeProject) return null
 
@@ -87,6 +95,55 @@ export const ContextPanel: React.FC = () => {
     setIsAddingChar(false)
     setNewCharName('')
     setNewCharDesc('')
+  }
+
+  const handleSaveCompassDraft = async (updatedData: Record<string, unknown>) => {
+    if (!editingCompassDraft || !activeProject) return
+
+    if (editingCompassDraft.draftType === 'character' && editingCompassDraft.entityId) {
+      await updateCharacter(editingCompassDraft.entityId, {
+        name: typeof updatedData.name === 'string' ? updatedData.name : undefined,
+        role: typeof updatedData.role === 'string'
+          ? updatedData.role as 'PROTAGONIST' | 'ANTAGONIST' | 'SUPPORTING' | 'MINOR'
+          : undefined,
+        description: typeof updatedData.description === 'string' ? updatedData.description : undefined,
+        voice_dna: typeof updatedData.voice_dna === 'object' && updatedData.voice_dna !== null
+          ? updatedData.voice_dna as Record<string, unknown>
+          : undefined,
+        activation_keys: Array.isArray(updatedData.activation_keys)
+          ? updatedData.activation_keys as string[]
+          : undefined,
+        priority: typeof updatedData.priority === 'number' ? updatedData.priority : undefined,
+        is_locked: typeof updatedData.is_locked === 'boolean' ? updatedData.is_locked : undefined
+      })
+      addToast('Tokoh di Story Compass diperbarui.', 'success')
+    } else if (editingCompassDraft.draftType === 'ending') {
+      await updateProject(activeProject.id, {
+        target_ending: typeof updatedData.target_ending === 'string'
+          ? updatedData.target_ending
+          : activeProject.target_ending
+      })
+      addToast('Target Ending diperbarui.', 'success')
+    } else if (editingCompassDraft.draftType === 'mystery' && editingCompassDraft.entityId) {
+      await updateMysteryLayer(editingCompassDraft.entityId, {
+        layer_number: typeof updatedData.layer_number === 'number' ? updatedData.layer_number : undefined,
+        central_question: typeof updatedData.central_question === 'string' ? updatedData.central_question : undefined,
+        revealed_at_chapter: typeof updatedData.revealed_at_chapter === 'number'
+          ? updatedData.revealed_at_chapter
+          : null,
+        answer: typeof updatedData.answer === 'string' ? updatedData.answer : null,
+        opens_next_question: typeof updatedData.opens_next_question === 'string'
+          ? updatedData.opens_next_question
+          : null,
+        breadcrumbs: Array.isArray(updatedData.breadcrumbs)
+          ? updatedData.breadcrumbs as { chapter: number; hint: string }[]
+          : undefined,
+        status: typeof updatedData.status === 'string'
+          ? updatedData.status as 'ACTIVE' | 'REVEALED' | 'PLANNED'
+          : undefined
+      })
+      addToast('Lapisan misteri diperbarui.', 'success')
+    }
   }
 
   // Animation variants
@@ -151,6 +208,8 @@ export const ContextPanel: React.FC = () => {
                   targetEnding={activeProject.target_ending}
                   characters={characters}
                   mysteryLayers={mysteryLayers}
+                  onEditCompassDraft={setEditingCompassDraft}
+                  onStartOutline={() => setMode('outline')}
                 />
                 <MysteryLayerPanel />
                 <VoiceDNAEditor />
@@ -474,6 +533,14 @@ export const ContextPanel: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <EditDraftModal
+        isOpen={editingCompassDraft !== null}
+        onClose={() => setEditingCompassDraft(null)}
+        draftType={editingCompassDraft?.draftType || ''}
+        initialData={editingCompassDraft?.initialData || {}}
+        onSave={handleSaveCompassDraft}
+      />
     </motion.aside>
   )
 }

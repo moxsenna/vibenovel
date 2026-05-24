@@ -30,6 +30,16 @@ export const SeasonArchitectPanel: React.FC = () => {
   // Completed result display
   const [showResult, setShowResult] = useState(false)
 
+  // Sprint 9.8 — Deep Outline settings panel
+  const [showOutlineSettings, setShowOutlineSettings] = useState(false)
+  const deepOutlineEnabled = useSettingsStore((s) => s.deepOutlineEnabled)
+  const deepOutlineBudget = useSettingsStore((s) => s.deepOutlineBudget)
+  const deepOutlineInBatch = useSettingsStore((s) => s.deepOutlineInBatch)
+  const setDeepOutlineEnabled = useSettingsStore((s) => s.setDeepOutlineEnabled)
+  const setDeepOutlineBudget = useSettingsStore((s) => s.setDeepOutlineBudget)
+  const setDeepOutlineInBatch = useSettingsStore((s) => s.setDeepOutlineInBatch)
+  const outlineBudgetPresets = [512, 1024, 2048, 4096]
+
   // ── Story Compass Completeness Check ───────────────────────────────────
   const compassStatus = useMemo(() => {
     if (!activeProject) return { isComplete: false, missing: [] as string[] }
@@ -181,6 +191,118 @@ export const SeasonArchitectPanel: React.FC = () => {
               ✍ Ditulis: <span className="font-bold text-on-surface">{chapters.filter(ch => ch.prose).length}</span> bab
             </span>
           </div>
+        </div>
+
+        {/* Sprint 9.8 — Deep Outline Settings (collapsible) */}
+        <div className="bg-surface-container/60 rounded-2xl border border-outline-variant/15 overflow-hidden">
+          <button
+            onClick={() => setShowOutlineSettings((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-surface-container-high/40"
+          >
+            <span className="flex items-center gap-2 text-body-sm font-medium text-on-surface-variant">
+              <span className="material-symbols-outlined text-[16px]">tune</span>
+              Pengaturan Outline
+              {deepOutlineEnabled && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 font-bold">
+                  🧠 Deep Outline
+                </span>
+              )}
+            </span>
+            <span className="material-symbols-outlined text-[16px] text-on-surface-variant/60">
+              {showOutlineSettings ? 'expand_less' : 'expand_more'}
+            </span>
+          </button>
+          <AnimatePresence>
+            {showOutlineSettings && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden border-t border-outline-variant/15"
+              >
+                <div className="px-4 py-3 space-y-3">
+                  {/* Master toggle */}
+                  <button
+                    onClick={() => setDeepOutlineEnabled(!deepOutlineEnabled)}
+                    className="w-full flex items-center gap-3 px-2 py-1.5 rounded-lg text-left hover:bg-surface-container cursor-pointer"
+                  >
+                    <span
+                      className={`w-9 h-5 rounded-full relative transition-colors flex-shrink-0 ${
+                        deepOutlineEnabled ? 'bg-purple-500' : 'bg-outline-variant/40'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                          deepOutlineEnabled ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </span>
+                    <div className="flex-1">
+                      <div className="text-body-sm font-medium text-on-surface">
+                        🧠 Deep Outline
+                      </div>
+                      <div className="text-[11px] text-on-surface-variant/70 leading-relaxed">
+                        AI berpikir dulu sebelum bikin outline. Hasil lebih cerdas (mystery
+                        breadcrumb tepat, cliffhanger variatif), tapi +2-3 detik per bab.
+                      </div>
+                    </div>
+                  </button>
+
+                  {deepOutlineEnabled && (
+                    <>
+                      <div>
+                        <div className="text-[10px] text-on-surface-variant/60 mb-1 px-2 uppercase tracking-wider font-bold">
+                          Budget berpikir (token)
+                        </div>
+                        <div className="flex gap-1 px-2">
+                          {outlineBudgetPresets.map((b) => (
+                            <button
+                              key={b}
+                              onClick={() => setDeepOutlineBudget(b)}
+                              className={`flex-1 px-2 py-1.5 rounded-md text-[11px] font-mono font-bold cursor-pointer transition-colors ${
+                                deepOutlineBudget === b
+                                  ? 'bg-purple-500 text-white'
+                                  : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                              }`}
+                            >
+                              {b}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setDeepOutlineInBatch(!deepOutlineInBatch)}
+                        className="w-full flex items-center gap-3 px-2 py-1.5 rounded-lg text-left hover:bg-surface-container cursor-pointer"
+                      >
+                        <span
+                          className={`w-7 h-4 rounded-full relative transition-colors flex-shrink-0 ${
+                            deepOutlineInBatch ? 'bg-amber-500' : 'bg-outline-variant/40'
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${
+                              deepOutlineInBatch ? 'translate-x-3' : 'translate-x-0'
+                            }`}
+                          />
+                        </span>
+                        <span className="flex-1 text-[11px] text-on-surface">
+                          Aktifkan juga di batch outline
+                        </span>
+                      </button>
+
+                      {deepOutlineInBatch && (
+                        <div className="text-[10px] text-amber-400 px-2 leading-relaxed">
+                          ⚠️ Batch 200 bab dengan Deep Outline = +10 menit total. Pertimbangkan
+                          biaya token kalau pakai OpenRouter.
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* ── Range Selector / Generate Modal ── */}

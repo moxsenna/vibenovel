@@ -61,6 +61,8 @@ const ProseWriterInner: React.FC<ProseWriterInnerProps> = ({
     streamingText,
     saveStatus,
     stateGenStatus,
+    isThinking,
+    currentThought,
     generateBeat,
     stopGeneration,
     handleManualEdit
@@ -182,6 +184,8 @@ const ProseWriterInner: React.FC<ProseWriterInnerProps> = ({
                 beatDirection={activeBeat.direction}
                 prose={isGenerating ? streamingText : (activeBeat.prose || '')}
                 isGenerating={isGenerating}
+                isThinking={isThinking}
+                currentThought={currentThought}
                 onEdit={(text) => handleManualEdit(currentBeatIndex, text)}
                 onGenerate={() => (isGenerating ? stopGeneration() : generateBeat(currentBeatIndex))}
                 onNext={handleNextBeat}

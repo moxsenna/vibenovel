@@ -14,7 +14,7 @@ export const BeatIndicator: React.FC<BeatIndicatorProps> = ({ beats, currentInde
   return (
     <div className="flex flex-col gap-2 mb-4">
       <div className="flex justify-between items-center text-sm">
-        <span className="font-semibold text-text-primary">Struktur Bab (Beats)</span>
+        <span className="font-semibold text-text-primary">Struktur Bab (Adegan)</span>
         <span className="text-text-tertiary">{currentIndex + 1} / {beats.length}</span>
       </div>
       
@@ -33,7 +33,7 @@ export const BeatIndicator: React.FC<BeatIndicatorProps> = ({ beats, currentInde
             >
               {/* Tooltip on hover */}
               <div className="absolute opacity-0 group-hover:opacity-100 bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-bg-secondary text-text-secondary text-xs rounded-lg shadow-xl pointer-events-none transition-opacity z-10 border border-border-divider">
-                <p className="font-semibold text-text-primary mb-1">Beat {index + 1}</p>
+                <p className="font-semibold text-text-primary mb-1">Adegan {index + 1}</p>
                 <p className="line-clamp-3">{beat.direction}</p>
               </div>
 

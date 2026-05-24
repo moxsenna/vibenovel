@@ -1,4 +1,5 @@
 import { useSettingsStore } from '../../store/useSettingsStore'
+import type { ThinkingChunk } from './types'
 
 interface KeyStatus {
   key: string
@@ -195,6 +196,124 @@ class GeminiPool {
   }
 
   /**
+   * Sprint 9.8 — Deep Outline non-streaming variant.
+   *
+   * Returns `{ text, thoughtSummary? }` where `text` is the final model
+   * output (used for JSON parsing in the outline engine) and
+   * `thoughtSummary` is the joined `thought: true` parts (currently
+   * discarded by the outline caller, but exposed for future use).
+   *
+   * Combines `responseMimeType: 'application/json'` with `thinkingConfig`.
+   * If a provider rejects this combo the caller can fall back to legacy
+   * `generateContent()` since this method only adds a non-breaking field.
+   *
+   * Backward-compat: original `generateContent()` is untouched. This is
+   * a strictly additive helper used only by `generateChapterOutline`.
+   */
+  public async generateContentV2(
+    prompt: string,
+    systemInstruction?: string,
+    jsonMode = false,
+    model = 'gemini-flash-latest',
+    signal?: AbortSignal,
+    thinkingBudget = 0
+  ): Promise<{ text: string; thoughtSummary?: string }> {
+    // Lock model to gemini-flash-latest for all Gemini calls
+    model = 'gemini-flash-latest'
+
+    let retries = Math.max(3, this.keyStatuses.length)
+    let lastError: unknown = null
+
+    while (retries > 0) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      const key = this.getNextKey()
+      if (!key) {
+        throw new Error('No Gemini API keys configured. Please add keys in Settings.')
+      }
+
+      try {
+        const generationConfig: Record<string, unknown> = {
+          temperature: 0.7,
+          topP: 0.95,
+          maxOutputTokens: 8192
+        }
+        if (jsonMode) {
+          generationConfig.responseMimeType = 'application/json'
+        }
+        if (thinkingBudget > 0) {
+          generationConfig.thinkingConfig = {
+            thinkingBudget,
+            includeThoughts: true
+          }
+        }
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              ...(systemInstruction
+                ? { systemInstruction: { parts: [{ text: systemInstruction }] } }
+                : {}),
+              generationConfig
+            }),
+            signal
+          }
+        )
+
+        if (response.status === 429) {
+          this.reportRateLimit(key)
+          retries--
+          continue
+        }
+
+        if (!response.ok) {
+          const errText = await response.text()
+          throw new Error(`Gemini API Error (${response.status}): ${errText}`)
+        }
+
+        const data = await response.json()
+        const parts: Array<{ text?: string; thought?: boolean }> | undefined =
+          data.candidates?.[0]?.content?.parts
+
+        if (!parts || parts.length === 0) {
+          throw new Error('Invalid response structure from Gemini API')
+        }
+
+        const textParts: string[] = []
+        const thoughtParts: string[] = []
+        for (const p of parts) {
+          if (typeof p.text !== 'string' || p.text.length === 0) continue
+          if (p.thought === true) thoughtParts.push(p.text)
+          else textParts.push(p.text)
+        }
+        const text = textParts.join('')
+        if (!text) {
+          throw new Error('Gemini V2 response had no final text content')
+        }
+
+        this.reportSuccess(key)
+        return {
+          text,
+          thoughtSummary: thoughtParts.length > 0 ? thoughtParts.join('\n') : undefined
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') throw error
+        console.error(`Error with Gemini V2 ${keyLabel(this.keyStatuses, key)}:`, error)
+        this.reportError(key, error)
+        lastError = error
+        retries--
+      }
+    }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('Failed to generate V2 content after exhausting keys in the pool')
+  }
+
+  /**
    * Generates content using Server-Sent Events (SSE) streaming for real-time UI updates
    */
   public async *generateContentStream(
@@ -289,6 +408,137 @@ class GeminiPool {
     throw lastError instanceof Error
       ? lastError
       : new Error('Failed to generate stream after exhausting keys')
+  }
+
+  /**
+   * Sprint 9.7 — Deep Think streaming variant.
+   *
+   * Yields {@link ThinkingChunk} objects so callers can distinguish thought
+   * tokens (model's internal reasoning) from final prose text. When
+   * `thinkingBudget > 0`, injects Gemini's `thinkingConfig` into the
+   * generation config and parses each SSE part for `thought === true` flag.
+   *
+   * Backward-compat note: existing {@link generateContentStream} method is
+   * untouched — Director's Cut, recap and other non-prose callers continue
+   * yielding raw `string` chunks.
+   *
+   * Graceful degradation: if the model ignores `thinkingConfig` or yields
+   * no thought parts, all chunks are emitted as `{ type: 'text' }`.
+   */
+  public async *generateContentStreamV2(
+    prompt: string,
+    systemInstruction?: string,
+    model = 'gemini-flash-latest',
+    signal?: AbortSignal,
+    thinkingBudget = 0
+  ): AsyncGenerator<ThinkingChunk, void, unknown> {
+    // Lock model to gemini-flash-latest for all Gemini calls
+    model = 'gemini-flash-latest'
+
+    let retries = Math.max(3, this.keyStatuses.length)
+    let lastError: unknown = null
+
+    while (retries > 0) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      const key = this.getNextKey()
+      if (!key) throw new Error('No Gemini API keys configured. Please add keys in Settings.')
+
+      try {
+        const generationConfig: Record<string, unknown> = {
+          temperature: 0.7,
+          topP: 0.95,
+          maxOutputTokens: 8192
+        }
+        if (thinkingBudget > 0) {
+          generationConfig.thinkingConfig = {
+            thinkingBudget,
+            includeThoughts: true
+          }
+        }
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${key}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              ...(systemInstruction
+                ? { systemInstruction: { parts: [{ text: systemInstruction }] } }
+                : {}),
+              generationConfig
+            }),
+            signal
+          }
+        )
+
+        if (response.status === 429) {
+          this.reportRateLimit(key)
+          retries--
+          continue
+        }
+
+        if (!response.ok) {
+          const errText = await response.text()
+          throw new Error(`Gemini API Error (${response.status}): ${errText}`)
+        }
+
+        this.reportSuccess(key)
+
+        if (!response.body) throw new Error('ReadableStream not supported by browser.')
+
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder('utf-8')
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.replace('data: ', '').trim()
+              if (dataStr) {
+                try {
+                  const data = JSON.parse(dataStr)
+                  const parts: Array<{ text?: string; thought?: boolean }> | undefined =
+                    data.candidates?.[0]?.content?.parts
+                  if (!parts || parts.length === 0) continue
+                  for (const part of parts) {
+                    if (typeof part.text !== 'string' || part.text.length === 0) continue
+                    yield {
+                      type: part.thought === true ? 'thought' : 'text',
+                      content: part.text
+                    }
+                  }
+                } catch {
+                  // Ignore JSON parse errors for incomplete chunks
+                }
+              }
+            }
+          }
+        }
+
+        return
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') throw error
+        console.error(
+          `Streaming V2 error with Gemini ${keyLabel(this.keyStatuses, key)}:`,
+          error
+        )
+        this.reportError(key, error)
+        lastError = error
+        retries--
+      }
+    }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('Failed to generate V2 stream after exhausting keys')
   }
 
   /**

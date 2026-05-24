@@ -14,6 +14,9 @@ interface BeatEditorProps {
   onNext: () => void
   isLastBeat: boolean
   onSelectionChange?: (sel: SelectionInfo | null) => void
+  /** Sprint 9.7 — Deep Think indicator state. Optional for backward compat. */
+  isThinking?: boolean
+  currentThought?: string
 }
 
 export interface BeatEditorHandle {
@@ -32,16 +35,36 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
     onGenerate,
     onNext,
     isLastBeat,
-    onSelectionChange
+    onSelectionChange,
+    isThinking = false,
+    currentThought = ''
   },
   ref
 ) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const thoughtScrollRef = useRef<HTMLDivElement>(null)
   const { isOnline, loadDraft, clearDraft } = useOfflineDraft()
   const [restoreOffer, setRestoreOffer] = useState<{ text: string; timestamp: number } | null>(null)
   const [prevKey, setPrevKey] = useState<string>('')
   const currentKey = `${chapterId}__${beatIndex}`
   const lastSelectionRef = useRef<{ start: number; end: number } | null>(null)
+  // Sprint 9.7 — Thought panel collapse state. Default open during thinking;
+  // auto-collapse 500ms after the first prose chunk arrives (handled below).
+  const [thoughtPanelOpen, setThoughtPanelOpen] = useState(true)
+  // Track previous isThinking so we can collapse panel on transition false.
+  const [prevIsThinking, setPrevIsThinking] = useState(isThinking)
+  if (prevIsThinking !== isThinking) {
+    setPrevIsThinking(isThinking)
+    if (!isThinking && currentThought.length > 0) {
+      // Defer collapse so user sees the final thought briefly before hiding.
+      const timer = setTimeout(() => setThoughtPanelOpen(false), 500)
+      // Cleanup if component unmounts; harmless if already fired.
+      void timer
+    } else if (isThinking) {
+      // Re-open when a fresh thinking phase starts.
+      setThoughtPanelOpen(true)
+    }
+  }
 
   // Derive restore-offer during render whenever the active beat changes.
   if (prevKey !== currentKey) {
@@ -60,6 +83,13 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
       textareaRef.current.scrollTop = textareaRef.current.scrollHeight
     }
   }, [prose, isGenerating])
+
+  // Sprint 9.7 — Auto-scroll thought panel during thinking phase.
+  useEffect(() => {
+    if (isThinking && thoughtScrollRef.current) {
+      thoughtScrollRef.current.scrollTop = thoughtScrollRef.current.scrollHeight
+    }
+  }, [currentThought, isThinking])
 
   const handleRestore = () => {
     if (!restoreOffer) return
@@ -131,7 +161,7 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
           <div className="flex-1">
             <div className="flex items-center justify-between gap-2 mb-1">
               <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">
-                Arahan Beat
+                Arahan Adegan
               </h3>
               {!isOnline && (
                 <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
@@ -144,6 +174,67 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
           </div>
         </div>
       </div>
+
+      {/* Sprint 9.7 — Deep Think indicator + collapsible thought panel */}
+      <AnimatePresence>
+        {(isThinking || (currentThought.length > 0 && thoughtPanelOpen)) && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-b border-purple-500/20"
+          >
+            <div className="px-4 py-2.5 bg-purple-500/8 flex items-center gap-2">
+              <motion.span
+                animate={
+                  isThinking
+                    ? { scale: [1, 1.15, 1], opacity: [1, 0.6, 1] }
+                    : { scale: 1, opacity: 1 }
+                }
+                transition={
+                  isThinking
+                    ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' }
+                    : { duration: 0.2 }
+                }
+                className="text-base"
+              >
+                {isThinking ? '🧠' : '💭'}
+              </motion.span>
+              <span className="text-xs font-semibold text-purple-300">
+                {isThinking ? 'Merancang adegan...' : 'Rencana Adegan'}
+              </span>
+              <button
+                onClick={() => setThoughtPanelOpen((v) => !v)}
+                className="ml-auto text-[10px] text-purple-400/80 hover:text-purple-300 cursor-pointer flex items-center gap-1"
+              >
+                {thoughtPanelOpen ? 'Sembunyikan' : 'Tampilkan'}
+                <span className="material-symbols-outlined text-[12px]">
+                  {thoughtPanelOpen ? 'expand_less' : 'expand_more'}
+                </span>
+              </button>
+            </div>
+            <AnimatePresence>
+              {thoughtPanelOpen && currentThought.length > 0 && (
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{ height: 'auto' }}
+                  exit={{ height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div
+                    ref={thoughtScrollRef}
+                    className="px-4 pb-3 max-h-32 overflow-y-auto custom-scrollbar"
+                  >
+                    <p className="text-[11px] text-purple-200/80 font-mono whitespace-pre-line leading-relaxed">
+                      {currentThought}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Restore Prompt */}
       <AnimatePresence>
@@ -186,15 +277,15 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
             <div className="w-16 h-16 rounded-full bg-bg-tertiary flex items-center justify-center mb-4 opacity-50">
               <span className="text-2xl">✍️</span>
             </div>
-            <h4 className="text-lg font-medium text-text-primary mb-2">Beat {beatIndex + 1} Kosong</h4>
+            <h4 className="text-lg font-medium text-text-primary mb-2">Adegan {beatIndex + 1} Kosong</h4>
             <p className="text-sm text-text-tertiary mb-6 max-w-sm">
-              AI akan menulis adegan ini berdasarkan konteks bab sebelumnya, arahan beat, dan Voice DNA karakter.
+              AI akan menulis adegan ini berdasarkan konteks bab sebelumnya, arahan adegan, dan cara bicara karakter.
             </p>
             <button
               onClick={onGenerate}
               className="px-6 py-2.5 bg-primary text-bg-primary font-semibold rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
             >
-              ✨ Mulai Tulis Beat Ini
+              ✨ Mulai Tulis Adegan Ini
             </button>
           </div>
         ) : (
@@ -215,8 +306,12 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
                 }
               }, 200)
             }}
-            disabled={isGenerating}
-            placeholder="Mulai mengetik manual atau tunggu AI menyelesaikan..."
+            disabled={isGenerating || isThinking}
+            placeholder={
+              isThinking
+                ? 'AI sedang merancang adegan...'
+                : 'Mulai mengetik manual atau tunggu AI menyelesaikan...'
+            }
             className="flex-1 w-full p-6 bg-transparent text-text-primary leading-relaxed resize-none focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary/50 disabled:opacity-80"
           />
         )}
@@ -231,7 +326,7 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
               disabled={isGenerating}
               className="px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-50"
             >
-              {isGenerating ? 'Stop Generating' : '🔄 Tulis Ulang (Regenerate)'}
+              {isGenerating ? '⏹ Hentikan' : '🔄 Tulis Ulang'}
             </button>
           </div>
 
@@ -242,7 +337,7 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
               onClick={onNext}
               className="px-6 py-2 bg-success text-bg-primary text-sm font-semibold rounded-lg hover:bg-success/90 transition-colors shadow-lg shadow-success/20"
             >
-              {isLastBeat ? 'Selesaikan Bab 🎉' : 'Lanjut ke Beat Berikutnya ➡️'}
+              {isLastBeat ? 'Selesaikan Bab 🎉' : 'Lanjut ke Adegan Berikutnya ➡️'}
             </motion.button>
           )}
         </div>

@@ -70,6 +70,10 @@ Seluruh asisten coding AI **WAJIB** mengikuti Master Sprint Plan yang telah dise
 * **Sprint 7** — Thread Tracker & RAG (Fase 7)
 * **Sprint 8** — Visualization (Fase 8)
 * **Sprint 9** — Genre Blueprints & Polish (Fase 9)
+* **Sprint 9.5** — QA Hardening (Polish)
+* **Sprint 9.6** — UX Polish (Notion-Grade Calm) (Polish)
+* **Sprint 9.7** — Deep Think Mode (Prose Writer Reasoning) (Polish)
+* **Sprint 9.8** — Deep Outline (Outline Generator Reasoning) (Polish)
 * **Sprint 10** — Capacitor & Production (Fase 10)
 
 ### 🔑 Aturan Eksekusi Per Sprint (WAJIB DIPATUHI)

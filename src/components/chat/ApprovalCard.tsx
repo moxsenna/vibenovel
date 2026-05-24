@@ -7,6 +7,7 @@ interface ApprovalCardProps {
   onApprove: () => void
   onEdit: () => void
   onReject: () => void
+  disabled?: boolean
 }
 
 export const ApprovalCard: React.FC<ApprovalCardProps> = ({
@@ -15,7 +16,8 @@ export const ApprovalCard: React.FC<ApprovalCardProps> = ({
   status,
   onApprove,
   onEdit,
-  onReject
+  onReject,
+  disabled = false
 }) => {
   if (status === 'approved') {
     return (
@@ -34,7 +36,7 @@ export const ApprovalCard: React.FC<ApprovalCardProps> = ({
         <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
           edit_square
         </span>
-        Draf ditandai untuk edit manual!
+        Draf diedit & disimpan ke Pustaka Lore!
       </div>
     )
   }
@@ -74,22 +76,28 @@ export const ApprovalCard: React.FC<ApprovalCardProps> = ({
       <div className="flex flex-wrap gap-3">
         <button
           onClick={onApprove}
-          className="flex-1 min-w-[120px] bg-[#3B5A40] hover:bg-[#4A6E4F] active:scale-[0.98] text-[#E2F0E5] py-2.5 px-4 rounded-xl text-label-md transition-all shadow-sm flex items-center justify-center gap-2 border border-[#4A6E4F]/50 cursor-pointer font-bold"
+          disabled={disabled}
+          className="flex-1 min-w-[120px] bg-[#3B5A40] hover:bg-[#4A6E4F] active:scale-[0.98] text-[#E2F0E5] py-2.5 px-4 rounded-xl text-label-md transition-all shadow-sm flex items-center justify-center gap-2 border border-[#4A6E4F]/50 cursor-pointer font-bold disabled:opacity-50 disabled:cursor-wait disabled:active:scale-100"
         >
-          <span className="material-symbols-outlined text-sm font-bold">check</span>Setuju!
+          <span className="material-symbols-outlined text-sm font-bold">
+            {disabled ? 'hourglass_empty' : 'check'}
+          </span>
+          {disabled ? 'Memproses...' : 'Setuju!'}
         </button>
 
         <button
           onClick={onEdit}
-          className="flex-1 min-w-[120px] bg-secondary-container hover:bg-secondary-container/85 active:scale-[0.98] text-on-secondary-container py-2.5 px-4 rounded-xl text-label-md transition-all shadow-sm flex items-center justify-center gap-2 border border-secondary/30 cursor-pointer font-bold"
+          disabled={disabled}
+          className="flex-1 min-w-[120px] bg-secondary-container hover:bg-secondary-container/85 active:scale-[0.98] text-on-secondary-container py-2.5 px-4 rounded-xl text-label-md transition-all shadow-sm flex items-center justify-center gap-2 border border-secondary/30 cursor-pointer font-bold disabled:opacity-50 disabled:cursor-wait disabled:active:scale-100"
         >
           <span className="material-symbols-outlined text-sm">edit</span>Edit Dulu
         </button>
 
         <button
           onClick={onReject}
+          disabled={disabled}
           aria-label="Tolak"
-          className="p-2.5 rounded-xl border border-surface-variant text-on-surface-variant hover:bg-surface-variant/30 active:scale-[0.95] transition-all flex items-center justify-center cursor-pointer"
+          className="p-2.5 rounded-xl border border-surface-variant text-on-surface-variant hover:bg-surface-variant/30 active:scale-[0.95] transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-wait"
         >
           <span className="material-symbols-outlined">refresh</span>
         </button>

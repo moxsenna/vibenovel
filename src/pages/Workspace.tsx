@@ -18,6 +18,7 @@ import { LoreDiffModal } from '../components/modals/LoreDiffModal'
 import { BatchSuccessModal } from '../components/modals/BatchSuccessModal'
 import { BatchProgressPanel } from '../components/prose/BatchProgressPanel'
 import { FreeWriteIndexerWatcher } from '../components/onboarding/FreeWriteIndexerWatcher'
+import { HoverModeRevealer } from '../components/workspace/HoverModeRevealer'
 import { SkipLink } from '../components/ui/SkipLink'
 
 const MODES = [
@@ -37,6 +38,9 @@ export const Workspace: React.FC = () => {
   const setMode = useUiStore((s) => s.setMode)
   const contextPanelOpen = useUiStore((s) => s.contextPanelOpen)
   const toggleContextPanel = useUiStore((s) => s.toggleContextPanel)
+  const focusMode = useUiStore((s) => s.focusMode)
+  const toggleFocusMode = useUiStore((s) => s.toggleFocusMode)
+  const setPaletteOpen = useUiStore((s) => s.setPaletteOpen)
   const theme = useUiStore((s) => s.theme)
   const toggleTheme = useUiStore((s) => s.toggleTheme)
   const freeWriteMode = useSettingsStore((s) => s.freeWriteMode)
@@ -66,6 +70,53 @@ export const Workspace: React.FC = () => {
     }
   }, [projectId, projects, setActiveProject, loadProjectData, navigate])
 
+  // Sprint 9.6 — first-launch onboarding toast for UX polish update.
+  // Shown once per device when user opens Workspace post-v9.6.
+  const addToast = useUiStore((s) => s.addToast)
+  useEffect(() => {
+    try {
+      const flag = localStorage.getItem('vn_ux_polish_v96_seen')
+      if (flag === null) {
+        addToast(
+          '✨ UI baru: tekan Cmd/Ctrl+K untuk Aksi Cepat, klik ikon fokus untuk lihat panel lengkap.',
+          'info',
+          7000
+        )
+        localStorage.setItem('vn_ux_polish_v96_seen', '1')
+      }
+    } catch {
+      // ignore localStorage errors (private mode etc.)
+    }
+  }, [addToast])
+
+  // Sprint 9.7 — Deep Think onboarding toast. Independent flag so it shows
+  // sequentially with the v9.6 toast (each user sees both once total).
+  useEffect(() => {
+    try {
+      const flag = localStorage.getItem('vn_deepthink_v97_seen')
+      if (flag === null) {
+        // Slight delay so this doesn't overlap with the v9.6 toast on a
+        // brand-new install; the toast queue stacks them visually anyway,
+        // but the spacing reads better.
+        const timer = setTimeout(() => {
+          addToast(
+            '🧠 Fitur baru: AI sekarang merencanakan adegan dulu sebelum menulis. Bikin prosa lebih tajam (subtext, cliffhanger). Bisa dimatikan di ⋯ Lainnya.',
+            'info',
+            8000
+          )
+          try {
+            localStorage.setItem('vn_deepthink_v97_seen', '1')
+          } catch {
+            // ignore
+          }
+        }, 1500)
+        return () => clearTimeout(timer)
+      }
+    } catch {
+      // ignore localStorage errors (private mode etc.)
+    }
+  }, [addToast])
+
   if (!activeProject) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-on-surface-variant">
@@ -92,60 +143,155 @@ export const Workspace: React.FC = () => {
       <BatchProgressPanel />
       <FreeWriteIndexerWatcher />
       {/* ── Header ── */}
-      <header className="flex-shrink-0 z-50">
-        <div className="bg-surface-dim/80 backdrop-blur-md flex flex-col w-full px-5 md:px-16 py-4 space-y-4 border-b border-surface-variant/20 shadow-sm">
-          {/* Row 1: Navigation & Actions */}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center space-x-2 text-on-surface-variant hover:text-primary transition-colors group cursor-pointer"
-            >
-              <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">
-                arrow_back
-              </span>
-              <span className="text-label-lg hidden sm:inline">Beranda</span>
-            </button>
-            <h1 className="text-headline-md text-primary text-center truncate flex-1 px-4 font-bold">
-              {activeProject.title}
-              {activeProject.genesis_mode === 'IMPORTED' && (
-                <span className="ml-3 align-middle text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/30">
-                  📥 Imported
+      {/*
+        Sprint 9.6 — Focus Mode aware header.
+        - focusMode ON: 36px slim breadcrumb + auto-save + Aksi Cepat hint.
+          ModeSwitcher hidden, accessible via hover top edge or Cmd+K.
+        - focusMode OFF: full original header with project title chips,
+          theme toggle, notifications, ModeSwitcher row.
+      */}
+      {focusMode ? (
+        <header className="flex-shrink-0 z-50">
+          <div className="bg-surface-dim/85 backdrop-blur-md flex items-center justify-between gap-3 w-full px-4 md:px-8 py-2 border-b border-surface-variant/20">
+            {/* Left: back + breadcrumb */}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <button
+                onClick={() => navigate('/')}
+                aria-label="Kembali ke Beranda"
+                className="text-on-surface-variant hover:text-primary transition-colors p-1 rounded cursor-pointer shrink-0"
+              >
+                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              </button>
+              <button
+                onClick={toggleContextPanel}
+                aria-label={contextPanelOpen ? 'Tutup panel' : 'Buka panel'}
+                className="text-on-surface-variant hover:text-primary transition-colors p-1 rounded cursor-pointer shrink-0"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  {contextPanelOpen ? 'menu_open' : 'menu'}
                 </span>
-              )}
-              {freeWriteMode && (
-                <span className="ml-2 align-middle text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
-                  🔓 Free Write
+              </button>
+              <div className="text-label-md text-on-surface-variant min-w-0 truncate flex items-center gap-1.5">
+                <span className="text-primary font-semibold truncate">
+                  {activeProject.title}
                 </span>
-              )}
-            </h1>
-            <div className="flex items-center space-x-4">
-              <span className="text-label-md text-on-surface-variant hidden sm:inline font-semibold">
+                <span className="text-on-surface-variant/40">·</span>
+                <span className="text-on-surface-variant/80 hidden sm:inline">
+                  {activeMode === 'brainstorm' && '💬 Brainstorm'}
+                  {activeMode === 'outline' && '📋 Outline'}
+                  {activeMode === 'write' && '✍ Menulis'}
+                  {activeMode === 'review' && '📊 Review'}
+                  {activeMode === 'visualize' && '🌌 Visualisasi'}
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Aksi Cepat + chapters + focus toggle */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setPaletteOpen(true)}
+                aria-label="Buka Aksi Cepat"
+                className="hidden md:flex items-center gap-1.5 text-[11px] text-on-surface-variant hover:text-on-surface bg-surface-container-low border border-outline-variant/30 hover:border-primary/40 px-2 py-1 rounded-lg cursor-pointer transition-colors"
+              >
+                <span className="material-symbols-outlined text-[14px]">bolt</span>
+                Aksi Cepat
+                <kbd className="font-mono text-[9px] bg-surface-container px-1 py-0.5 rounded">⌘K</kbd>
+              </button>
+              <span className="text-[11px] text-on-surface-variant/70 hidden sm:inline">
                 {chapters.length}/{activeProject.target_chapters} bab
               </span>
               <button
-                onClick={toggleTheme}
-                aria-label="Toggle Theme"
-                className="text-on-surface-variant hover:text-primary transition-colors hover:bg-primary/10 rounded-full p-2 cursor-pointer"
+                onClick={toggleFocusMode}
+                aria-label="Keluar Mode Fokus"
+                title="Mode Fokus aktif — klik untuk lihat panel lengkap"
+                className="text-primary hover:bg-primary/10 transition-colors p-1 rounded cursor-pointer"
               >
                 <span
-                  className="material-symbols-outlined text-secondary"
+                  className="material-symbols-outlined text-[18px]"
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >
-                  {theme === 'dark' ? 'dark_mode' : 'light_mode'}
+                  center_focus_strong
                 </span>
-              </button>
-              <button
-                aria-label="Notifications"
-                className="text-on-surface-variant hover:text-primary transition-colors hover:bg-primary/10 rounded-full p-2 cursor-pointer"
-              >
-                <span className="material-symbols-outlined">notifications</span>
               </button>
             </div>
           </div>
-          {/* Row 2: Animated Mode Tab Bar */}
-          <ModeSwitcher />
-        </div>
-      </header>
+          {/* Hover-reveal ModeSwitcher when focus mode is on */}
+          <HoverModeRevealer />
+        </header>
+      ) : (
+        <header className="flex-shrink-0 z-50">
+          <div className="bg-surface-dim/80 backdrop-blur-md flex flex-col w-full px-5 md:px-16 py-4 space-y-4 border-b border-surface-variant/20 shadow-sm">
+            {/* Row 1: Navigation & Actions */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center space-x-2 text-on-surface-variant hover:text-primary transition-colors group cursor-pointer"
+              >
+                <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">
+                  arrow_back
+                </span>
+                <span className="text-label-lg hidden sm:inline">Beranda</span>
+              </button>
+              <h1 className="text-headline-md text-primary text-center truncate flex-1 px-4 font-bold">
+                {activeProject.title}
+                {activeProject.genesis_mode === 'IMPORTED' && (
+                  <span className="ml-3 align-middle text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/30">
+                    📥 Imported
+                  </span>
+                )}
+                {freeWriteMode && (
+                  <span className="ml-2 align-middle text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
+                    🔓 Free Write
+                  </span>
+                )}
+              </h1>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setPaletteOpen(true)}
+                  aria-label="Buka Aksi Cepat"
+                  title="Aksi Cepat (Cmd+K)"
+                  className="flex items-center gap-1.5 text-[11px] text-on-surface-variant hover:text-on-surface bg-surface-container-low border border-outline-variant/30 hover:border-primary/40 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[14px]">bolt</span>
+                  <span className="hidden md:inline">Aksi Cepat</span>
+                  <kbd className="font-mono text-[9px] bg-surface-container px-1 py-0.5 rounded">⌘K</kbd>
+                </button>
+                <span className="text-label-md text-on-surface-variant hidden sm:inline font-semibold">
+                  {chapters.length}/{activeProject.target_chapters} bab
+                </span>
+                <button
+                  onClick={toggleFocusMode}
+                  aria-label="Aktifkan Mode Fokus"
+                  title="Mode Fokus — sembunyikan toolbar"
+                  className="text-on-surface-variant hover:text-primary transition-colors hover:bg-primary/10 rounded-full p-2 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[20px]">center_focus_weak</span>
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  aria-label="Toggle Theme"
+                  className="text-on-surface-variant hover:text-primary transition-colors hover:bg-primary/10 rounded-full p-2 cursor-pointer"
+                >
+                  <span
+                    className="material-symbols-outlined text-secondary"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    {theme === 'dark' ? 'dark_mode' : 'light_mode'}
+                  </span>
+                </button>
+                <button
+                  aria-label="Notifications"
+                  className="text-on-surface-variant hover:text-primary transition-colors hover:bg-primary/10 rounded-full p-2 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined">notifications</span>
+                </button>
+              </div>
+            </div>
+            {/* Row 2: Animated Mode Tab Bar */}
+            <ModeSwitcher />
+          </div>
+        </header>
+      )}
 
       {/* ── Main Area ── */}
       <div className="flex-1 flex overflow-hidden">

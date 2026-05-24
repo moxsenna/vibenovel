@@ -109,7 +109,7 @@ export const EditDraftModal: React.FC<EditDraftModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="fixed inset-0 bg-black/35 backdrop-blur-[2px] flex items-stretch justify-end z-50">
         {/* Backdrop transition */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -121,29 +121,29 @@ export const EditDraftModal: React.FC<EditDraftModalProps> = ({
 
         {/* Modal Container */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ type: 'spring', duration: 0.35 }}
-          className="bg-surface-container-high rounded-[24px] w-full max-w-[550px] p-6 md:p-8 shadow-2xl relative inner-glow border border-outline-variant/30 z-10 max-h-[90vh] flex flex-col"
+          initial={{ x: '100%', opacity: 0.8 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: '100%', opacity: 0.8 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+          className="bg-surface-container-high w-full sm:w-[min(450px,92vw)] h-screen p-5 md:p-6 shadow-2xl relative inner-glow border-l border-outline-variant/30 z-10 flex flex-col"
         >
           {/* Close button */}
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container hover:bg-surface-container-highest border border-outline-variant absolute top-6 right-6 cursor-pointer transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container hover:bg-surface-container-highest border border-outline-variant absolute top-5 right-5 cursor-pointer transition-colors"
             type="button"
           >
             <span className="material-symbols-outlined text-[18px] text-on-surface-variant">close</span>
           </button>
 
           {/* Header */}
-          <h3 className="text-headline-md text-on-surface mb-6 flex items-center gap-2.5 flex-shrink-0">
+          <h3 className="text-headline-sm md:text-headline-md text-on-surface mb-5 pr-10 flex items-center gap-2.5 flex-shrink-0">
             <span className="material-symbols-outlined text-primary text-[28px]">{meta.icon}</span>
             Edit Draf {meta.label}
           </h3>
 
           {/* Form Scroll Area */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1 scrollbar-hide space-y-5">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1 scrollbar-hide space-y-5 pb-3">
             
             {/* CHARACTER FORM */}
             {draftType === 'character' && (
@@ -496,7 +496,7 @@ export const EditDraftModal: React.FC<EditDraftModalProps> = ({
             )}
 
             {/* Actions Buttons Footer */}
-            <div className="flex items-center gap-3 pt-4 border-t border-outline-variant/30 flex-shrink-0">
+            <div className="sticky bottom-0 -mx-1 flex items-center gap-3 pt-4 border-t border-outline-variant/30 bg-surface-container-high flex-shrink-0">
               <button
                 type="button"
                 onClick={onClose}

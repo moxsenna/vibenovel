@@ -21,7 +21,8 @@ import type {
   ProseGenerateInput,
   QuickScanResult,
   ImportedChapterData,
-  VoiceDnaResult
+  VoiceDnaResult,
+  ThinkingChunk
 } from './types'
 import {
   buildPlotRadarSystemInstruction,
@@ -160,10 +161,24 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
   /**
    * Outline Engine: Generates a highly detailed, 20+ field outline for a specific chapter
    * using Gemini Core Engine (gratis).
-   * Uses dedicated prompt builder from outline-engine.ts.
+   *
+   * Sprint 9.8 — Accepts optional `options.thinkingBudget` for Deep Outline.
+   * When > 0, switches from `geminiPool.generateContent()` to
+   * `geminiPool.generateContentV2()` which injects `thinkingConfig` into
+   * `generationConfig`. Thought summary is currently discarded — outline
+   * is an analytical task, user doesn't need to see model reasoning.
+   *
+   * Retry mechanism remains as defense-in-depth — Deep Outline reduces
+   * retry rate (model plans JSON shape before output) but doesn't replace
+   * the safety net.
    */
-  public async generateChapterOutline(input: OutlineGenerateInput): Promise<OutlineResponse> {
+  public async generateChapterOutline(
+    input: OutlineGenerateInput,
+    options?: { thinkingBudget?: number; signal?: AbortSignal }
+  ): Promise<OutlineResponse> {
     const systemInstruction = buildOutlineSystemInstruction()
+    const thinkingBudget = options?.thinkingBudget ?? 0
+    const signal = options?.signal
 
     const userPrompt = buildOutlineUserPrompt({
       title: input.title,
@@ -230,13 +245,15 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
 
     while (retries > 0) {
       try {
-        const response = await geminiPool.generateContent(
+        const result = await geminiPool.generateContentV2(
           userPrompt,
           systemInstruction,
           true,
-          'gemini-flash-latest'
+          'gemini-flash-latest',
+          signal,
+          thinkingBudget
         )
-        const cleaned = response.replace(/^```json\s*/i, '').replace(/```$/, '').trim()
+        const cleaned = result.text.replace(/^```json\s*/i, '').replace(/```$/, '').trim()
         return JSON.parse(cleaned) as OutlineResponse
       } catch (e) {
         console.error(`Outline parse attempt failed (${retries} retries left):`, e)
@@ -250,13 +267,15 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
             'No markdown, no explanation, no code fences. Start with { and end with }.'
 
           try {
-            const response = await geminiPool.generateContent(
+            const result = await geminiPool.generateContentV2(
               stricterPrompt,
               systemInstruction,
               true,
-              'gemini-flash-latest'
+              'gemini-flash-latest',
+              signal,
+              thinkingBudget
             )
-            const cleaned = response.replace(/^```json\s*/i, '').replace(/```$/, '').trim()
+            const cleaned = result.text.replace(/^```json\s*/i, '').replace(/```$/, '').trim()
             return JSON.parse(cleaned) as OutlineResponse
           } catch (retryError) {
             lastError = retryError instanceof Error ? retryError : new Error(String(retryError))
@@ -271,35 +290,56 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
 
   /**
    * Prose Writer: Generates the actual chapter prose beat-by-beat via Streaming.
-   * Can use Gemini Core, Claude, or Deepseek depending on settings.
+   *
+   * Sprint 9.7 — Returns {@link ThinkingChunk} so callers can split
+   * model reasoning ("thought" chunks) from final prose ("text" chunks).
+   * Caller passes `options.thinkingBudget` per call (0 = thinking off).
+   *
+   * Routes to Gemini (free, 2.5 Flash) or OpenRouter (Claude Sonnet 4.6,
+   * DeepSeek V4 Flash :free, DeepSeek V4 Pro) depending on settings.
    */
   public async *generateProseBeatStream(
     _project: Project,
-    input: ProseGenerateInput
-  ): AsyncGenerator<string, void, unknown> {
+    input: ProseGenerateInput,
+    options?: { thinkingBudget?: number; signal?: AbortSignal }
+  ): AsyncGenerator<ThinkingChunk, void, unknown> {
     const settings = useSettingsStore.getState()
     const activeModel = settings.activeProseModel
+    const thinkingBudget = options?.thinkingBudget ?? 0
+    const signal = options?.signal
 
     const systemInstruction = buildProseSystemInstruction()
     const userPrompt = buildProseUserPrompt(input)
 
     if (activeModel === 'gemini') {
-      const stream = geminiPool.generateContentStream(
+      const stream = geminiPool.generateContentStreamV2(
         userPrompt,
         systemInstruction,
-        'gemini-flash-latest'
+        'gemini-flash-latest',
+        signal,
+        thinkingBudget
       )
       for await (const chunk of stream) {
         yield chunk
       }
     } else {
-      const orModel =
-        activeModel === 'claude' ? 'anthropic/claude-3.5-sonnet' : 'deepseek/deepseek-chat'
+      // OpenRouter routing: claude → Sonnet 4.6, deepseek → V4 Flash (free),
+      // deepseek-pro → V4 Pro (paid, best fiction quality).
+      let orModel = 'anthropic/claude-sonnet-4.6'
+      if (activeModel === 'claude') {
+        orModel = 'anthropic/claude-sonnet-4.6'
+      } else if (activeModel === 'deepseek') {
+        orModel = 'deepseek/deepseek-v4-flash'
+      } else if (activeModel === 'deepseek-pro') {
+        orModel = 'deepseek/deepseek-v4-pro'
+      }
 
-      const stream = openRouterAdapter.generateContentStream(
+      const stream = openRouterAdapter.generateContentStreamV2(
         userPrompt,
         systemInstruction,
-        orModel
+        orModel,
+        thinkingBudget,
+        signal
       )
       for await (const chunk of stream) {
         yield chunk

@@ -7,6 +7,7 @@ import { useAuth } from './hooks/useAuth'
 import { PremiumConfirmModal } from './components/ui/PremiumConfirmModal'
 import { PremiumToastContainer } from './components/ui/PremiumToastContainer'
 import { LoadingSplash } from './components/ui/LoadingSplash'
+import { CommandPalette } from './components/ui/CommandPalette'
 
 // Sprint 9 — Lazy-load Workspace route. ProseWriter, ContextPanel, modals,
 // and visualization chunks all load on demand when user opens a project.
@@ -43,6 +44,49 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+/**
+ * Global keyboard shortcut listener — Sprint 9.6.
+ * Cmd/Ctrl+K opens command palette anywhere in the app.
+ * Cmd/Ctrl+1..5 switches workspace mode (only effective when in Workspace).
+ */
+function GlobalKeybinds() {
+  const setPaletteOpen = useUiStore((s) => s.setPaletteOpen)
+  const setMode = useUiStore((s) => s.setMode)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey
+      if (!isMod) return
+
+      if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault()
+        setPaletteOpen(true)
+        return
+      }
+
+      // Mode switching shortcuts
+      const modes: Record<string, 'brainstorm' | 'outline' | 'write' | 'review' | 'visualize'> = {
+        '1': 'brainstorm',
+        '2': 'outline',
+        '3': 'write',
+        '4': 'review',
+        '5': 'visualize'
+      }
+      if (modes[e.key]) {
+        // Only on workspace route — but no easy hook to detect router state here,
+        // so just dispatch unconditionally; setMode is a no-op visually outside.
+        e.preventDefault()
+        setMode(modes[e.key])
+      }
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [setPaletteOpen, setMode])
+
+  return null
+}
+
 function App() {
   const theme = useUiStore((s) => s.theme)
   const { user, isConfigured } = useAuth()
@@ -58,6 +102,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <GlobalKeybinds />
       <Routes>
         {/* Public routes */}
         <Route
@@ -97,9 +142,9 @@ function App() {
       {/* Global themed custom dialogs */}
       <PremiumConfirmModal />
       <PremiumToastContainer />
+      <CommandPalette />
     </BrowserRouter>
   )
 }
 
 export default App
-

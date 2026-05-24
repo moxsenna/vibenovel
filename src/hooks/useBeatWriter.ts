@@ -37,6 +37,26 @@ export function useBeatWriter(chapterId: string) {
   const [streamingText, setStreamingText] = useState('')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [stateGenStatus, setStateGenStatus] = useState<StateGenStatus>('idle')
+  // Sprint 9.7 — Deep Think state. Both reset on chapter/beat change.
+  const [isThinking, setIsThinking] = useState(false)
+  const [currentThought, setCurrentThought] = useState('')
+
+  const { triggerPlotRadar } = usePlotRadar()
+  const { triggerLoreExtraction } = useLoreExtractor()
+  const { isOnline, saveDraft, clearDraft, syncPendingDrafts } = useOfflineDraft()
+  const freeWriteMode = useSettingsStore((s) => s.freeWriteMode)
+  // Sprint 9.7 — Deep Think settings. Read once per render so generateBeat
+  // captures the current values via closure when invoked.
+  const deepThinkEnabled = useSettingsStore((s) => s.deepThinkEnabled)
+  const deepThinkBudget = useSettingsStore((s) => s.deepThinkBudget)
+
+  // Refs that survive re-renders without triggering them
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const stateGenTriggeredRef = useRef(false)
+  // Sprint 9.7 — Track thinking phase via ref so the stream loop can guard
+  // duplicate `setIsThinking(false)` setState calls without re-renders.
+  const isThinkingRef = useRef(false)
 
   // Reset state-gen-status during render whenever the active chapter changes,
   // avoiding the cascading-renders warning that comes from setState-in-effect.
@@ -45,21 +65,17 @@ export function useBeatWriter(chapterId: string) {
     setPrevChapterId(chapterId)
     setStateGenStatus('idle')
     setCurrentBeatIndex(0)
+    setIsThinking(false)
+    setCurrentThought('')
+    // isThinkingRef is reset by generateBeat's finally block + the
+    // chapterId useEffect below — keeping it out of render satisfies the
+    // React 19 react-hooks/refs purity rule.
   }
-
-  const { triggerPlotRadar } = usePlotRadar()
-  const { triggerLoreExtraction } = useLoreExtractor()
-  const { isOnline, saveDraft, clearDraft, syncPendingDrafts } = useOfflineDraft()
-  const freeWriteMode = useSettingsStore((s) => s.freeWriteMode)
-
-  // Refs that survive re-renders without triggering them
-  const abortControllerRef = useRef<AbortController | null>(null)
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const stateGenTriggeredRef = useRef(false)
 
   // Reset the trigger flag when the chapter id changes (refs don't trigger renders).
   useEffect(() => {
     stateGenTriggeredRef.current = false
+    isThinkingRef.current = false
   }, [chapterId])
 
   // Initialize beats based on key_events if beats array is empty.
@@ -311,8 +327,12 @@ export function useBeatWriter(chapterId: string) {
 
       setIsGenerating(true)
       setStreamingText('')
+      // Sprint 9.7 — Reset thought state for the new beat.
+      setCurrentThought('')
+      setIsThinking(false)
 
       abortControllerRef.current = new AbortController()
+      const effectiveBudget = deepThinkEnabled ? deepThinkBudget : 0
 
       try {
         const prevStates = getLatestStatesForChapter(chapter.chapter_number)
@@ -327,16 +347,37 @@ export function useBeatWriter(chapterId: string) {
           allChapters: chapters
         })
 
-        const stream = aiRouter.generateProseBeatStream(activeProject, input)
+        const stream = aiRouter.generateProseBeatStream(activeProject, input, {
+          thinkingBudget: effectiveBudget,
+          signal: abortControllerRef.current.signal
+        })
         let accumulatedText = ''
+        let thoughtBuffer = ''
 
         for await (const chunk of stream) {
           if (abortControllerRef.current.signal.aborted) {
             break
           }
-          accumulatedText += chunk
-          setStreamingText(accumulatedText)
-          debouncedSaveBeat(beatIndex, accumulatedText)
+          if (chunk.type === 'thought') {
+            // Mark that the model is currently thinking; first text chunk
+            // flips this back to false.
+            if (!isThinkingRef.current) {
+              isThinkingRef.current = true
+              setIsThinking(true)
+            }
+            thoughtBuffer += chunk.content
+            setCurrentThought(thoughtBuffer)
+          } else if (chunk.type === 'text') {
+            // First prose chunk = thinking phase ended. Strict filter:
+            // ONLY text chunks accumulate into the saved buffer.
+            if (isThinkingRef.current) {
+              isThinkingRef.current = false
+              setIsThinking(false)
+            }
+            accumulatedText += chunk.content
+            setStreamingText(accumulatedText)
+            debouncedSaveBeat(beatIndex, accumulatedText)
+          }
         }
       } catch (e: unknown) {
         const err = e as { name?: string; message?: string }
@@ -346,6 +387,8 @@ export function useBeatWriter(chapterId: string) {
         }
       } finally {
         setIsGenerating(false)
+        isThinkingRef.current = false
+        setIsThinking(false)
         abortControllerRef.current = null
       }
     },
@@ -358,7 +401,9 @@ export function useBeatWriter(chapterId: string) {
       worldRules,
       getLatestStatesForChapter,
       debouncedSaveBeat,
-      addToast
+      addToast,
+      deepThinkEnabled,
+      deepThinkBudget
     ]
   )
 
@@ -388,6 +433,8 @@ export function useBeatWriter(chapterId: string) {
     streamingText,
     saveStatus,
     stateGenStatus,
+    isThinking,
+    currentThought,
     generateBeat,
     stopGeneration,
     handleManualEdit,

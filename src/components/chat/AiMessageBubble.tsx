@@ -14,13 +14,15 @@ interface AiMessageBubbleProps {
   onApprove: () => void
   onEdit: () => void
   onReject: () => void
+  actionsDisabled?: boolean
 }
 
 export const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
   message,
   onApprove,
   onEdit,
-  onReject
+  onReject,
+  actionsDisabled = false
 }) => {
   const { content, draftData } = message
 
@@ -95,6 +97,7 @@ export const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
               onApprove={onApprove}
               onEdit={onEdit}
               onReject={onReject}
+              disabled={actionsDisabled}
             />
           </div>
         )}

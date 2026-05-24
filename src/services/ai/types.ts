@@ -5,6 +5,18 @@ export interface AISettings {
   activeProseModel: string
 }
 
+/**
+ * Sprint 9.7 — Deep Think Mode.
+ * Streaming chunk shape that distinguishes thinking tokens (model's internal
+ * reasoning) from final prose text. Only `type === 'text'` content is
+ * persisted to chapter prose; `type === 'thought'` is rendered live in the
+ * UI but never saved.
+ */
+export interface ThinkingChunk {
+  type: 'thought' | 'text'
+  content: string
+}
+
 export interface ChatMessageParam {
   role: 'user' | 'assistant' | 'system'
   content: string

@@ -84,6 +84,25 @@ export const CoAuthorChat: React.FC<CoAuthorChatProps> = ({ projectId }) => {
           {chatMessages.map((msg) => {
             const isUser = msg.role === 'user'
 
+            if (msg.role === 'system') {
+              return (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="flex justify-center"
+                >
+                  <div className="px-3 py-1.5 rounded-full bg-surface-container-high border border-outline-variant/30 text-[11px] text-on-surface-variant flex items-center gap-1.5 shadow-sm">
+                    <span className="material-symbols-outlined text-[14px] text-primary">
+                      check_circle
+                    </span>
+                    {msg.content}
+                  </div>
+                </motion.div>
+              )
+            }
+
             if (isUser) {
               return (
                 <motion.div
@@ -118,6 +137,7 @@ export const CoAuthorChat: React.FC<CoAuthorChatProps> = ({ projectId }) => {
                   onApprove={() => updateMessageDraftStatus(projectId, msg.id, 'approved')}
                   onEdit={() => setEditingMessage(msg)}
                   onReject={() => updateMessageDraftStatus(projectId, msg.id, 'rejected')}
+                  actionsDisabled={chatLoading}
                 />
               </motion.div>
             )
