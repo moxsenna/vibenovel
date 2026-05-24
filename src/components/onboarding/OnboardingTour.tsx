@@ -1,69 +1,181 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
- * OnboardingTour — Sprint 9
+ * OnboardingTour
  *
- * 5-step coach mark overlay for first-time users.
- *
- * Trigger: localStorage.getItem('vn_onboarding_done_v1') === null
- * Reset:   SettingsModal "Tutorial" tab → "Reset Onboarding" button.
- *
- * Highlight target via `data-tour-step="..."` attribute selector.
- * Portal overlay dengan dim background + cutout ring sekitar target.
- *
- * Respects prefers-reduced-motion (skip scale/spring, use fade only).
+ * Reusable coach-mark overlay. Each tour owns a separate localStorage flag,
+ * so Home and every Workspace mode can teach itself the first time it opens.
  */
 
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 
-const ONBOARDING_FLAG = 'vn_onboarding_done_v1'
+const HOME_ONBOARDING_FLAG = 'vn_onboarding_done_v1'
+const ONBOARDING_FLAG_PREFIX = 'vn_onboarding_'
+const ONBOARDING_FLAG_SUFFIX = '_done_v1'
 
-interface TourStep {
+export interface TourStep {
   /** Selector matched against `[data-tour-step="..."]`. */
-  target: string | null // null → centered welcome (no target)
+  target: string | null
   title: string
   body: string
-  emoji: string
+  icon: string
 }
 
-const STEPS: TourStep[] = [
+export const getOnboardingFlag = (tourId: string) => {
+  if (tourId === 'home') return HOME_ONBOARDING_FLAG
+  return `${ONBOARDING_FLAG_PREFIX}${tourId}${ONBOARDING_FLAG_SUFFIX}`
+}
+
+export const resetAllOnboardingFlags = () => {
+  if (typeof localStorage === 'undefined') return
+
+  localStorage.removeItem(HOME_ONBOARDING_FLAG)
+
+  const keys: string[] = []
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i)
+    if (
+      key &&
+      key.startsWith(ONBOARDING_FLAG_PREFIX) &&
+      key.endsWith(ONBOARDING_FLAG_SUFFIX)
+    ) {
+      keys.push(key)
+    }
+  }
+
+  keys.forEach((key) => localStorage.removeItem(key))
+}
+
+export const HOME_ONBOARDING_STEPS: TourStep[] = [
   {
     target: null,
-    emoji: '✨',
+    icon: 'auto_awesome',
     title: 'Selamat datang di VibeNovel',
-    body: 'Mesin pencetak novel komersial bertenaga AI. Tour singkat 5 langkah biar kamu cepat akrab.'
+    body: 'Kamu bisa mulai dari membuat proyek baru, lanjut menulis naskah, atau membuka pengaturan bantuan AI.'
   },
   {
     target: 'new-project',
-    emoji: '🌱',
-    title: 'Buat Proyek Baru',
-    body: 'Klik kartu "Mulai Novel Baru" untuk bikin proyek. Tiga jalan: Mulai Dari Nol, Pakai Blueprint, atau Lanjut Cerita Saya (import).'
-  },
-  {
-    target: 'mode-switcher',
-    emoji: '🧭',
-    title: 'Mode Switcher',
-    body: 'Di Workspace ada 5 mode: Brainstorm, Outline, Write, Review, Visualisasi. Pindah mode sesuai aktivitas saat ini.'
-  },
-  {
-    target: 'context-panel',
-    emoji: '📂',
-    title: 'Context Panel',
-    body: 'Sidebar kiri menampilkan info relevan dengan mode aktif: Story Compass, Lorebook, atau State Snapshot. Bisa dilipat.'
+    icon: 'add_circle',
+    title: 'Mulai novel baru',
+    body: 'Pilih kartu ini saat ingin membuat cerita dari nol, memakai blueprint genre, atau mengimpor naskah lama.'
   },
   {
     target: 'settings',
-    emoji: '🔑',
-    title: 'Pengaturan & API Keys',
-    body: 'Tambahkan Gemini API key dulu sebelum mulai. BYOK — key tetap di browser-mu, tidak pernah pergi ke server kami.'
+    icon: 'settings',
+    title: 'Pengaturan bantuan AI',
+    body: 'Masukkan API key di sini sebelum memakai fitur bantuan AI. Kuncinya tetap tersimpan lokal di browser.'
   }
 ]
 
+export const WORKSPACE_ONBOARDING_STEPS = {
+  brainstorm: [
+    {
+      target: 'canvas-brainstorm',
+      icon: 'psychology_alt',
+      title: 'Ide Cerita',
+      body: 'Di sini kamu merapikan premis, tokoh, konflik, dan arah ending lewat obrolan dengan Co-Author.'
+    },
+    {
+      target: 'context-panel',
+      icon: 'explore',
+      title: 'Kompas Cerita',
+      body: 'Panel samping menyimpan bagian penting cerita. Kalau panel sedang tertutup, buka lewat ikon menu di header.'
+    },
+    {
+      target: 'menu-pintas',
+      icon: 'bolt',
+      title: 'Menu Pintas',
+      body: 'Pakai ini untuk lompat ke fitur penting tanpa mencari tombol satu per satu.'
+    }
+  ],
+  outline: [
+    {
+      target: 'canvas-outline',
+      icon: 'format_list_numbered',
+      title: 'Rencana Bab',
+      body: 'Bagian ini membantu menyusun arah tiap bab sebelum kamu masuk ke penulisan naskah.'
+    },
+    {
+      target: 'context-panel',
+      icon: 'library_books',
+      title: 'Catatan cerita',
+      body: 'Tokoh, barang penting, aturan dunia, dan suara cerita tetap terlihat sebagai pegangan saat merancang bab.'
+    },
+    {
+      target: 'menu-pintas',
+      icon: 'bolt',
+      title: 'Menu Pintas',
+      body: 'Buka cepat Naskah, Ide Cerita, Pengaturan, atau aksi lain dari satu tempat.'
+    }
+  ],
+  write: [
+    {
+      target: 'canvas-write',
+      icon: 'history_edu',
+      title: 'Naskah',
+      body: 'Ini meja menulismu. Kamu bisa menulis bebas, memakai rencana bab, atau meminta AI membantu membuat adegan.'
+    },
+    {
+      target: 'workspace-panel-toggle',
+      icon: 'view_sidebar',
+      title: 'Panel catatan',
+      body: 'Gunakan tombol ini saat ingin melihat rencana bab, state tokoh, atau catatan cerita sambil menulis.'
+    },
+    {
+      target: 'menu-pintas',
+      icon: 'bolt',
+      title: 'Menu Pintas',
+      body: 'Saat ingin pindah mode tanpa kehilangan fokus, buka Menu Pintas dari header.'
+    }
+  ],
+  review: [
+    {
+      target: 'canvas-review',
+      icon: 'fact_check',
+      title: 'Cek Cerita',
+      body: 'Di sini kamu memeriksa lubang plot, konsistensi, alur emosi, dan catatan revisi sebelum lanjut.'
+    },
+    {
+      target: 'context-panel',
+      icon: 'radar',
+      title: 'Radar cerita',
+      body: 'Panel samping menampilkan ringkasan masalah dan petunjuk agar revisi terasa lebih terarah.'
+    },
+    {
+      target: 'menu-pintas',
+      icon: 'bolt',
+      title: 'Menu Pintas',
+      body: 'Gunakan Menu Pintas untuk kembali ke Naskah atau membuka Pengaturan kapan saja.'
+    }
+  ],
+  visualize: [
+    {
+      target: 'canvas-visualize',
+      icon: 'hub',
+      title: 'Peta Cerita',
+      body: 'Bagian ini memberi pandangan besar: emosi, timeline, hubungan, dan statistik naskah.'
+    },
+    {
+      target: 'mode-switcher',
+      icon: 'tabs',
+      title: 'Pindah ruang kerja',
+      body: 'Saat butuh kembali menulis atau merancang bab, pilih mode lain dari tab ruang kerja.'
+    },
+    {
+      target: 'menu-pintas',
+      icon: 'bolt',
+      title: 'Menu Pintas',
+      body: 'Semua perpindahan penting tetap bisa dicari dari satu tombol cepat.'
+    }
+  ]
+} as const satisfies Record<string, readonly TourStep[]>
+
 interface OnboardingTourProps {
+  tourId?: string
+  steps?: readonly TourStep[]
   onClose?: () => void
-  /**
-   * Force open even if flag is set. Useful for testing.
-   */
+  /** Force open even if the saved flag is set. Useful for testing/reset flows. */
   forceOpen?: boolean
 }
 
@@ -76,12 +188,11 @@ interface TargetRect {
 
 const PADDING = 8
 
-/** Find target rect via data-tour-step attribute. */
 const findTargetRect = (selector: string | null): TargetRect | null => {
-  if (!selector) return null
-  if (typeof document === 'undefined') return null
+  if (!selector || typeof document === 'undefined') return null
   const el = document.querySelector(`[data-tour-step="${selector}"]`)
   if (!el) return null
+
   const r = el.getBoundingClientRect()
   return {
     top: r.top - PADDING,
@@ -91,14 +202,17 @@ const findTargetRect = (selector: string | null): TargetRect | null => {
   }
 }
 
-export const OnboardingTour: React.FC<OnboardingTourProps> = ({ onClose, forceOpen = false }) => {
-  // Decide whether to open on mount via lazy initial state — avoids
-  // setState-in-effect (React 19 strict purity rule).
+export const OnboardingTour: React.FC<OnboardingTourProps> = ({
+  tourId = 'home',
+  steps = HOME_ONBOARDING_STEPS,
+  onClose,
+  forceOpen = false
+}) => {
   const [open, setOpen] = useState<boolean>(() => {
     if (forceOpen) return true
     if (typeof window === 'undefined') return false
     try {
-      return localStorage.getItem(ONBOARDING_FLAG) === null
+      return localStorage.getItem(getOnboardingFlag(tourId)) === null
     } catch {
       return false
     }
@@ -107,8 +221,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ onClose, forceOp
   const [rect, setRect] = useState<TargetRect | null>(null)
   const reducedMotion = useReducedMotion()
 
-  // Recompute rect when step or window resizes.
-  const currentStep = STEPS[stepIndex]
+  const currentStep = steps[stepIndex]
+
   useEffect(() => {
     if (!open) return
     const recompute = () => setRect(findTargetRect(currentStep?.target ?? null))
@@ -123,59 +237,60 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ onClose, forceOp
 
   const finishTour = () => {
     try {
-      localStorage.setItem(ONBOARDING_FLAG, '1')
+      localStorage.setItem(getOnboardingFlag(tourId), '1')
     } catch {
-      // ignore
+      // Ignore localStorage errors in private browsing.
     }
     setOpen(false)
     onClose?.()
   }
 
   const handleNext = () => {
-    if (stepIndex < STEPS.length - 1) {
+    if (stepIndex < steps.length - 1) {
       setStepIndex((i) => i + 1)
-    } else {
-      finishTour()
+      return
     }
+    finishTour()
   }
 
   const handlePrev = () => {
     if (stepIndex > 0) setStepIndex((i) => i - 1)
   }
 
-  // Position the tooltip beside the highlight, or centered if no target.
   const tooltipPos = useMemo(() => {
     if (!rect || typeof window === 'undefined') {
       return { centered: true } as const
     }
+
     const tooltipWidth = 360
     const margin = 16
-    // Try right side first; fall back to below; fall back to centered.
     const fitsRight = rect.left + rect.width + margin + tooltipWidth < window.innerWidth
     const fitsLeft = rect.left - margin - tooltipWidth > 0
+
     if (fitsRight) {
       return {
         centered: false,
-        top: Math.max(margin, Math.min(window.innerHeight - 200, rect.top)),
+        top: Math.max(margin, Math.min(window.innerHeight - 220, rect.top)),
         left: rect.left + rect.width + margin
       } as const
     }
+
     if (fitsLeft) {
       return {
         centered: false,
-        top: Math.max(margin, Math.min(window.innerHeight - 200, rect.top)),
+        top: Math.max(margin, Math.min(window.innerHeight - 220, rect.top)),
         left: Math.max(margin, rect.left - margin - tooltipWidth)
       } as const
     }
-    // Place below.
+
     return {
       centered: false,
-      top: Math.min(window.innerHeight - 240, rect.top + rect.height + margin),
+      top: Math.min(window.innerHeight - 260, rect.top + rect.height + margin),
       left: Math.max(margin, Math.min(window.innerWidth - tooltipWidth - margin, rect.left))
     } as const
   }, [rect])
 
-  if (!open || !currentStep || typeof document === 'undefined') return null
+  if (!open || !currentStep || steps.length === 0 || typeof document === 'undefined') return null
 
   const motionPreset = reducedMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
@@ -188,20 +303,19 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ onClose, forceOp
   return createPortal(
     <AnimatePresence>
       <motion.div
-        key="tour"
+        key={`tour-${tourId}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[100] pointer-events-auto"
         role="dialog"
         aria-modal="true"
-        aria-label={`Onboarding step ${stepIndex + 1}: ${currentStep.title}`}
+        aria-label={`Onboarding ${tourId}, step ${stepIndex + 1}: ${currentStep.title}`}
       >
-        {/* Backdrop dim + cutout */}
         <div className="absolute inset-0 bg-black/70 backdrop-blur-[1px]" onClick={handleNext}>
           {rect && (
             <motion.div
-              key={`hl-${stepIndex}`}
+              key={`hl-${tourId}-${stepIndex}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="absolute rounded-2xl pointer-events-none"
@@ -219,7 +333,6 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ onClose, forceOp
           )}
         </div>
 
-        {/* Tooltip card */}
         <motion.div
           {...motionPreset}
           onClick={(e) => e.stopPropagation()}
@@ -235,14 +348,17 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ onClose, forceOp
           }
         >
           <div className="flex items-start gap-3 mb-2">
-            <span className="text-3xl">{currentStep.emoji}</span>
+            <span className="w-10 h-10 rounded-2xl bg-primary-container/80 text-on-primary-container flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[22px]">{currentStep.icon}</span>
+            </span>
             <div className="flex-1 min-w-0">
               <h3 className="text-title-md font-bold text-on-surface">{currentStep.title}</h3>
               <p className="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold mt-0.5">
-                Langkah {stepIndex + 1} dari {STEPS.length}
+                Langkah {stepIndex + 1} dari {steps.length}
               </p>
             </div>
           </div>
+
           <p className="text-body-sm text-on-surface-variant leading-relaxed mb-4">
             {currentStep.body}
           </p>
@@ -260,21 +376,20 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ onClose, forceOp
                   onClick={handlePrev}
                   className="h-9 px-3 rounded-full bg-surface-container-low border border-outline-variant text-on-surface-variant text-[11px] font-bold cursor-pointer hover:bg-surface-container-highest"
                 >
-                  ← Kembali
+                  Kembali
                 </button>
               )}
               <button
                 onClick={handleNext}
                 className="h-9 px-4 rounded-full btn-gradient text-white text-[11px] font-bold cursor-pointer flex items-center gap-1 hover-glow"
               >
-                {stepIndex === STEPS.length - 1 ? 'Selesai ✓' : 'Lanjut →'}
+                {stepIndex === steps.length - 1 ? 'Selesai' : 'Lanjut'}
               </button>
             </div>
           </div>
 
-          {/* Step dots */}
           <div className="flex justify-center gap-1.5 mt-4 pt-3 border-t border-outline-variant/15">
-            {STEPS.map((_, i) => (
+            {steps.map((_, i) => (
               <span
                 key={i}
                 className={`w-1.5 h-1.5 rounded-full transition-colors ${

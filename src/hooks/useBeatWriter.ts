@@ -242,6 +242,30 @@ export function useBeatWriter(chapterId: string) {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
 
       saveTimeoutRef.current = setTimeout(async () => {
+        // ── Free Write path: no beats array, save directly to chapter.prose ──
+        if (freeWriteMode || !chapter.beats || chapter.beats.length === 0) {
+          const wordCount = text.split(/\s+/).filter((w) => w.length > 0).length
+
+          if (!isOnline) {
+            saveDraft(chapter.id, -1, text)
+          }
+
+          await updateChapter(chapter.id, {
+            prose: text,
+            word_count: wordCount,
+            status: text.trim().length > 10 ? 'DRAFT' : 'GENERATING'
+          })
+
+          if (isOnline) {
+            clearDraft(chapter.id, -1)
+          }
+
+          setSaveStatus('saved')
+          setTimeout(() => setSaveStatus('idle'), 2000)
+          return
+        }
+
+        // ── Beat-based path (standard mode) ──
         const updatedBeats = [...(chapter.beats || [])]
         if (updatedBeats[beatIndex]) {
           updatedBeats[beatIndex] = { ...updatedBeats[beatIndex], prose: text }
