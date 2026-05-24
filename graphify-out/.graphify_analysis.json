@@ -1,0 +1,435 @@
+{
+  "communities": {
+    "0": [
+      "ai_context_injector_contextinjector_pruneandinject",
+      "ai_context_injector_prunedcontextresult",
+      "compass_storycompasspreview_compassstep",
+      "compass_storycompasspreview_storycompasspreviewprops",
+      "dashboard_projectcreationmodal_genres",
+      "src_components_compass_storycompasspreview_tsx",
+      "src_components_dashboard_projectcreationmodal_tsx",
+      "src_services_ai_context_injector_ts",
+      "src_store_useprojectstore_ts",
+      "src_types_project_ts",
+      "store_useprojectstore_dummy_chapters",
+      "store_useprojectstore_dummy_characters",
+      "store_useprojectstore_dummy_items",
+      "store_useprojectstore_dummy_projects",
+      "store_useprojectstore_projectactions",
+      "store_useprojectstore_projectstate",
+      "store_useprojectstore_projectstore",
+      "store_useprojectstore_supabase",
+      "types_project_beatoutline",
+      "types_project_chapter",
+      "types_project_character",
+      "types_project_charactergenesis",
+      "types_project_characterrole",
+      "types_project_characterstate",
+      "types_project_emotionalpattern",
+      "types_project_genesismode",
+      "types_project_itemcategory",
+      "types_project_lorecategory",
+      "types_project_mysterylayer",
+      "types_project_plotthread",
+      "types_project_project",
+      "types_project_season",
+      "types_project_subarc",
+      "types_project_worldrule"
+    ],
+    "1": [
+      "hooks_useauth_authstate",
+      "hooks_useauth_useauth",
+      "lib_database_types_database",
+      "lib_database_types_json",
+      "lib_supabase_issupabaseconfigured",
+      "lib_supabase_supabase",
+      "lib_supabase_supabaseanonkey",
+      "lib_supabase_supabaseurl",
+      "pages_lobby_lobby",
+      "pages_login_authmode",
+      "pages_login_login",
+      "pages_workspace_modes",
+      "pages_workspace_workspace",
+      "src_app_app",
+      "src_app_authloader",
+      "src_app_protectedroute",
+      "src_app_tsx",
+      "src_hooks_useauth_ts",
+      "src_lib_database_types_ts",
+      "src_lib_supabase_ts",
+      "src_main_tsx",
+      "src_pages_login_tsx",
+      "src_pages_workspace_tsx",
+      "src_store_useuistore_ts",
+      "store_useuistore_qalogs",
+      "store_useuistore_uiactions",
+      "store_useuistore_uistate",
+      "store_useuistore_uistore",
+      "store_useuistore_useuistore",
+      "store_useuistore_workspacemode",
+      "workspace_contextpanel_contextpanel",
+      "workspace_modeswitcher_modes",
+      "workspace_modeswitcher_modeswitcher"
+    ],
+    "2": [
+      "package_json",
+      "vibenovel_package_dependencies",
+      "vibenovel_package_dependencies_framer_motion",
+      "vibenovel_package_dependencies_react",
+      "vibenovel_package_dependencies_react_dom",
+      "vibenovel_package_dependencies_react_router_dom",
+      "vibenovel_package_dependencies_supabase_supabase_js",
+      "vibenovel_package_dependencies_zustand",
+      "vibenovel_package_devdependencies",
+      "vibenovel_package_devdependencies_eslint",
+      "vibenovel_package_devdependencies_eslint_js",
+      "vibenovel_package_devdependencies_eslint_plugin_react_hooks",
+      "vibenovel_package_devdependencies_eslint_plugin_react_refresh",
+      "vibenovel_package_devdependencies_globals",
+      "vibenovel_package_devdependencies_pg",
+      "vibenovel_package_devdependencies_tailwindcss",
+      "vibenovel_package_devdependencies_tailwindcss_vite",
+      "vibenovel_package_devdependencies_types_node",
+      "vibenovel_package_devdependencies_types_react",
+      "vibenovel_package_devdependencies_typescript",
+      "vibenovel_package_devdependencies_typescript_eslint",
+      "vibenovel_package_devdependencies_vite",
+      "vibenovel_package_devdependencies_vitejs_plugin_react",
+      "vibenovel_package_name",
+      "vibenovel_package_private",
+      "vibenovel_package_scripts",
+      "vibenovel_package_scripts_build",
+      "vibenovel_package_scripts_dev",
+      "vibenovel_package_scripts_lint",
+      "vibenovel_package_scripts_preview",
+      "vibenovel_package_type",
+      "vibenovel_package_version"
+    ],
+    "3": [
+      "ai_router_service",
+      "byok_keyring",
+      "client_side_only",
+      "coauthor_chat_component",
+      "context_injector_service",
+      "database_types",
+      "dual_theme_system",
+      "four_layer_memory_system",
+      "gemini_multikey_pool_system",
+      "gemini_pool_service",
+      "icons_svg",
+      "openrouter_adapter_service",
+      "prose_canvas_panel_component",
+      "react_svg",
+      "supabase_client",
+      "supabase_rls_security",
+      "system_architecture",
+      "use_chat_store",
+      "use_project_store",
+      "use_settings_store",
+      "use_ui_store"
+    ],
+    "4": [
+      "chat_aimessagebubble_aimessagebubble",
+      "chat_approvalcard_approvalcard",
+      "chat_approvalcard_approvalcardprops",
+      "chat_coauthorchat_coauthorchat",
+      "chat_coauthorchat_coauthorchatprops",
+      "prompts_brainstorm_agent_buildbiblesummary",
+      "prompts_brainstorm_agent_buildcoauthorsysteminstruction",
+      "prompts_brainstorm_agent_compassgap",
+      "prompts_brainstorm_agent_compassstate",
+      "prompts_brainstorm_agent_detectcompassgap",
+      "prompts_brainstorm_agent_getcoauthormode",
+      "prompts_brainstorm_agent_getgapguidance",
+      "src_prompts_brainstorm_agent_ts",
+      "src_store_usechatstore_ts",
+      "store_usechatstore_chatactions",
+      "store_usechatstore_chatmessage",
+      "store_usechatstore_chatstate",
+      "store_usechatstore_chatstore",
+      "store_usechatstore_empty_array",
+      "store_usechatstore_getcompassstate",
+      "types_project_item"
+    ],
+    "5": [
+      "tsconfig_app_json",
+      "vibenovel_tsconfig_app_compileroptions",
+      "vibenovel_tsconfig_app_compileroptions_allowimportingtsextensions",
+      "vibenovel_tsconfig_app_compileroptions_erasablesyntaxonly",
+      "vibenovel_tsconfig_app_compileroptions_jsx",
+      "vibenovel_tsconfig_app_compileroptions_lib",
+      "vibenovel_tsconfig_app_compileroptions_module",
+      "vibenovel_tsconfig_app_compileroptions_moduledetection",
+      "vibenovel_tsconfig_app_compileroptions_moduleresolution",
+      "vibenovel_tsconfig_app_compileroptions_noemit",
+      "vibenovel_tsconfig_app_compileroptions_nofallthroughcasesinswitch",
+      "vibenovel_tsconfig_app_compileroptions_nounusedlocals",
+      "vibenovel_tsconfig_app_compileroptions_nounusedparameters",
+      "vibenovel_tsconfig_app_compileroptions_skiplibcheck",
+      "vibenovel_tsconfig_app_compileroptions_target",
+      "vibenovel_tsconfig_app_compileroptions_tsbuildinfofile",
+      "vibenovel_tsconfig_app_compileroptions_types",
+      "vibenovel_tsconfig_app_compileroptions_verbatimmodulesyntax",
+      "vibenovel_tsconfig_app_include"
+    ],
+    "6": [
+      "tsconfig_node_json",
+      "vibenovel_tsconfig_node_compileroptions",
+      "vibenovel_tsconfig_node_compileroptions_allowimportingtsextensions",
+      "vibenovel_tsconfig_node_compileroptions_erasablesyntaxonly",
+      "vibenovel_tsconfig_node_compileroptions_lib",
+      "vibenovel_tsconfig_node_compileroptions_module",
+      "vibenovel_tsconfig_node_compileroptions_moduledetection",
+      "vibenovel_tsconfig_node_compileroptions_moduleresolution",
+      "vibenovel_tsconfig_node_compileroptions_noemit",
+      "vibenovel_tsconfig_node_compileroptions_nofallthroughcasesinswitch",
+      "vibenovel_tsconfig_node_compileroptions_nounusedlocals",
+      "vibenovel_tsconfig_node_compileroptions_nounusedparameters",
+      "vibenovel_tsconfig_node_compileroptions_skiplibcheck",
+      "vibenovel_tsconfig_node_compileroptions_target",
+      "vibenovel_tsconfig_node_compileroptions_tsbuildinfofile",
+      "vibenovel_tsconfig_node_compileroptions_types",
+      "vibenovel_tsconfig_node_compileroptions_verbatimmodulesyntax",
+      "vibenovel_tsconfig_node_include"
+    ],
+    "7": [
+      "dashboard_projectcard_archivecard",
+      "dashboard_projectcard_archivecardprops",
+      "dashboard_projectcard_genre_emojis",
+      "dashboard_projectcard_genre_gradients",
+      "dashboard_projectcard_newprojectcard",
+      "dashboard_projectcard_projectcard",
+      "dashboard_projectcard_status_config",
+      "dashboard_statsbar_statitem",
+      "dashboard_statsbar_statsbar",
+      "dashboard_statsbar_statsbarprops",
+      "src_components_dashboard_statsbar_tsx",
+      "src_components_ui_bottomnavbar_tsx",
+      "src_pages_lobby_tsx",
+      "types_project_projectstatus",
+      "ui_bottomnavbar_bottomnavbar",
+      "ui_bottomnavbar_bottomnavbarprops",
+      "ui_bottomnavbar_nav_items"
+    ],
+    "8": [
+      "ai_ai_router_airouter",
+      "ai_ai_router_airouter_chatcoauthor",
+      "ai_ai_router_airouter_generatechapteroutline",
+      "ai_ai_router_airouter_generateprosebeat",
+      "ai_ai_router_airouter_runqaradar",
+      "ai_types_aisettings",
+      "ai_types_brainstorminput",
+      "ai_types_brainstormresponse",
+      "ai_types_chatmessageparam",
+      "ai_types_outlinegenerateinput",
+      "ai_types_outlineresponse",
+      "ai_types_prosegenerateinput",
+      "ai_types_proseresponse",
+      "ai_types_qaradarinput",
+      "ai_types_qaradarresponse",
+      "src_services_ai_ai_router_ts",
+      "src_services_ai_types_ts"
+    ],
+    "9": [
+      "ai_gemini_pool_geminipool",
+      "ai_gemini_pool_geminipool_constructor",
+      "ai_gemini_pool_geminipool_generatecontent",
+      "ai_gemini_pool_geminipool_getnextkey",
+      "ai_gemini_pool_geminipool_reporterror",
+      "ai_gemini_pool_geminipool_reportratelimit",
+      "ai_gemini_pool_geminipool_reportsuccess",
+      "ai_gemini_pool_geminipool_synckeys",
+      "ai_gemini_pool_keystatus",
+      "ai_openrouter_adapter_openrouteradapter_generatecontent",
+      "modals_settingsmodal_settingsmodal",
+      "src_services_ai_openrouter_adapter_ts",
+      "src_store_usesettingsstore_ts",
+      "store_usesettingsstore_settingsactions",
+      "store_usesettingsstore_settingsstate",
+      "store_usesettingsstore_settingsstore"
+    ],
+    "10": [
+      "graphify_cli_explain",
+      "graphify_cli_path",
+      "graphify_cli_query",
+      "graphify_cli_update",
+      "graphify_out_graph_json",
+      "graphify_rules_graphify",
+      "graphify_skill_definition",
+      "graphify_workflow_graphify"
+    ],
+    "11": [
+      "implementation_plan",
+      "sprint_plan",
+      "task_todo",
+      "walkthrough_diffs"
+    ],
+    "12": [
+      "tsconfig_json",
+      "vibenovel_tsconfig_files",
+      "vibenovel_tsconfig_references"
+    ],
+    "13": [
+      "agents_rules",
+      "verbatim_module_syntax"
+    ],
+    "14": [
+      "story_compass_preview_component",
+      "vite_svg"
+    ],
+    "15": [
+      "eslint_config_js"
+    ],
+    "16": [
+      "vite_config_ts"
+    ],
+    "17": [
+      "readme_react"
+    ],
+    "18": [
+      "session_reports"
+    ],
+    "19": [
+      "favicon_svg"
+    ],
+    "20": [
+      "hero_png"
+    ]
+  },
+  "cohesion": {
+    "0": 0.08377896613190731,
+    "1": 0.11363636363636363,
+    "2": 0.0625,
+    "3": 0.10952380952380952,
+    "4": 0.12380952380952381,
+    "5": 0.10526315789473684,
+    "6": 0.1111111111111111,
+    "7": 0.14705882352941177,
+    "8": 0.16176470588235295,
+    "9": 0.175,
+    "10": 0.25,
+    "11": 0.5,
+    "12": 0.6666666666666666,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0
+  },
+  "gods": [
+    {
+      "id": "vibenovel_tsconfig_app_compileroptions",
+      "label": "compilerOptions",
+      "degree": 17
+    },
+    {
+      "id": "vibenovel_tsconfig_node_compileroptions",
+      "label": "compilerOptions",
+      "degree": 16
+    },
+    {
+      "id": "store_useuistore_useuistore",
+      "label": "useUiStore",
+      "degree": 11
+    },
+    {
+      "id": "ai_gemini_pool_geminipool",
+      "label": "GeminiPool",
+      "degree": 10
+    },
+    {
+      "id": "dashboard_projectcard_projectcard",
+      "label": "ProjectCard()",
+      "degree": 9
+    },
+    {
+      "id": "ai_ai_router_airouter",
+      "label": "AiRouter",
+      "degree": 7
+    },
+    {
+      "id": "lib_supabase_issupabaseconfigured",
+      "label": "isSupabaseConfigured()",
+      "degree": 6
+    },
+    {
+      "id": "system_architecture",
+      "label": "System Architecture & Specs",
+      "degree": 6
+    },
+    {
+      "id": "graphify_rules_graphify",
+      "label": "Graphify Rules",
+      "degree": 6
+    },
+    {
+      "id": "vibenovel_package_scripts",
+      "label": "scripts",
+      "degree": 5
+    }
+  ],
+  "surprises": [
+    {
+      "source": "4-Layer Context Assembly (context-injector.ts)",
+      "target": "4-Layer Memory & Context Pruning System",
+      "source_files": [
+        "src/services/ai/context-injector.ts",
+        "architecture.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "implements",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); connects across different repos/directories"
+    },
+    {
+      "source": "Dual-Theme UI Zustand Store",
+      "target": "Anti-Flicker Dual-Theme Architecture",
+      "source_files": [
+        "src/store/useUiStore.ts",
+        "architecture.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "implements",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); connects across different repos/directories"
+    },
+    {
+      "source": "Settings Zustand Store (API Keys)",
+      "target": "BYOK & Local Encrypted Keyring Security",
+      "source_files": [
+        "src/store/useSettingsStore.ts",
+        "architecture.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "implements",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); connects across different repos/directories"
+    },
+    {
+      "source": "Supabase Client & Auth Instantiation",
+      "target": "Supabase Row-Level Security (RLS) Policy",
+      "source_files": [
+        "src/lib/supabase.ts",
+        "architecture.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "implements",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); connects across different repos/directories"
+    },
+    {
+      "source": "CoAuthor Chat UI Interface",
+      "target": "SVG Icon Sprite",
+      "source_files": [
+        "src/components/chat/CoAuthorChat.tsx",
+        "public/icons.svg"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "crosses file types (image \u2194 code); connects across different repos/directories"
+    }
+  ],
+  "tokens": {
+    "input": 648,
+    "output": 1531
+  }
+}

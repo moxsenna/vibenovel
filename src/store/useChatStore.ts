@@ -1,0 +1,487 @@
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { useProjectStore } from './useProjectStore'
+import { useSettingsStore } from './useSettingsStore'
+import { aiRouter } from '../services/ai/ai-router'
+import {
+  buildCoAuthorSystemInstruction,
+  detectCompassGap,
+} from '../prompts/brainstorm-agent'
+import type { CompassState } from '../prompts/brainstorm-agent'
+import type {
+  Character,
+  Item,
+  WorldRule,
+  MysteryLayer,
+  CharacterState
+} from '../types/project'
+
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  timestamp: string
+  draftData?: {
+    type: 'character' | 'item' | 'world_rule' | 'ending' | 'mystery' | 'character_state'
+    status: 'pending' | 'approved' | 'rejected' | 'edited'
+    data: Record<string, unknown>
+  }
+}
+
+interface ChatState {
+  // project_id -> ChatMessage[]
+  messages: Record<string, ChatMessage[]>
+  loading: boolean
+  // Anti-melantur: track consecutive off-topic turns per project
+  offTopicCounters: Record<string, number>
+  // Non-persistent state for active request aborting
+  activeControllers: Record<string, AbortController>
+}
+
+interface ChatActions {
+  sendMessage: (projectId: string, content: string) => Promise<void>
+  generateAiResponse: (projectId: string, content: string) => Promise<void>
+  regenerateResponse: (projectId: string) => Promise<void>
+  stopResponse: (projectId: string) => void
+  addMessage: (projectId: string, message: Omit<ChatMessage, 'id' | 'timestamp'>) => void
+  updateMessageDraftStatus: (
+    projectId: string,
+    messageId: string,
+    status: 'approved' | 'rejected' | 'edited',
+    editedData?: Record<string, unknown>
+  ) => void
+  clearChat: (projectId: string) => void
+  getProjectMessages: (projectId: string) => ChatMessage[]
+}
+
+export type ChatStore = ChatState & ChatActions
+
+const EMPTY_ARRAY: ChatMessage[] = []
+
+// ─── Helper: Build compass state snapshot from project store ──────────────
+
+function getCompassState(projectId: string): CompassState {
+  const projectStore = useProjectStore.getState()
+  const activeProj =
+    projectStore.projects.find((p) => p.id === projectId) ||
+    projectStore.activeProject
+
+  return {
+    title: activeProj?.title || '',
+    genre: activeProj?.genre || '',
+    targetChapters: activeProj?.target_chapters || 200,
+    narrativeConstitution: activeProj?.narrative_constitution || null,
+    targetEnding: activeProj?.target_ending || null,
+    themeAndTone: activeProj?.theme_and_tone || null,
+    characters: projectStore.characters.filter((c) => c.project_id === projectId),
+    items: projectStore.items.filter((i) => i.project_id === projectId),
+    worldRules: projectStore.worldRules.filter((r) => r.project_id === projectId),
+    mysteryLayers: projectStore.mysteryLayers.filter((m) => m.project_id === projectId),
+  }
+}
+
+// ─── Store ────────────────────────────────────────────────────────────────
+
+export const useChatStore = create<ChatStore>()(
+  persist(
+    (set, get) => ({
+      messages: {},
+      loading: false,
+      offTopicCounters: {},
+      activeControllers: {},
+
+      getProjectMessages: (projectId) => {
+        return get().messages[projectId] || EMPTY_ARRAY
+      },
+
+      addMessage: (projectId, message) => {
+        const newMessage: ChatMessage = {
+          ...message,
+          id: crypto.randomUUID(),
+          timestamp: new Date().toISOString()
+        }
+
+        set((state) => ({
+          messages: {
+            ...state.messages,
+            [projectId]: [...(state.messages[projectId] || []), newMessage]
+          }
+        }))
+      },
+
+      sendMessage: async (projectId, content) => {
+        // 1. Add user message
+        get().addMessage(projectId, {
+          role: 'user',
+          content
+        })
+
+        await get().generateAiResponse(projectId, content)
+      },
+
+      generateAiResponse: async (projectId, content) => {
+        // ── BYOK GUARD ─────────────────────────────────────────────────
+        const { geminiKeys } = useSettingsStore.getState()
+        if (geminiKeys.length === 0) {
+          get().addMessage(projectId, {
+            role: 'assistant',
+            content:
+              '🔑 **Belum ada API Key!**\n\nSilakan masukkan minimal satu Gemini API key di **Settings** (ikon ⚙️ di halaman utama) untuk mengaktifkan Co-Author.\n\nGemini API key bisa didapat gratis di [Google AI Studio](https://aistudio.google.com/apikey).'
+          })
+          return
+        }
+
+        // Cancel any existing controller for this project
+        const activeControllers = { ...get().activeControllers }
+        if (activeControllers[projectId]) {
+          activeControllers[projectId].abort()
+        }
+
+        const controller = new AbortController()
+        activeControllers[projectId] = controller
+
+        set({ loading: true, activeControllers })
+
+        try {
+          // ── Build Compass State & System Instruction ────────────────
+          const compassState = getCompassState(projectId)
+          const currentGap = detectCompassGap(compassState)
+
+          // ── Anti-Melantur Logic ────────────────────────────────────
+          const offTopicCount = get().offTopicCounters[projectId] || 0
+          let systemInstruction = buildCoAuthorSystemInstruction(compassState, currentGap)
+
+          // If user has been off-topic 3+ times, inject a forceful redirect
+          if (offTopicCount >= 3) {
+            systemInstruction += `\n\n⚠️ OVERRIDE: User sudah melantur ${offTopicCount}x berturut-turut. JANGAN merespons topik di luar novel. Langsung ajukan draf elemen Story Compass yang sedang dibahas TANPA menunggu arahan user. Paksa pembicaraan kembali ku rancangan novel.`
+          }
+
+          // ── Prepare Chat History ───────────────────────────────────
+          const existingMessages = get().getProjectMessages(projectId)
+          // Only send last 20 messages to keep context window manageable
+          const recentHistory = existingMessages.slice(-20).map((msg) => ({
+            role: msg.role,
+            content: msg.content
+          }))
+
+          // ── Find Project ──────────────────────────────────────────
+          const projectStore = useProjectStore.getState()
+          const activeProj =
+            projectStore.projects.find((p) => p.id === projectId) ||
+            projectStore.activeProject
+
+          if (!activeProj) {
+            get().addMessage(projectId, {
+              role: 'assistant',
+              content:
+                'Maaf, saya tidak dapat menemukan proyek aktif. Silakan pilih atau buat proyek terlebih dahulu.'
+            })
+            return
+          }
+
+          // ── Call Real AI ───────────────────────────────────────────
+          const result = await aiRouter.chatCoAuthor(
+            activeProj,
+            systemInstruction,
+            recentHistory,
+            content,
+            controller.signal
+          )
+
+          // Remove completed controller
+          const finalControllers = { ...get().activeControllers }
+          delete finalControllers[projectId]
+          set({ activeControllers: finalControllers })
+
+          // ── Map Draft Data to Chat Message ─────────────────────────
+          const assistantMsg: Omit<ChatMessage, 'id' | 'timestamp'> = {
+            role: 'assistant',
+            content: result.reply
+          }
+
+          if (result.draftData && result.draftData.type && result.draftData.data) {
+            assistantMsg.draftData = {
+              type: result.draftData.type,
+              status: 'pending',
+              data: result.draftData.data
+            }
+            // AI proactively proposed lore → reset off-topic counter
+            set((state) => ({
+              offTopicCounters: {
+                ...state.offTopicCounters,
+                [projectId]: 0
+              }
+            }))
+          } else {
+            // No draft proposed — might be off-topic or clarifying
+            // Heuristic: if the AI reply mentions "kembali" or has redirect language,
+            // increment the off-topic counter
+            const redirectPatterns = /kembali ke|yuk kita|novel kita|cerita kita|rancangan/i
+            if (redirectPatterns.test(result.reply)) {
+              set((state) => ({
+                offTopicCounters: {
+                  ...state.offTopicCounters,
+                  [projectId]: (state.offTopicCounters[projectId] || 0) + 1
+                }
+              }))
+            } else {
+              // Normal on-topic discussion without draft — reset counter
+              set((state) => ({
+                offTopicCounters: {
+                  ...state.offTopicCounters,
+                  [projectId]: 0
+                }
+              }))
+            }
+          }
+
+          get().addMessage(projectId, assistantMsg)
+        } catch (e: unknown) {
+          if (e instanceof DOMException && e.name === 'AbortError') {
+            console.log('Co-Author chat generation aborted.')
+            return
+          }
+
+          console.error('Co-Author AI error:', e)
+
+          const err = e as { message?: string }
+
+          // Provide a user-friendly error message
+          let errorMsg = 'Maaf, terjadi kesalahan saat menghubungi Co-Author AI.'
+          if (err.message?.includes('429') || err.message?.includes('rate')) {
+            errorMsg =
+              '⏳ **Rate Limited!** Semua API key sedang cooldown. Tunggu beberapa detik lalu coba lagi, atau tambahkan key tambahan di Settings.'
+          } else if (err.message?.includes('No Gemini API keys')) {
+            errorMsg =
+              '🔑 **Belum ada API Key!** Silakan masukkan Gemini API key di Settings.'
+          } else if (err.message) {
+            errorMsg += `\n\nDetail: ${err.message}`
+          }
+
+          get().addMessage(projectId, {
+            role: 'assistant',
+            content: errorMsg
+          })
+        } finally {
+          const finalControllers = { ...get().activeControllers }
+          if (finalControllers[projectId] === controller) {
+            delete finalControllers[projectId]
+          }
+          set({ loading: false, activeControllers: finalControllers })
+        }
+      },
+
+      regenerateResponse: async (projectId) => {
+        const existingMessages = get().getProjectMessages(projectId)
+        if (existingMessages.length === 0) return
+
+        // Find last user message index
+        let lastUserIdx = -1
+        for (let i = existingMessages.length - 1; i >= 0; i--) {
+          if (existingMessages[i].role === 'user') {
+            lastUserIdx = i
+            break
+          }
+        }
+
+        if (lastUserIdx === -1) return
+
+        const lastUserMsg = existingMessages[lastUserIdx]
+
+        // Keep messages up to and including the last user message
+        const cleanedMessages = existingMessages.slice(0, lastUserIdx + 1)
+        set((state) => ({
+          messages: {
+            ...state.messages,
+            [projectId]: cleanedMessages
+          }
+        }))
+
+        // Now call the AI generation logic with the last user message's content
+        await get().generateAiResponse(projectId, lastUserMsg.content)
+      },
+
+      stopResponse: (projectId) => {
+        const activeControllers = { ...get().activeControllers }
+        const controller = activeControllers[projectId]
+        if (controller) {
+          controller.abort()
+          delete activeControllers[projectId]
+          set({ activeControllers, loading: false })
+
+          get().addMessage(projectId, {
+            role: 'system',
+            content: '🛑 *Generasi dihentikan oleh pengguna.*'
+          })
+        }
+      },
+
+      updateMessageDraftStatus: (projectId, messageId, status, editedData) => {
+        set((state) => {
+          const projectMsgs = state.messages[projectId] || []
+          const updatedMsgs = projectMsgs.map((msg) => {
+            if (msg.id === messageId && msg.draftData) {
+              return {
+                ...msg,
+                draftData: {
+                  ...msg.draftData,
+                  status,
+                  data: status === 'edited' && editedData ? editedData : msg.draftData.data
+                }
+              }
+            }
+            return msg
+          })
+
+          // Execute action in project store if approved
+          if (status === 'approved' || status === 'edited') {
+            const msg = projectMsgs.find((m) => m.id === messageId)
+            if (msg && msg.draftData) {
+              const dataToUse = (status === 'edited' && editedData
+                ? editedData
+                : msg.draftData.data) as Record<string, unknown>
+              const projectStore = useProjectStore.getState()
+
+              const str = (k: string): string => {
+                const v = dataToUse[k]
+                return typeof v === 'string' ? v : ''
+              }
+              const num = (k: string, fallback: number): number => {
+                const v = dataToUse[k]
+                return typeof v === 'number' ? v : fallback
+              }
+              const arr = (k: string): string[] => {
+                const v = dataToUse[k]
+                return Array.isArray(v) ? (v as string[]) : []
+              }
+              const bool = (k: string, fallback: boolean): boolean => {
+                const v = dataToUse[k]
+                return typeof v === 'boolean' ? v : fallback
+              }
+
+              if (msg.draftData.type === 'character') {
+                projectStore.addCharacter({
+                  project_id: projectId,
+                  name: str('name') || 'Tanpa Nama',
+                  role: (str('role') as Character['role']) || 'SUPPORTING',
+                  description: str('description'),
+                  voice_dna: (dataToUse.voice_dna as Record<string, unknown>) || {},
+                  activation_keys: arr('activation_keys').length
+                    ? arr('activation_keys')
+                    : [str('name')],
+                  priority: num('priority', 5),
+                  is_locked: bool('is_locked', false),
+                  genesis: (str('genesis') as Character['genesis']) || 'BRAINSTORMED'
+                })
+              } else if (msg.draftData.type === 'item') {
+                projectStore.addItem({
+                  project_id: projectId,
+                  name: str('name') || 'Tanpa Nama',
+                  category: (str('category') as Item['category']) || 'OTHER',
+                  description: str('description'),
+                  significance: str('significance'),
+                  activation_keys: arr('activation_keys').length
+                    ? arr('activation_keys')
+                    : [str('name')],
+                  current_owner: str('current_owner'),
+                  priority: num('priority', 5),
+                  genesis: (str('genesis') as Item['genesis']) || 'BRAINSTORMED'
+                })
+              } else if (msg.draftData.type === 'world_rule') {
+                projectStore.addWorldRule({
+                  project_id: projectId,
+                  category: (str('category') as WorldRule['category']) || 'OTHER',
+                  name: str('name') || 'Tanpa Nama',
+                  description: str('description'),
+                  priority: num('priority', 5),
+                  activation_keys: arr('activation_keys'),
+                  genesis: (str('genesis') as WorldRule['genesis']) || 'BRAINSTORMED'
+                })
+              } else if (msg.draftData.type === 'ending') {
+                projectStore.updateProject(projectId, {
+                  target_ending: str('target_ending'),
+                  status: 'OUTLINING'
+                })
+              } else if (msg.draftData.type === 'mystery') {
+                const currentLayers = useProjectStore.getState().mysteryLayers
+                const newLayer: Omit<MysteryLayer, 'id'> = {
+                  project_id: projectId,
+                  layer_number: num('layer_number', currentLayers.length + 1),
+                  central_question: str('central_question'),
+                  revealed_at_chapter:
+                    typeof dataToUse.revealed_at_chapter === 'number'
+                      ? (dataToUse.revealed_at_chapter as number)
+                      : null,
+                  answer: typeof dataToUse.answer === 'string' ? (dataToUse.answer as string) : null,
+                  opens_next_question:
+                    typeof dataToUse.opens_next_question === 'string'
+                      ? (dataToUse.opens_next_question as string)
+                      : null,
+                  breadcrumbs: Array.isArray(dataToUse.breadcrumbs)
+                    ? (dataToUse.breadcrumbs as { chapter: number; hint: string }[])
+                    : [],
+                  status: (str('status') as MysteryLayer['status']) || 'ACTIVE'
+                }
+                projectStore.addMysteryLayer(newLayer)
+              } else if (msg.draftData.type === 'character_state') {
+                const characters = useProjectStore.getState().characters
+                const matchedChar = characters.find(
+                  (c) => c.name.toLowerCase() === str('character_name').toLowerCase()
+                )
+                const chapterNum = num('chapter_number', 0)
+
+                const newState: CharacterState = {
+                  id: crypto.randomUUID(),
+                  character_id: matchedChar?.id || str('character_name') || 'unknown',
+                  chapter_number: chapterNum,
+                  location: str('location'),
+                  physical_condition: str('physical_condition'),
+                  emotional_state: str('emotional_state'),
+                  inventory: arr('inventory'),
+                  relationships:
+                    (dataToUse.relationships as Record<string, unknown>) || {},
+                  last_action: str('last_action'),
+                  knowledge_state: arr('knowledge_state'),
+                  active_goal: str('active_goal'),
+                  secrets: arr('secrets'),
+                  appearance_notes: str('appearance_notes'),
+                  alliances: arr('alliances'),
+                  source: 'MANUAL_EDIT'
+                }
+
+                projectStore.upsertCharacterStates(chapterNum, [newState])
+              }
+            }
+          }
+
+          return {
+            messages: {
+              ...state.messages,
+              [projectId]: updatedMsgs
+            }
+          }
+        })
+      },
+
+      clearChat: (projectId) => {
+        set((state) => ({
+          messages: {
+            ...state.messages,
+            [projectId]: []
+          },
+          offTopicCounters: {
+            ...state.offTopicCounters,
+            [projectId]: 0
+          }
+        }))
+      }
+    }),
+    {
+      name: 'vibenovel-chat-state',
+      partialize: (state) => ({
+        messages: state.messages,
+        offTopicCounters: state.offTopicCounters
+      })
+    }
+  )
+)

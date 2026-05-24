@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="id" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1c2c" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fff8e7" media="(prefers-color-scheme: light)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="VibeNovel" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="description" content="Pencetak novel komersial bertenaga AI untuk platform KBM App." />
+    <title>VibeNovel - AI Web Novel Writer</title>
+    
+    <!-- Google Fonts: Playfair Display & Nunito Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    
+    <!-- Google Fonts: Material Symbols Outlined -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+    <!-- Anti-Flicker theme script to prevent layout shift before React mounts -->
+    <script>
+      (function() {
+        try {
+          const stored = localStorage.getItem('vibenovel-ui-state');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.state && parsed.state.theme === 'light') {
+              document.documentElement.classList.remove('dark');
+              return;
+            }
+          }
+          // Default fallback is dark theme ("Malam Kreatif")
+          document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-bg-primary text-text-main font-body antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

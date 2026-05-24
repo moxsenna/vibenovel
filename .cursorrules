@@ -1,0 +1,22 @@
+# CursorRules — VibeNovel v2 Guidelines
+
+Always follow these guidelines and conventions for the VibeNovel v2 project:
+
+1. **Primary References**:
+   - Refer to and align all changes with the project's design guidelines in `implementation_plan_v3.md` and the system specifications in `architecture.md`.
+   - Maintain client-side consistency with all UI tokens, state management flow, and AI router behaviors.
+
+2. **TypeScript & Module Import Syntax**:
+   - The project uses `"verbatimModuleSyntax": true` in `tsconfig.json`.
+   - **Rule**: You MUST use type-only imports for types, interfaces, or type aliases.
+   - **Correct**: `import type { Project } from './types/project'`
+   - **Incorrect**: `import { Project } from './types/project'`
+
+3. **Client-Side SPA Architecture**:
+   - Everything must run entirely in the browser. Do not introduce Next.js API routes or custom node servers. Keep the static bundle web-friendly and Capacitor-ready for wrap to Android/iOS.
+
+4. **Security & Local BYOK**:
+   - Keep user API keys safely locked inside the client-side persistent Zustand local storage keyrings. Never leak, sync, or upload these keys to external databases.
+
+5. **Theme Management**:
+   - Preserve custom premium themes (Dark "Malam Kreatif" and Light "Jurnal Cantik") via standard Tailwind CSS v4 variables with instant DOM injection (HTML element className updates) to block early layout flicker.

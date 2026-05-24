@@ -1,0 +1,816 @@
+﻿{
+  "nodes": [
+    {
+      "id": "agents_md",
+      "label": "AGENTS.md",
+      "file_type": "document",
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "architecture_md",
+      "label": "architecture.md",
+      "file_type": "document",
+      "source_file": "architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "implementation_plan_v3_md",
+      "label": "implementation_plan_v3.md",
+      "file_type": "document",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "index_html",
+      "label": "index.html",
+      "file_type": "document",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "session_reports_md",
+      "label": "session_reports.md",
+      "file_type": "document",
+      "source_file": "session_reports.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sprint_plan_md",
+      "label": "sprint_plan.md",
+      "file_type": "document",
+      "source_file": "sprint_plan.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "task_md",
+      "label": "task.md",
+      "file_type": "document",
+      "source_file": "task.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "walkthrough_md",
+      "label": "walkthrough.md",
+      "file_type": "document",
+      "source_file": "walkthrough.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "agents_verbatimmodulesyntax",
+      "label": "verbatimModuleSyntax Compliance",
+      "file_type": "rationale",
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Enforced verbatimModuleSyntax: true in tsconfig.json requires type-only imports to ensure clean compilation and type safety without runtime import side-effects."
+    },
+    {
+      "id": "architecture_clientsideonly",
+      "label": "Client-Side Only Architecture",
+      "file_type": "rationale",
+      "source_file": "architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "100% client-side (SPA) design using browser service layers to invoke Supabase and AI provider APIs directly, enabling static deployment (Vercel/Netlify) and instant Capacitor wrapping for mobile platforms without custom backend server code."
+    },
+    {
+      "id": "architecture_byok",
+      "label": "BYOK & Local Keyring Security",
+      "file_type": "rationale",
+      "source_file": "architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Users' Gemini and OpenRouter API keys are saved exclusively in the client's local storage using encrypted Zustand persist middleware. This avoids transferring, logging, or storing sensitive keys on any external server, ensuring data privacy and BYOK compliance."
+    },
+    {
+      "id": "architecture_antiflicker",
+      "label": "Theme Synchronization (Anti-Flicker)",
+      "file_type": "rationale",
+      "source_file": "architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Default dark theme is instantly synchronized to document.documentElement via a small inline script before React renders to prevent white-flash layout shifts during page loading."
+    },
+    {
+      "id": "architecture_fourlayermemory",
+      "label": "4-Layer Memory System",
+      "file_type": "rationale",
+      "source_file": "architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "A structured memory system that manages context pruning to fit prompts within standard token budgets: Layer 1 (Static Bible), Layer 2 (Dynamic State per Chapter), Layer 3 (RAG summaries from Supabase pgvector), and Layer 4 (Sliding Window of recent text/outlines)."
+    },
+    {
+      "id": "architecture_aiprovider",
+      "label": "AI Provider Hierarchy",
+      "file_type": "rationale",
+      "source_file": "architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "AI Router sends non-prose core operations to free Gemini API pool (using multi-key round-robin rotation) and gives the user a toggle option to route prose generation to OpenRouter (Claude/Deepseek) or Gemini."
+    },
+    {
+      "id": "architecture_zustandstores",
+      "label": "Zustand Stores",
+      "file_type": "code",
+      "source_file": "architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "architecture_supabase",
+      "label": "Supabase Integration",
+      "file_type": "code",
+      "source_file": "architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "implementation_retentionengine",
+      "label": "KBM PPC Retention Engine",
+      "file_type": "rationale",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Orchestrates 5 retention engines: Layered Mystery, Emotional Rollercoaster (dynamic emotional tone validation), Hook Chain, False Resolution + Reversal, and Character Investment Trap to optimize user retention and monetization on pay-per-chapter KBM platforms."
+    },
+    {
+      "id": "implementation_layeredmystery",
+      "label": "Layered Mystery (Bawang Berlapis)",
+      "file_type": "rationale",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Long-term engagement mechanism where resolving one mystery layer reveals answers but immediately triggers a deeper narrative question, with breadcrumbs strategically seeded across preceding chapters."
+    },
+    {
+      "id": "implementation_emotionalrollercoaster",
+      "label": "Emotional Rollercoaster",
+      "file_type": "rationale",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Prevents narrative fatigue by ensuring pacing follows an alternating tension-and-relief curve, validated automatically by the Plot Radar and Outline Engine to avoid consecutive monotonous chapters."
+    },
+    {
+      "id": "implementation_hookchain",
+      "label": "Hook Chain",
+      "file_type": "rationale",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Multi-level narrative hooks spanning Series, Season, Sub-Arc, Chapter (6-type Cliffhanger Protocol), and Micro-Hooks (dialogue subtext/wrong details) to compel ongoing reading."
+    },
+    {
+      "id": "implementation_falseresolution",
+      "label": "False Resolution & Reversal",
+      "file_type": "rationale",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "PPC monetization technique that makes readers believe a major conflict is happily resolved, only to immediately introduce a devastating reversal, driving urgent chapter purchases."
+    },
+    {
+      "id": "implementation_characterinvestment",
+      "label": "Character Investment Trap",
+      "file_type": "rationale",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Fosters strong reader bonds through a Voice DNA system, consistent character vulnerability, and memorable quirks, creating stakes when these characters are placed in jeopardy."
+    },
+    {
+      "id": "implementation_dualonboarding",
+      "label": "Dual Onboarding Flow",
+      "file_type": "rationale",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Accommodates both beginner/zero-literacy writers (Fresh Start guided brainstorm or Blueprint templates) and pro writers with existing novels (Import Manuscript workflow)."
+    },
+    {
+      "id": "implementation_brainstormagent",
+      "label": "Co-Author Brainstorm Agent",
+      "file_type": "code",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "implementation_outlineengine",
+      "label": "Outline Engine",
+      "file_type": "code",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "implementation_prosewriter",
+      "label": "Beat-by-Beat Prose Writer",
+      "file_type": "code",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "implementation_plotradar",
+      "label": "Plot Radar & Filler Detector",
+      "file_type": "code",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "implementation_loreextractor",
+      "label": "Auto-Lore Extractor",
+      "file_type": "code",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "implementation_batchgenerator",
+      "label": "Auto-Pilot Batch Generator",
+      "file_type": "code",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "implementation_threadtracker",
+      "label": "Thread Tracker",
+      "file_type": "code",
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "agents_md",
+      "target": "agents_verbatimmodulesyntax",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "agents_md",
+      "target": "architecture_clientsideonly",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "agents_md",
+      "target": "architecture_byok",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "agents_md",
+      "target": "architecture_antiflicker",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "agents_md",
+      "target": "architecture_fourlayermemory",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "architecture_md",
+      "target": "architecture_clientsideonly",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "architecture_md",
+      "target": "architecture_byok",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "architecture_md",
+      "target": "architecture_antiflicker",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "architecture_md",
+      "target": "architecture_fourlayermemory",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "architecture_md",
+      "target": "architecture_aiprovider",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "architecture_md",
+      "target": "architecture_zustandstores",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "architecture_md",
+      "target": "architecture_supabase",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "architecture_clientsideonly",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "architecture_byok",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "architecture_fourlayermemory",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "implementation_retentionengine",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "implementation_dualonboarding",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "implementation_brainstormagent",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "implementation_outlineengine",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "implementation_prosewriter",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "implementation_plotradar",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "implementation_loreextractor",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "implementation_batchgenerator",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plan_v3_md",
+      "target": "implementation_threadtracker",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_retentionengine",
+      "target": "implementation_layeredmystery",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_retentionengine",
+      "target": "implementation_emotionalrollercoaster",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_retentionengine",
+      "target": "implementation_hookchain",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_retentionengine",
+      "target": "implementation_falseresolution",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_retentionengine",
+      "target": "implementation_characterinvestment",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_retentionengine",
+      "target": "architecture_fourlayermemory",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_layeredmystery",
+      "target": "architecture_fourlayermemory",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_brainstormagent",
+      "target": "architecture_aiprovider",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_prosewriter",
+      "target": "architecture_aiprovider",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_plotradar",
+      "target": "architecture_aiprovider",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_loreextractor",
+      "target": "architecture_aiprovider",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "implementation_threadtracker",
+      "target": "architecture_aiprovider",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sprint_plan_md",
+      "target": "implementation_plan_v3_md",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "sprint_plan.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "session_reports_md",
+      "target": "implementation_brainstormagent",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "session_reports.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "walkthrough_md",
+      "target": "architecture_supabase",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "walkthrough.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "walkthrough_md",
+      "target": "implementation_brainstormagent",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "walkthrough.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "task_md",
+      "target": "implementation_brainstormagent",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "task.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "index_html",
+      "target": "architecture_antiflicker",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "vibenovel_v2_system",
+      "label": "VibeNovel v2 Core Components",
+      "nodes": [
+        "architecture_clientsideonly",
+        "architecture_byok",
+        "architecture_fourlayermemory",
+        "architecture_aiprovider",
+        "architecture_zustandstores",
+        "architecture_supabase"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "architecture.md"
+    },
+    {
+      "id": "kbm_ppc_retention_suite",
+      "label": "KBM PPC Retention Suite",
+      "nodes": [
+        "implementation_retentionengine",
+        "implementation_layeredmystery",
+        "implementation_emotionalrollercoaster",
+        "implementation_hookchain",
+        "implementation_falseresolution",
+        "implementation_characterinvestment"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "implementation_plan_v3.md"
+    }
+  ],
+  "input_tokens": 32540,
+  "output_tokens": 3450
+}
