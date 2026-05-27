@@ -138,6 +138,13 @@ Hanya 3 route. Workspace mengelola semua mode secara internal via state, bukan v
 
 ## Theme & Styling System
 
+### Maintainability Notes
+
+- `activeProseModel` is the single persisted prose-provider choice used by UI and AI routing. Legacy split fields like `defaultProseProvider` and `openRouterModel` are intentionally no longer part of the architectural contract.
+- Onboarding helpers are split into `onboarding-flags.ts` and `onboarding-steps.ts` so the tour component stays export-clean and React Refresh friendly.
+- `projects.ts` and `chapters.ts` guard Supabase calls when configuration is unavailable, which keeps local demo/offline flows from crashing on empty credentials.
+- `chapter_versions` and `recaps` are part of the persisted memory surface and should stay in sync with the store/API typings whenever schema changes are introduced.
+
 Sistem tema VibeNovel dirancang untuk mendukung **Dual-Theme (Light/Dark)** dengan estetika premium yang disesuaikan untuk target audiens (emak-emak penulis KBM + penulis pro).
 
 Kami menggunakan kombinasi Tailwind CSS 4.x dan CSS Variables untuk memastikan transisi tema berjalan instan, mulus, dan bebas kedipan (no flash of dark mode).
@@ -445,11 +452,16 @@ Pemuatan konteks dijalankan secara terarah (deterministic keyword pruning) untuk
 3. **Layer 3: RAG Long-Term Memory (Pencarian Semantik pgvector & Fallback)**:
    - Vektor pencarian semantik (768 dimensi hasil bentukan `text-embedding-004`) dicocokkan dengan summary bab-bab lampau di database melalui query `match_chapter_summaries` (menggunakan cosine distance `<=>`).
    - **Keyword Fallback**: Jika database offline atau API mengalami limitasi, sistem menjalankan pencarian kata kunci berbasis memori (in-memory token-overlap) menggunakan stopword filter Bahasa Indonesia (Jakarta connectors) dan penghitungan pembobotan normalisasi panjang teks untuk menyaring 3 bab paling relevan.
+   - **Prose Injection**: Prose Writer menerima memori Layer 3 secara opsional lewat `buildProseInputWithRag()`. Helper ini membungkus jalur sinkron `buildProseInput()`, mengambil summary bab relevan secara best-effort, mengecualikan bab berjalan, lalu fallback ke prompt dasar saat RAG tidak tersedia atau Supabase sedang offline.
 
 4. **Layer 4: Sliding Window (Immediate Context)**:
    - Mengambil 500 kata terakhir dari prosa bab sebelumnya (jika ada) untuk menjamin kesinambungan gaya bahasa, nada bicara, serta alur kalimat langsung.
    - Menyertakan outline berjalan dan adegan-adegan yang telah ditulis sebelumnya pada bab aktif.
    - Pagar pembatas (*read-only fence*) berupa outline 2 bab ke depan agar AI mengerti arah tujuan cerita tanpa melompati pembabakan.
+
+### Version History Beat Snapshots
+
+`chapter_versions` menyimpan `prose` penuh dan `beats` JSONB. Restore riwayat memakai snapshot beat tersimpan agar mode Beat-by-Beat dapat memulihkan bab sebagai satu unit, bukan menumpahkan versi lama ke beat aktif. Payload `beats` dinormalisasi saat dibaca dari Supabase sebelum dipaparkan sebagai `ChapterVersion.beats`.
 
 ### Token Budget
 
@@ -502,6 +514,59 @@ sequenceDiagram
 ```
 
 ### Flow 2: Outline Generation (Story Compass Safeguarded)
+
+### Story Contract & Canon Guardrails
+
+Story Contract adalah sumber kebenaran mesin untuk canon cerita. Field ini
+disimpan sebagai `projects.story_contract` (`jsonb`) dan dipakai oleh Co-Author,
+Outline Engine, Prose Writer, dan validator sebelum output AI disimpan.
+
+`narrative_constitution` tetap dipakai sebagai ringkasan naratif manusiawi,
+sedangkan `story_contract` menyimpan struktur yang bisa divalidasi:
+
+- `core_promise` dan `reader_promise`
+- `opening_contract`
+- `narrative_mechanics`
+- `causality_rules`
+- `canon_entities`
+- `relationship_addressing`
+- `arc_order`
+- `forbidden_contradictions`
+- `required_reveals`
+- `tone_contract`
+
+Flow wajib:
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Chat as Co-Author
+    participant AI as Gemini
+    participant DB as Supabase
+    participant OE as Outline Engine
+    participant V as Story Validator
+
+    User->>Chat: Premis mentah
+    Chat->>AI: Extract Story Contract draft
+    AI->>Chat: story_contract JSON
+    Chat->>User: Review / edit / approve
+    User->>Chat: Approve
+    Chat->>DB: UPDATE projects.story_contract
+    Chat->>AI: Draft Story Compass entities from approved contract
+    User->>OE: Generate outline
+    OE->>V: Deterministic validation
+    OE->>V: AI semantic validation with thinking
+    alt BLOCKER
+        OE->>AI: Retry with validation issues
+    else Passed or warnings only
+        OE->>DB: INSERT/UPDATE chapters
+    end
+```
+
+Relationship addressing menggantikan daftar nama yang dilarang. Validator harus
+bisa resolve panggilan seperti `Mas`, `Sayang`, `Bu`, atau `Pak` berdasarkan
+pasangan `speaker -> addressee` dan konteks relasi, lalu membedakannya dari
+nama karakter baru yang perlu approval.
 
 ```mermaid
 sequenceDiagram
@@ -828,6 +893,7 @@ erDiagram
     
     CHAPTERS ||--o| CHAPTER_SUMMARIES : "has summary"
     CHAPTERS ||--o{ EMOTIONAL_PATTERNS : "has pattern"
+    CHAPTERS ||--o{ CHAPTER_VERSIONS : "has version history"
 
     PROJECTS {
         uuid id PK
@@ -845,6 +911,7 @@ erDiagram
         text theme_and_tone
         text series_hook
         text[] season_hooks
+        jsonb story_contract
         jsonb voice_dna_project
     }
 
@@ -954,6 +1021,23 @@ erDiagram
         vector embedding
         jsonb key_facts
     }
+
+    RECAPS {
+        uuid id PK
+        uuid project_id FK
+        int chapter_range_start
+        int chapter_range_end
+        text content
+        timestamptz created_at
+    }
+
+    CHAPTER_VERSIONS {
+        uuid id PK
+        uuid chapter_id FK
+        text prose
+        int word_count
+        text change_summary
+    }
 ```
 
 ### Row Level Security (RLS)
@@ -1047,15 +1131,14 @@ graph LR
 interface SettingsStore {
   geminiKeys: string[];
   openRouterKey: string | null;
-  openRouterModel: string;
-  defaultProseProvider: 'gemini' | 'openrouter';
-  activeProseModel: string; // Persisted chosen model
+  activeProseModel: 'gemini' | 'claude' | 'deepseek' | 'deepseek-pro'; // Single source of truth for prose routing
   freeWriteMode: boolean;    // Toggle unguided free write mode
   wordCountDefault: number;
   
   addGeminiKey(key: string): void;
   removeGeminiKey(index: number): void;
   setOpenRouterKey(key: string): void;
+  setActiveProseModel(model: SettingsStore['activeProseModel']): void;
   toggleFreeWriteMode(): void;
 }
 

@@ -19,6 +19,9 @@ export const EditDraftModal: React.FC<EditDraftModalProps> = ({
 }) => {
   // Local state holding form fields
   const [formData, setFormData] = useState<Record<string, unknown>>(() => ({ ...initialData }))
+  const [jsonDraftText, setJsonDraftText] = useState(() => JSON.stringify(initialData, null, 2))
+  const [isAdvancedMode, setIsAdvancedMode] = useState(false)
+
   // Prev-prop-during-render pattern: reset form when modal opens or initialData
   // identity changes — avoids effect-driven setState that would cascade renders.
   const [lastInitialData, setLastInitialData] = useState(initialData)
@@ -144,7 +147,7 @@ export const EditDraftModal: React.FC<EditDraftModalProps> = ({
 
           {/* Form Scroll Area */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1 scrollbar-hide space-y-5 pb-3">
-            
+
             {/* CHARACTER FORM */}
             {draftType === 'character' && (
               <>
@@ -301,6 +304,134 @@ export const EditDraftModal: React.FC<EditDraftModalProps> = ({
                   placeholder="Bagaimana novel ini harus berakhir? Tulis resolusi, nasib tokoh utama, dan twist penutup..."
                   className="w-full p-4 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-body-md resize-none leading-relaxed"
                 />
+              </div>
+            )}
+
+            {/* STORY CONTRACT FORM */}
+            {draftType === 'story_contract' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-label-md text-on-surface-variant font-bold uppercase tracking-wider">Form Kontrak</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isAdvancedMode) {
+                        try {
+                          const parsed = JSON.parse(jsonDraftText)
+                          setFormData(parsed)
+                          setIsAdvancedMode(false)
+                        } catch {
+                          window.alert('JSON belum valid. Perbaiki error sebelum kembali ke Mode Visual.')
+                        }
+                      } else {
+                        setJsonDraftText(JSON.stringify(formData, null, 2))
+                        setIsAdvancedMode(true)
+                      }
+                    }}
+                    className="text-label-sm text-primary hover:bg-primary/10 px-3 py-1 rounded-full transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">{isAdvancedMode ? 'view_list' : 'code'}</span>
+                    {isAdvancedMode ? 'Mode Visual' : 'Mode JSON'}
+                  </button>
+                </div>
+
+                {!isAdvancedMode ? (
+                  <div className="space-y-4 animate-fade-in">
+                    <div>
+                      <label className="block text-label-md text-on-surface-variant font-bold uppercase tracking-wider mb-2">Premis Utama</label>
+                      <textarea
+                        rows={3}
+                        required
+                        value={getStr('core_promise')}
+                        onChange={(e) => handleChange('core_promise', e.target.value)}
+                        placeholder="Premis cerita..."
+                        className="w-full p-3.5 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-body-md resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-label-md text-on-surface-variant font-bold uppercase tracking-wider mb-2">Janji Pembaca (Reader Promise)</label>
+                      <textarea
+                        rows={3}
+                        required
+                        value={getStr('reader_promise')}
+                        onChange={(e) => handleChange('reader_promise', e.target.value)}
+                        placeholder="Apa yang dijanjikan ke pembaca..."
+                        className="w-full p-3.5 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-body-md resize-none"
+                      />
+                    </div>
+
+                    <div className="p-4 rounded-xl border border-outline-variant/50 bg-surface-container-lowest space-y-4">
+                      <h4 className="text-label-md font-bold text-secondary flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[18px]">movie_creation</span>
+                        Kondisi Pembuka Cerita
+                      </h4>
+                      <div>
+                        <label className="block text-label-sm text-on-surface-variant font-bold uppercase tracking-wider mb-1.5">Timeline Pembuka</label>
+                        <input
+                          type="text"
+                          value={(formData.opening_contract as Record<string, string>)?.opening_timeline || ''}
+                          onChange={(e) => {
+                            const oc = (formData.opening_contract as Record<string, unknown>) || {};
+                            handleChange('opening_contract', { ...oc, opening_timeline: e.target.value });
+                          }}
+                          className="w-full h-10 px-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-all text-body-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-label-sm text-on-surface-variant font-bold uppercase tracking-wider mb-1.5">Wajib Dimulai Dengan</label>
+                        <textarea
+                          rows={2}
+                          value={(formData.opening_contract as Record<string, string>)?.must_start_with || ''}
+                          onChange={(e) => {
+                            const oc = (formData.opening_contract as Record<string, unknown>) || {};
+                            handleChange('opening_contract', { ...oc, must_start_with: e.target.value });
+                          }}
+                          className="w-full p-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-all text-body-sm resize-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-label-sm text-on-surface-variant font-bold uppercase tracking-wider mb-1.5">Status Relasi Awal</label>
+                        <input
+                          type="text"
+                          value={(formData.opening_contract as Record<string, string>)?.opening_relationship_state || ''}
+                          onChange={(e) => {
+                            const oc = (formData.opening_contract as Record<string, unknown>) || {};
+                            handleChange('opening_contract', { ...oc, opening_relationship_state: e.target.value });
+                          }}
+                          className="w-full h-10 px-3 rounded-lg bg-surface-container-low border border-outline-variant text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-all text-body-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-label-md text-on-surface-variant font-bold uppercase tracking-wider mb-2">Nada & Suasana (Tone)</label>
+                      <textarea
+                        rows={2}
+                        value={(formData.tone_contract as Record<string, string>)?.description || ''}
+                        onChange={(e) => {
+                          const tc = (formData.tone_contract as Record<string, unknown>) || {};
+                          handleChange('tone_contract', { ...tc, description: e.target.value });
+                        }}
+                        placeholder="Deskripsi suasana cerita..."
+                        className="w-full p-3.5 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-body-md resize-none"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="animate-fade-in">
+                    <textarea
+                      rows={22}
+                      required
+                      value={jsonDraftText}
+                      onChange={(e) => setJsonDraftText(e.target.value)}
+                      spellCheck={false}
+                      className="w-full p-4 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-body-sm font-mono resize-none leading-relaxed"
+                    />
+                    <p className="mt-2 text-body-sm text-on-surface-variant">
+                      Mode JSON untuk edit struktur lanjutan seperti babak cerita (arcs), karakter canon, dll.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

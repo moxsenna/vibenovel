@@ -5,6 +5,8 @@ import { useUiStore } from '../../store/useUiStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { useBatchGenerator } from '../../hooks/useBatchGenerator'
 import { ChapterOutlineCard } from './ChapterOutlineCard'
+import { CanonProposalCard } from './CanonProposalCard'
+import { isNonEmptyStoryContract } from '../../services/story-contract-validator'
 
 export const SeasonArchitectPanel: React.FC = () => {
   const activeProject = useProjectStore((s) => s.activeProject)
@@ -15,6 +17,9 @@ export const SeasonArchitectPanel: React.FC = () => {
   const outlineProgress = useProjectStore((s) => s.outlineProgress)
   const generateOutlineBatch = useProjectStore((s) => s.generateOutlineBatch)
   const abortOutlineGeneration = useProjectStore((s) => s.abortOutlineGeneration)
+  const canonProposals = useProjectStore((s) => s.canonProposals)
+  const approveCanonProposal = useProjectStore((s) => s.approveCanonProposal)
+  const rejectCanonProposal = useProjectStore((s) => s.rejectCanonProposal)
   const setActiveChapter = useUiStore((s) => s.setActiveChapter)
   const activeChapterNumber = useUiStore((s) => s.activeChapter)
   const addToast = useUiStore((s) => s.addToast)
@@ -29,6 +34,7 @@ export const SeasonArchitectPanel: React.FC = () => {
 
   // Completed result display
   const [showResult, setShowResult] = useState(false)
+  const [resolvingCanonProposalId, setResolvingCanonProposalId] = useState<string | null>(null)
 
   // Sprint 9.8 — Deep Outline settings panel
   const [showOutlineSettings, setShowOutlineSettings] = useState(false)
@@ -45,6 +51,7 @@ export const SeasonArchitectPanel: React.FC = () => {
     if (!activeProject) return { isComplete: false, missing: [] as string[] }
     const missing: string[] = []
     if (!activeProject.title || !activeProject.genre) missing.push('Premis & Genre')
+    if (!isNonEmptyStoryContract(activeProject.story_contract)) missing.push('Story Contract')
     if (!characters.some((c) => c.role === 'PROTAGONIST')) missing.push('Tokoh Utama (Protagonis)')
     if (!characters.some((c) => c.role === 'ANTAGONIST')) missing.push('Antagonis')
     if (!activeProject.target_ending) missing.push('Target Ending')
@@ -52,13 +59,20 @@ export const SeasonArchitectPanel: React.FC = () => {
     return { isComplete: missing.length === 0, missing }
   }, [activeProject, characters, mysteryLayers])
 
+  const pendingCanonProposals = useMemo(() => {
+    if (!activeProject) return []
+    return canonProposals.filter(
+      (proposal) => proposal.project_id === activeProject.id && proposal.status === 'PENDING'
+    )
+  }, [activeProject, canonProposals])
+
   if (!activeProject) return null
 
   const handleOpenGenerateModal = () => {
     // Guard: Story Compass must be complete
     if (!compassStatus.isComplete) {
       addToast(
-        `Story Compass belum lengkap! Yang belum terisi: ${compassStatus.missing.join(', ')}. Lengkapi di mode Brainstorm terlebih dahulu.`,
+        `Kompas cerita belum lengkap. Yang belum terisi: ${compassStatus.missing.join(', ')}. Lengkapi di Ide Cerita terlebih dahulu.`,
         'warning'
       )
       return
@@ -76,7 +90,7 @@ export const SeasonArchitectPanel: React.FC = () => {
 
   const handleGenerate = async () => {
     if (geminiKeys.length === 0) {
-      addToast('Belum ada Gemini API key. Masukkan key di Settings terlebih dahulu.', 'error')
+      addToast('Belum ada Gemini API key. Masukkan key di Pengaturan terlebih dahulu.', 'error')
       return
     }
     if (rangeStart > rangeEnd) {
@@ -90,9 +104,13 @@ export const SeasonArchitectPanel: React.FC = () => {
 
     setShowResult(false)
     try {
-      await generateOutlineBatch(rangeStart, rangeEnd)
+      const result = await generateOutlineBatch(rangeStart, rangeEnd)
       setShowResult(true)
-      addToast(`Berhasil generate outline Bab ${rangeStart} sampai ${rangeEnd}!`, 'success')
+      if (result.warnings.some((warning) => warning.includes('tertahan'))) {
+        addToast('Generate tertahan karena ada proposal canon yang perlu disetujui.', 'warning')
+      } else {
+        addToast(`Berhasil generate outline Bab ${rangeStart} sampai ${rangeEnd}!`, 'success')
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Gagal generate outline batch.'
       addToast(`Gagal: ${msg}`, 'error')
@@ -101,7 +119,7 @@ export const SeasonArchitectPanel: React.FC = () => {
 
   const handleAutoPilot = async () => {
     if (geminiKeys.length === 0) {
-      addToast('Belum ada Gemini API key. Masukkan key di Settings terlebih dahulu.', 'error')
+      addToast('Belum ada Gemini API key. Masukkan key di Pengaturan terlebih dahulu.', 'error')
       return
     }
     if (rangeStart > rangeEnd) {
@@ -142,6 +160,24 @@ export const SeasonArchitectPanel: React.FC = () => {
     }
   }
 
+  const handleApproveCanonProposal = async (proposalId: string) => {
+    setResolvingCanonProposalId(proposalId)
+    try {
+      await approveCanonProposal(proposalId)
+      addToast('Proposal canon disetujui. Lorebook dan draft bab sudah disinkronkan.', 'success')
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Gagal menyetujui proposal canon.'
+      addToast(`Gagal: ${msg}`, 'error')
+    } finally {
+      setResolvingCanonProposalId(null)
+    }
+  }
+
+  const handleRejectCanonProposal = (proposalId: string) => {
+    rejectCanonProposal(proposalId)
+    addToast('Draft bab ditolak. Regenerate bab tersebut agar AI memakai canon yang ada.', 'warning')
+  }
+
   const progressPercent = outlineProgress
     ? Math.round((outlineProgress.current / Math.max(outlineProgress.total, 1)) * 100)
     : 0
@@ -154,15 +190,15 @@ export const SeasonArchitectPanel: React.FC = () => {
         <div className="bg-surface-container/75 p-5 rounded-[20px] border border-outline-variant/20 shadow-sm inner-glow">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-headline-md text-on-surface font-bold">Season Architect</h3>
+              <h3 className="text-headline-md text-on-surface font-bold">Rencana Bab</h3>
               <p className="text-body-sm text-on-surface-variant mt-0.5">
-                Rancang alur per bab. Tentukan dopamine hit, paywall, dan cliffhanger.
+                Susun alur tiap bab sebelum masuk ke naskah.
               </p>
             </div>
             <button
               onClick={handleOpenGenerateModal}
               disabled={outlineGenerating || !compassStatus.isComplete}
-              title={!compassStatus.isComplete ? `Story Compass belum lengkap: ${compassStatus.missing.join(', ')}` : undefined}
+              title={!compassStatus.isComplete ? `Kompas cerita belum lengkap: ${compassStatus.missing.join(', ')}` : undefined}
               className="h-10 px-5 rounded-xl btn-gradient text-white font-semibold text-label-lg cursor-pointer flex items-center gap-2 hover-glow disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
             >
               {outlineGenerating ? (
@@ -173,7 +209,7 @@ export const SeasonArchitectPanel: React.FC = () => {
               ) : (
                 <>
                   <span className="material-symbols-outlined text-[16px]">psychology</span>
-                  <span>Generate Outline</span>
+                  <span>Buat Rencana Bab</span>
                 </>
               )}
             </button>
@@ -182,7 +218,7 @@ export const SeasonArchitectPanel: React.FC = () => {
           {/* Stats Row */}
           <div className="flex flex-wrap gap-4 mt-4 text-body-sm">
             <span className="text-on-surface-variant">
-              📋 <span className="font-bold text-on-surface">{chapters.length}</span> outline
+              📋 <span className="font-bold text-on-surface">{chapters.length}</span> rencana
             </span>
             <span className="text-on-surface-variant">
               🎯 Target: <span className="font-bold text-on-surface">{activeProject.target_chapters}</span> bab
@@ -201,10 +237,10 @@ export const SeasonArchitectPanel: React.FC = () => {
           >
             <span className="flex items-center gap-2 text-body-sm font-medium text-on-surface-variant">
               <span className="material-symbols-outlined text-[16px]">tune</span>
-              Pengaturan Outline
+              Opsi Rencana Bab
               {deepOutlineEnabled && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 font-bold">
-                  🧠 Deep Outline
+                  AI teliti
                 </span>
               )}
             </span>
@@ -239,11 +275,10 @@ export const SeasonArchitectPanel: React.FC = () => {
                     </span>
                     <div className="flex-1">
                       <div className="text-body-sm font-medium text-on-surface">
-                        🧠 Deep Outline
+                        AI teliti
                       </div>
                       <div className="text-[11px] text-on-surface-variant/70 leading-relaxed">
-                        AI berpikir dulu sebelum bikin outline. Hasil lebih cerdas (mystery
-                        breadcrumb tepat, cliffhanger variatif), tapi +2-3 detik per bab.
+                        AI berpikir dulu sebelum menyusun rencana. Hasil lebih rapi, tapi sedikit lebih lama.
                       </div>
                     </div>
                   </button>
@@ -293,7 +328,7 @@ export const SeasonArchitectPanel: React.FC = () => {
 
                       {deepOutlineInBatch && (
                         <div className="text-[10px] text-amber-400 px-2 leading-relaxed">
-                          ⚠️ Batch 200 bab dengan Deep Outline = +10 menit total. Pertimbangkan
+                          ⚠️ Batch 200 bab dengan AI teliti = +10 menit total. Pertimbangkan
                           biaya token kalau pakai OpenRouter.
                         </div>
                       )}
@@ -306,6 +341,33 @@ export const SeasonArchitectPanel: React.FC = () => {
         </div>
 
         {/* ── Range Selector / Generate Modal ── */}
+        {pendingCanonProposals.length > 0 && (
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-amber-500/25 bg-surface-container/75 p-4">
+              <div className="flex items-start gap-3">
+                <span className="material-symbols-outlined text-[22px] text-amber-400">fact_check</span>
+                <div>
+                  <h3 className="text-body-md font-bold text-on-surface">
+                    Approval Canon Diperlukan
+                  </h3>
+                  <p className="text-body-sm text-on-surface-variant leading-relaxed mt-1">
+                    AI mencoba memakai karakter atau item yang belum ada di Lorebook. Setujui jika memang canon baru, atau tolak agar bab diregenerate dengan canon yang sudah ada.
+                  </p>
+                </div>
+              </div>
+            </div>
+            {pendingCanonProposals.map((proposal) => (
+              <CanonProposalCard
+                key={proposal.id}
+                proposal={proposal}
+                disabled={resolvingCanonProposalId !== null}
+                onApprove={handleApproveCanonProposal}
+                onReject={handleRejectCanonProposal}
+              />
+            ))}
+          </div>
+        )}
+
         <AnimatePresence>
           {showRangeModal && (
             <motion.div
@@ -318,7 +380,7 @@ export const SeasonArchitectPanel: React.FC = () => {
               {!outlineGenerating && !showResult && (
                 <div className="space-y-4">
                   <h4 className="text-body-md font-bold text-on-surface">
-                    🚀 Generate Outline Batch
+                    Buat Banyak Rencana Bab
                   </h4>
                   <div className="flex items-center gap-3 flex-wrap">
                     <label className="text-body-sm text-on-surface-variant font-semibold">Mulai Bab</label>
@@ -349,7 +411,7 @@ export const SeasonArchitectPanel: React.FC = () => {
                       className="h-9 px-5 rounded-lg btn-gradient text-white font-semibold text-label-md cursor-pointer hover-glow flex items-center gap-2"
                     >
                       <span className="material-symbols-outlined text-[14px]">play_arrow</span>
-                      Generate Outline
+                      Buat Rencana
                     </button>
                     <button
                       onClick={handleAutoPilot}
@@ -358,7 +420,7 @@ export const SeasonArchitectPanel: React.FC = () => {
                       className="h-9 px-4 rounded-lg bg-secondary-container text-on-secondary-container font-semibold text-label-md cursor-pointer hover-glow disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                       <span className="material-symbols-outlined text-[14px]">rocket_launch</span>
-                      🚀 Auto-Pilot Prose
+                      Auto-Pilot Naskah
                     </button>
                     <button
                       onClick={() => setShowRangeModal(false)}
@@ -375,7 +437,7 @@ export const SeasonArchitectPanel: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h4 className="text-body-md font-bold text-on-surface">
-                      ⏳ Generating Outline...
+                      Menyusun rencana bab...
                     </h4>
                     <button
                       onClick={abortOutlineGeneration}
@@ -438,7 +500,7 @@ export const SeasonArchitectPanel: React.FC = () => {
                   }`}>
                     {outlineProgress.status === 'cancelled'
                       ? '⚠️ Generasi Dibatalkan'
-                      : '✅ Outline Selesai!'}
+                      : '✅ Rencana Bab Selesai!'}
                   </h4>
                   <div className="flex flex-wrap gap-4 text-body-sm">
                     <span className="text-on-surface">
@@ -497,10 +559,10 @@ export const SeasonArchitectPanel: React.FC = () => {
               description
             </span>
             <h4 className="text-headline-sm text-on-surface font-bold mb-2">
-              Belum ada outline
+              Belum ada rencana bab
             </h4>
             <p className="text-body-sm text-on-surface-variant max-w-md mx-auto leading-relaxed mb-6">
-              Lengkapi Story Compass di mode Brainstorm terlebih dahulu, lalu kembali ke sini untuk generate outline bab-per-bab.
+              Lengkapi Kompas Cerita di Ide Cerita terlebih dahulu, lalu kembali ke sini untuk menyusun rencana bab-per-bab.
             </p>
 
             {/* Compass incomplete warning */}
@@ -508,7 +570,7 @@ export const SeasonArchitectPanel: React.FC = () => {
               <div className="max-w-md mx-auto mb-6 p-4 rounded-2xl bg-tertiary/10 border border-tertiary/25 text-left">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="material-symbols-outlined text-tertiary text-[18px]">warning</span>
-                  <span className="text-label-md font-bold text-tertiary">Story Compass Belum Lengkap</span>
+                  <span className="text-label-md font-bold text-tertiary">Kompas Cerita Belum Lengkap</span>
                 </div>
                 <ul className="space-y-1 ml-6">
                   {compassStatus.missing.map((item) => (
@@ -518,7 +580,7 @@ export const SeasonArchitectPanel: React.FC = () => {
                   ))}
                 </ul>
                 <p className="text-[11px] text-on-surface-variant/70 mt-2 italic">
-                  Kembali ke mode Brainstorm untuk melengkapi elemen di atas.
+                  Kembali ke Ide Cerita untuk melengkapi elemen di atas.
                 </p>
               </div>
             )}
@@ -526,11 +588,11 @@ export const SeasonArchitectPanel: React.FC = () => {
             <button
               onClick={handleOpenGenerateModal}
               disabled={outlineGenerating || !compassStatus.isComplete}
-              title={!compassStatus.isComplete ? `Story Compass belum lengkap: ${compassStatus.missing.join(', ')}` : undefined}
+              title={!compassStatus.isComplete ? `Kompas cerita belum lengkap: ${compassStatus.missing.join(', ')}` : undefined}
               className="h-10 px-6 rounded-xl btn-gradient text-white font-semibold text-label-lg cursor-pointer hover-glow disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-[16px]">psychology</span>
-              Generate Outline Pertama
+              Buat Rencana Bab Pertama
             </button>
           </div>
         )}

@@ -5,7 +5,8 @@
  * Used by both the interactive `useBeatWriter` hook AND the batch
  * generator (Sprint 6) so they always produce identical prompts.
  *
- * Side-effect free.
+ * `buildProseInput` is side-effect free; `buildProseInputWithRag` adds
+ * best-effort Layer 3 memory retrieval and falls back to the pure path.
  */
 
 import type {
@@ -17,6 +18,7 @@ import type {
   WorldRule
 } from '../types/project'
 import type { ProseGenerateInput } from './ai/types'
+import { searchSimilarChapters } from './rag-service'
 import { stateTracker } from './state-tracker'
 
 export interface BuildProseInputArgs {
@@ -109,6 +111,7 @@ export function buildProseInput(args: BuildProseInputArgs): ProseGenerateInput {
     title: project.title,
     genre: project.genre,
     narrativeConstitution: project.narrative_constitution || '',
+    storyContract: project.story_contract || {},
     chapterTitle: chapter.title || '',
     chapterNumber: chapter.chapter_number,
     synopsis: chapter.synopsis || '',
@@ -125,6 +128,52 @@ export function buildProseInput(args: BuildProseInputArgs): ProseGenerateInput {
     voiceDna,
     // Sprint 9 — null-safe project-wide voice DNA from Mimicry Engine.
     projectVoiceDna: project.voice_dna_project ?? {}
+  }
+}
+
+export async function buildProseInputWithRag(
+  args: BuildProseInputArgs,
+  options: { topK?: number; signal?: AbortSignal } = {}
+): Promise<ProseGenerateInput> {
+  const base = buildProseInput(args)
+  const query = [
+    args.chapter.title,
+    args.chapter.synopsis,
+    args.chapter.location,
+    args.chapter.time_in_story,
+    args.chapter.key_events.join('\n'),
+    args.chapter.active_characters.join(', '),
+    args.chapter.active_items.join(', ')
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  try {
+    const matches = await searchSimilarChapters(
+      args.project.id,
+      query,
+      options.topK ?? 3,
+      options.signal
+    )
+    const filtered = matches.filter((match) => match.summary.chapter_id !== args.chapter.id)
+    if (filtered.length === 0) return base
+
+    const ragMemory = filtered
+      .map(({ summary, similarity }) => {
+        const facts = summary.key_facts.length > 0
+          ? `\nFacts: ${summary.key_facts.slice(0, 5).join('; ')}`
+          : ''
+        return `Similarity ${Math.round(similarity * 100)}%: ${summary.summary}${facts}`
+      })
+      .join('\n\n')
+
+    return {
+      ...base,
+      ragMemory
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    return base
   }
 }
 

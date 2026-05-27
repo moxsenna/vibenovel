@@ -23,6 +23,7 @@ export interface Database {
           narrative_constitution: string | null
           target_ending: string | null
           theme_and_tone: string | null
+          story_contract: Json
           series_hook: string | null
           season_hooks: Json
           voice_dna_project: Json
@@ -35,6 +36,7 @@ export interface Database {
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['projects']['Insert']>
+        Relationships: []
       }
       characters: {
         Row: {
@@ -55,6 +57,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['characters']['Insert']>
+        Relationships: []
       }
       items: {
         Row: {
@@ -75,6 +78,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['items']['Insert']>
+        Relationships: []
       }
       world_rules: {
         Row: {
@@ -93,6 +97,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['world_rules']['Insert']>
+        Relationships: []
       }
       seasons: {
         Row: {
@@ -111,6 +116,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['seasons']['Insert']>
+        Relationships: []
       }
       sub_arcs: {
         Row: {
@@ -128,6 +134,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['sub_arcs']['Insert']>
+        Relationships: []
       }
       chapters: {
         Row: {
@@ -162,6 +169,7 @@ export interface Database {
           outline_source: 'GENERATED' | 'MANUAL' | 'IMPORTED'
           prose_source: 'GENERATED' | 'MANUAL_WRITE' | 'IMPORTED' | 'MIXED'
           is_locked: boolean
+          qa_logs: Json
           created_at: string
           updated_at: string
         }
@@ -171,6 +179,7 @@ export interface Database {
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['chapters']['Insert']>
+        Relationships: []
       }
       character_states: {
         Row: {
@@ -184,6 +193,11 @@ export interface Database {
           inventory: string[]
           relationships: Json
           last_action: string
+          knowledge_state: string[]
+          active_goal: string
+          secrets: string[]
+          appearance_notes: string
+          alliances: string[]
           source: 'AUTO_GENERATED' | 'MANUAL_EDIT' | 'IMPORTED'
           created_at: string
         }
@@ -192,6 +206,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['character_states']['Insert']>
+        Relationships: []
       }
       mystery_layers: {
         Row: {
@@ -212,6 +227,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['mystery_layers']['Insert']>
+        Relationships: []
       }
       plot_threads: {
         Row: {
@@ -232,6 +248,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['plot_threads']['Insert']>
+        Relationships: []
       }
       chapter_summaries: {
         Row: {
@@ -248,6 +265,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['chapter_summaries']['Insert']>
+        Relationships: []
       }
       emotional_patterns: {
         Row: {
@@ -264,6 +282,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['emotional_patterns']['Insert']>
+        Relationships: []
       }
       archived_outlines: {
         Row: {
@@ -278,10 +297,63 @@ export interface Database {
           archived_at?: string
         }
         Update: Partial<Database['public']['Tables']['archived_outlines']['Insert']>
+        Relationships: []
+      }
+      chapter_versions: {
+        Row: {
+          id: string
+          chapter_id: string
+          prose: string
+          word_count: number
+          change_summary: string
+          beats: Json
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['chapter_versions']['Row'], 'id' | 'created_at' | 'beats'> & {
+          id?: string
+          created_at?: string
+          beats?: Json
+        }
+        Update: Partial<Database['public']['Tables']['chapter_versions']['Insert']>
+        Relationships: []
+      }
+      recaps: {
+        Row: {
+          id: string
+          project_id: string
+          chapter_range_start: number
+          chapter_range_end: number
+          content: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['recaps']['Row'], 'id' | 'created_at'> & {
+          id?: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['recaps']['Insert']>
+        Relationships: []
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      match_chapter_summaries: {
+        Args: {
+          p_project_id: string
+          p_query_embedding: number[]
+          p_match_count?: number
+          p_min_similarity?: number
+        }
+        Returns: Array<{
+          id: string
+          chapter_id: string
+          project_id: string
+          summary: string
+          key_facts: Json
+          similarity: number
+        }>
+      }
+    }
     Enums: Record<string, never>
+    CompositeTypes: Record<string, never>
   }
 }

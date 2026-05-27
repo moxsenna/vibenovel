@@ -6,7 +6,7 @@ Dokumen ini merinci identitas brand, filosofi desain, palet warna, tipografi, se
 
 ## 🌟 1. Visi & Filosofi Brand
 
-VibeNovel bukan sekadar aplikasi pengolah kata (*word processor*); VibeNovel adalah **ruang kreatif kontemplatif (Notion-Grade Calm)** yang dirancang khusus untuk memeluk proses kreatif penulis novel. 
+VibeNovel bukan sekadar aplikasi pengolah kata (*word processor*); VibeNovel adalah **ruang kreatif kontemplatif (Notion-Grade Calm)** yang dirancang khusus untuk memeluk proses kreatif penulis novel.
 
 Kami menggabungkan kekuatan asisten kecerdasan buatan (*AI Co-Authoring*) tingkat lanjut dengan antarmuka yang sangat tenang, estetik, dan bebas distraksi.
 
@@ -17,13 +17,13 @@ graph TD
     A[VibeNovel Brand] --> B[Notion-Grade Calm]
     A --> C[Premium & Immersive]
     A --> D[Empowering Storytelling]
-    
+
     B --> B1[Bebas Distraksi]
     B --> B2[Bahasa Non-Teknis]
-    
+
     C --> C1[Warna HSL Harmonis]
     C --> C2[Animasi Spring Lembut]
-    
+
     D --> D1[4-Layer AI Memory]
     D --> D2[BYOK Security Guard]
 ```
@@ -32,7 +32,19 @@ graph TD
 2. **Premium & Immersive (Mewah & Hanyut)**: Estetika visual yang memanjakan mata dengan tema terkurasi hangat, sudut melengkung halus, efek kaca (*glassmorphism*), dan mikro-animasi transisi yang organik.
 3. **Empowering Storytelling (Pemberdayaan Pencerita)**: Membantu penulis menyusun plot tanpa cela melalui visualisasi sains cerita (seperti *Emotional Arc Heatmap* dan *Constellation Relationship Map*), namun menyajikannya dengan bahasa yang sederhana.
 
+### 🏷️ Tagline Resmi & Identitas Visual
+
+*   **Tagline Resmi (Mewakili Vibe Writing & Dukungan Penulis PPC)**:
+    > **"Alirkan Vibe Cerita, Sentuh Jiwa Pembaca."** *(Flow the Vibe of the Story, Touch the Soul of the Reader)*
+
+    Tagline ini merangkum proses menulis yang tenang (*vibe writing*), mengalir, serta berfokus penuh untuk membantu para pejuang penulis PPC (Pay Per Chapter) menghasilkan bab-bab berkualitas tinggi yang memikat emosi pembaca setianya di platform KBM App secara alami dan berkelanjutan.
+
+*   **Identitas Visual Pilihan (Logo Resmi)**:
+    *   **Gaya**: **Celestial Writer Style** — Monogram *Sleek VN* / *Quill-Line Art* dengan latar belakang Plum Burgundy Gelap (`#1A1118`), dipadukan dengan garis aksen emas satin dan pendaran lavender lembut.
+    *   **Rujukan File Promosi & Aset**: Seluruh pratinjau aset render logo, favicon, dan variasi horizontal dapat ditinjau di [logo_proposal.md](file:///C:/Users/bimap/.gemini/antigravity-ide/brain/434690a7-fb6a-4c78-a1e4-67bf947f130e/logo_proposal.md).
+
 ---
+
 
 ## 🎭 2. Kepribadian Brand (Brand Persona)
 

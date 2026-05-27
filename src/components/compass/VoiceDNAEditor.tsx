@@ -90,13 +90,13 @@ export const VoiceDNAEditor: React.FC = () => {
       </div>
 
       <p className="text-xs text-on-surface-variant/70 leading-relaxed mb-4">
-        Setiap karakter punya pola bicara yang unik. Voice DNA dipakai oleh
-        Prose Writer agar dialog konsisten lintas bab.
+        Setiap karakter punya cara bicara yang unik. Catatan ini membantu AI
+        menjaga dialog tetap konsisten lintas bab.
       </p>
 
       {sortedCharacters.length === 0 ? (
         <div className="text-center py-6 px-3 text-on-surface-variant/60 text-sm italic">
-          Belum ada karakter. Tambah dari mode Outline atau via Brainstorm chat.
+          Belum ada karakter. Tambah dari Rencana Bab atau lewat chat Ide Cerita.
         </div>
       ) : (
         <div className="space-y-3">

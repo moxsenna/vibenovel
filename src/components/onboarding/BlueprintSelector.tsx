@@ -82,7 +82,7 @@ export const BlueprintSelector: React.FC<BlueprintSelectorProps> = ({
               <p className="text-body-sm text-on-surface-variant/70 mt-0.5">
                 {previewBp
                   ? 'Review template + isi nama tokoh sebelum dipakai. Skip kalau mau pakai placeholder default.'
-                  : 'Story Compass akan auto-fill berdasarkan blueprint yang kamu pilih.'}
+                  : 'Kompas Cerita akan terisi otomatis berdasarkan blueprint yang kamu pilih.'}
               </p>
             </div>
           </div>

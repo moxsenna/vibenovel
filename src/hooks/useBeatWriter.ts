@@ -4,13 +4,15 @@ import { useSettingsStore } from '../store/useSettingsStore'
 import { useUiStore } from '../store/useUiStore'
 import { aiRouter } from '../services/ai/ai-router'
 import { stateTracker } from '../services/state-tracker'
-import { buildProseInput, ensureBeatsForChapter } from '../services/prose-context'
+import { buildProseInputWithRag, ensureBeatsForChapter } from '../services/prose-context'
 import { generateChapterSummary, buildSummaryUpsertPayload } from '../services/chapter-summary'
 import { analyzeChapterThreads } from '../services/thread-tracker'
 import { reindexChapter } from '../services/chapter-reindexer'
+import { buildOfflineDraftChapterPatch } from '../services/offline-draft-sync'
 import { usePlotRadar } from './usePlotRadar'
 import { useLoreExtractor } from './useLoreExtractor'
 import { useOfflineDraft } from './useOfflineDraft'
+import type { Chapter } from '../types/project'
 
 type StateGenStatus = 'idle' | 'generating' | 'done' | 'error'
 
@@ -27,14 +29,30 @@ export function useBeatWriter(chapterId: string) {
     plotThreads,
     chapterSummaries,
     applyThreadAnalysis,
-    upsertChapterSummary
+    upsertChapterSummary,
+    createChapterVersion
   } = useProjectStore()
   const chapter = chapters.find((c) => c.id === chapterId)
   const addToast = useUiStore((s) => s.addToast)
+  const freeWriteMode = useSettingsStore((s) => s.freeWriteMode)
+  // Sprint 9.7 — Deep Think settings. Read once per render so generateBeat
+  // captures the current values via closure when invoked.
+  const deepThinkEnabled = useSettingsStore((s) => s.deepThinkEnabled)
+  const deepThinkBudget = useSettingsStore((s) => s.deepThinkBudget)
+
+  const getEditorProse = (
+    targetChapter: typeof chapter,
+    beatIndex: number,
+    isFreeWrite: boolean
+  ) =>
+    isFreeWrite
+      ? targetChapter?.prose || ''
+      : targetChapter?.beats?.[beatIndex]?.prose || ''
 
   const [currentBeatIndex, setCurrentBeatIndex] = useState(0)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [streamingText, setStreamingText] = useState('')
+  const initialEditorProse = getEditorProse(chapter, 0, freeWriteMode)
+  const [activeProse, setActiveProse] = useState(initialEditorProse)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [stateGenStatus, setStateGenStatus] = useState<StateGenStatus>('idle')
   // Sprint 9.7 — Deep Think state. Both reset on chapter/beat change.
@@ -44,11 +62,6 @@ export function useBeatWriter(chapterId: string) {
   const { triggerPlotRadar } = usePlotRadar()
   const { triggerLoreExtraction } = useLoreExtractor()
   const { isOnline, saveDraft, clearDraft, syncPendingDrafts } = useOfflineDraft()
-  const freeWriteMode = useSettingsStore((s) => s.freeWriteMode)
-  // Sprint 9.7 — Deep Think settings. Read once per render so generateBeat
-  // captures the current values via closure when invoked.
-  const deepThinkEnabled = useSettingsStore((s) => s.deepThinkEnabled)
-  const deepThinkBudget = useSettingsStore((s) => s.deepThinkBudget)
 
   // Refs that survive re-renders without triggering them
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -57,6 +70,22 @@ export function useBeatWriter(chapterId: string) {
   // Sprint 9.7 — Track thinking phase via ref so the stream loop can guard
   // duplicate `setIsThinking(false)` setState calls without re-renders.
   const isThinkingRef = useRef(false)
+
+  // ── Two-Layer History: Local Undo/Redo (Sprint 9.9) ──
+  const [past, setPast] = useState<string[]>([])
+  const [future, setFuture] = useState<string[]>([])
+  const historyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastSavedTextRef = useRef(initialEditorProse)
+
+  const pushToHistory = useCallback((newText: string, oldText: string) => {
+    setPast((p) => {
+      const next = [...p, oldText]
+      if (next.length > 50) next.shift() // Max 50 stack
+      return next
+    })
+    setFuture([])
+    lastSavedTextRef.current = newText
+  }, [setPast, setFuture])
 
   // Reset state-gen-status during render whenever the active chapter changes,
   // avoiding the cascading-renders warning that comes from setState-in-effect.
@@ -67,10 +96,53 @@ export function useBeatWriter(chapterId: string) {
     setCurrentBeatIndex(0)
     setIsThinking(false)
     setCurrentThought('')
+    setPast([])
+    setFuture([])
     // isThinkingRef is reset by generateBeat's finally block + the
     // chapterId useEffect below — keeping it out of render satisfies the
     // React 19 react-hooks/refs purity rule.
   }
+
+  // Initialize activeProse when switching chapters, beats, or editor mode.
+  // We keep this guarded during render to avoid a set-state-in-effect cascade.
+  const proseSourceKey = `${chapter?.id ?? 'missing'}:${freeWriteMode ? 'free' : 'beat'}:${currentBeatIndex}`
+  const [prevProseSourceKey, setPrevProseSourceKey] = useState(proseSourceKey)
+  if (prevProseSourceKey !== proseSourceKey) {
+    const initProse = getEditorProse(chapter, currentBeatIndex, freeWriteMode)
+    setPrevProseSourceKey(proseSourceKey)
+    setActiveProse(initProse)
+    setPast([])
+    setFuture([])
+  }
+
+  const lastProseSourceKeyRef = useRef(proseSourceKey)
+  useEffect(() => {
+    if (lastProseSourceKeyRef.current === proseSourceKey) return
+    lastProseSourceKeyRef.current = proseSourceKey
+    lastSavedTextRef.current = activeProse
+  }, [proseSourceKey, activeProse])
+
+  // ── Auto-Snapshot (Setiap 15 Menit) ──
+  useEffect(() => {
+    if (!chapter || !activeProject || !isOnline) return
+    const interval = setInterval(() => {
+      const fullProse = freeWriteMode
+        ? (chapter.prose || '')
+        : (chapter.beats?.map(b => b.prose || '').join('\n\n') || '')
+      const wordCount = fullProse.split(/\s+/).filter(w => w.length > 0).length
+
+      if (wordCount > 10) {
+         createChapterVersion(
+           chapter.id,
+           fullProse,
+           wordCount,
+           'Auto-Snapshot (15 Menit)',
+           chapter.beats ?? []
+         )
+      }
+    }, 15 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [chapter, activeProject, isOnline, freeWriteMode, createChapterVersion])
 
   // Reset the trigger flag when the chapter id changes (refs don't trigger renders).
   useEffect(() => {
@@ -126,7 +198,7 @@ export function useBeatWriter(chapterId: string) {
         setStateGenStatus('error')
       }
     },
-    [chapter, activeProject, characters, getLatestStatesForChapter, upsertCharacterStates]
+    [chapter, activeProject, characters, getLatestStatesForChapter, upsertCharacterStates, setStateGenStatus]
   )
 
   /**
@@ -188,16 +260,11 @@ export function useBeatWriter(chapterId: string) {
           // Only sync drafts that belong to a chapter we currently have loaded.
           const targetChapter = chapters.find((c) => c.id === d.chapterId)
           if (!targetChapter) return false
-          const updatedBeats = [...(targetChapter.beats || [])]
-          if (!updatedBeats[d.beatIndex]) return false
-          updatedBeats[d.beatIndex] = { ...updatedBeats[d.beatIndex], prose: d.text }
-          const fullProse = updatedBeats.map((b) => b.prose || '').join('\n\n').trim()
-          const wordCount = fullProse.split(/\s+/).filter((w) => w.length > 0).length
-          await updateChapter(d.chapterId, {
-            beats: updatedBeats,
-            prose: fullProse,
-            word_count: wordCount
-          })
+
+          const patchResult = buildOfflineDraftChapterPatch(targetChapter, d)
+          if (!patchResult) return false
+
+          await updateChapter(d.chapterId, patchResult.patch)
           syncedChapterIds.add(d.chapterId)
           return true
         })
@@ -328,7 +395,8 @@ export function useBeatWriter(chapterId: string) {
       triggerPlotRadar,
       triggerLoreExtraction,
       triggerThreadAnalysis,
-      triggerChapterSummary
+      triggerChapterSummary,
+      setSaveStatus
     ]
   )
 
@@ -350,17 +418,18 @@ export function useBeatWriter(chapterId: string) {
       }
 
       setIsGenerating(true)
-      setStreamingText('')
+      setActiveProse('')
       // Sprint 9.7 — Reset thought state for the new beat.
       setCurrentThought('')
       setIsThinking(false)
 
-      abortControllerRef.current = new AbortController()
+      const controller = new AbortController()
+      abortControllerRef.current = controller
       const effectiveBudget = deepThinkEnabled ? deepThinkBudget : 0
 
       try {
         const prevStates = getLatestStatesForChapter(chapter.chapter_number)
-        const input = buildProseInput({
+        const input = await buildProseInputWithRag({
           project: activeProject,
           chapter,
           beatIndex,
@@ -369,17 +438,19 @@ export function useBeatWriter(chapterId: string) {
           worldRules,
           previousStates: prevStates,
           allChapters: chapters
+        }, {
+          signal: controller.signal
         })
 
         const stream = aiRouter.generateProseBeatStream(activeProject, input, {
           thinkingBudget: effectiveBudget,
-          signal: abortControllerRef.current.signal
+          signal: controller.signal
         })
         let accumulatedText = ''
         let thoughtBuffer = ''
 
         for await (const chunk of stream) {
-          if (abortControllerRef.current.signal.aborted) {
+          if (controller.signal.aborted) {
             break
           }
           if (chunk.type === 'thought') {
@@ -399,7 +470,7 @@ export function useBeatWriter(chapterId: string) {
               setIsThinking(false)
             }
             accumulatedText += chunk.content
-            setStreamingText(accumulatedText)
+            setActiveProse(accumulatedText)
             debouncedSaveBeat(beatIndex, accumulatedText)
           }
         }
@@ -436,25 +507,132 @@ export function useBeatWriter(chapterId: string) {
       abortControllerRef.current.abort()
       setIsGenerating(false)
     }
-  }, [])
+  }, [setIsGenerating])
 
   const handleManualEdit = useCallback(
     (beatIndex: number, text: string) => {
-      // If currently on this beat and it's not generating, mirror to streaming buffer.
+      // If currently on this beat and it's not generating, mirror to active buffer immediately.
       if (beatIndex === currentBeatIndex && !isGenerating) {
-        setStreamingText(text)
+        if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current)
+        historyTimeoutRef.current = setTimeout(() => {
+          if (text !== lastSavedTextRef.current) {
+            pushToHistory(text, lastSavedTextRef.current)
+          }
+        }, 1000)
+
+        setActiveProse(text)
       }
       debouncedSaveBeat(beatIndex, text)
     },
-    [currentBeatIndex, isGenerating, debouncedSaveBeat]
+    [currentBeatIndex, isGenerating, debouncedSaveBeat, pushToHistory, setActiveProse]
   )
+
+  const restoreChapterSnapshot = useCallback(
+    async (prose: string, wordCount: number, beats: Chapter['beats']) => {
+      if (!chapter) return
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+        abortControllerRef.current = null
+      }
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+      }
+      if (historyTimeoutRef.current) {
+        clearTimeout(historyTimeoutRef.current)
+        historyTimeoutRef.current = null
+      }
+
+      const restoredBeatIndex = beats[currentBeatIndex] ? currentBeatIndex : 0
+      const nextActiveProse = freeWriteMode
+        ? prose
+        : (beats[restoredBeatIndex]?.prose || '')
+
+      setIsGenerating(false)
+      isThinkingRef.current = false
+      setIsThinking(false)
+      setCurrentThought('')
+      setSaveStatus('saving')
+      setPast([])
+      setFuture([])
+      lastSavedTextRef.current = nextActiveProse
+
+      const updatePromise = updateChapter(chapter.id, {
+        prose,
+        word_count: wordCount,
+        beats,
+        status: prose.trim().length > 10 ? 'DRAFT' : 'GENERATING',
+        prose_source: beats.length > 0 ? 'MIXED' : 'MANUAL_WRITE'
+      })
+
+      setCurrentBeatIndex(restoredBeatIndex)
+      setActiveProse(nextActiveProse)
+
+      await updatePromise
+
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    },
+    [
+      chapter,
+      currentBeatIndex,
+      freeWriteMode,
+      updateChapter,
+      setIsGenerating,
+      setIsThinking,
+      setCurrentThought,
+      setSaveStatus,
+      setPast,
+      setFuture,
+      setCurrentBeatIndex,
+      setActiveProse
+    ]
+  )
+
+  const undo = useCallback(() => {
+    if (past.length === 0) return
+    if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current)
+
+    setPast((p) => {
+      const prev = p[p.length - 1]
+      const current = activeProse
+
+      setFuture((f) => current !== prev ? [current, ...f] : f)
+      setActiveProse(prev)
+      lastSavedTextRef.current = prev
+      debouncedSaveBeat(currentBeatIndex, prev)
+      return p.slice(0, -1)
+    })
+  }, [past, activeProse, currentBeatIndex, debouncedSaveBeat, setFuture, setActiveProse, setPast])
+
+  const redo = useCallback(() => {
+    if (future.length === 0) return
+    if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current)
+
+    setFuture((f) => {
+      const next = f[0]
+      const current = activeProse
+
+      setPast((p) => {
+        const nextPast = [...p, current]
+        if (nextPast.length > 50) nextPast.shift()
+        return nextPast
+      })
+
+      setActiveProse(next)
+      lastSavedTextRef.current = next
+      debouncedSaveBeat(currentBeatIndex, next)
+      return f.slice(1)
+    })
+  }, [future, activeProse, currentBeatIndex, debouncedSaveBeat, setPast, setActiveProse, setFuture])
 
   return {
     chapter,
     currentBeatIndex,
     setCurrentBeatIndex,
     isGenerating,
-    streamingText,
+    activeProse,
     saveStatus,
     stateGenStatus,
     isThinking,
@@ -462,6 +640,11 @@ export function useBeatWriter(chapterId: string) {
     generateBeat,
     stopGeneration,
     handleManualEdit,
-    regenerateState
+    restoreChapterSnapshot,
+    regenerateState,
+    undo,
+    redo,
+    canUndo: past.length > 0,
+    canRedo: future.length > 0
   }
 }

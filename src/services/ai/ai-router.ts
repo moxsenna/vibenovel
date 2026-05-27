@@ -19,6 +19,8 @@ import type {
   OutlineGenerateInput,
   OutlineResponse,
   ProseGenerateInput,
+  SemanticValidationInput,
+  SemanticValidationResponse,
   QuickScanResult,
   ImportedChapterData,
   VoiceDnaResult,
@@ -63,7 +65,7 @@ import {
 } from '../../prompts/mimicry-engine'
 
 interface CoAuthorDraft {
-  type: 'character' | 'item' | 'world_rule' | 'ending' | 'mystery' | 'character_state'
+  type: 'story_contract' | 'character' | 'item' | 'world_rule' | 'ending' | 'mystery' | 'character_state'
   data: Record<string, unknown>
 }
 
@@ -95,20 +97,32 @@ ${fullHistory}
 
 User: ${userInput}
 
-Silakan balas dengan persona Co-Author sesuai instruksi sistem. Jika kamu mengajukan elemen konkret baru (karakter, item, aturan dunia, ending, atau mystery layer), sertakan data JSON-nya di akhir balasan dalam blok:
+Silakan balas dengan persona Co-Author sesuai instruksi sistem. Jika kamu mengajukan elemen konkret baru (story_contract, karakter, item, aturan dunia, ending, mystery layer, atau state karakter), sertakan data JSON-nya di akhir balasan dalam blok:
 <DRAFT_DATA>
 { ... }
 </DRAFT_DATA>
 
 Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak ada trailing comma).`
 
-    const response = await geminiPool.generateContent(
-      prompt,
-      systemInstruction,
-      false,
-      'gemini-flash-latest',
-      signal
-    )
+    const shouldThinkForContract = systemInstruction.includes('PREMIS & STORY CONTRACT')
+    const response = shouldThinkForContract
+      ? (
+          await geminiPool.generateContentV2(
+            prompt,
+            systemInstruction,
+            false,
+            'gemini-flash-latest',
+            signal,
+            2048
+          )
+        ).text
+      : await geminiPool.generateContent(
+          prompt,
+          systemInstruction,
+          false,
+          'gemini-flash-latest',
+          signal
+        )
 
     // ── Parse DRAFT_DATA ───────────────────────────────────────────────
     const draftMatch = response.match(/<DRAFT_DATA>([\s\S]*?)<\/DRAFT_DATA>/)
@@ -132,6 +146,7 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
         ) {
           const validTypes: CoAuthorDraft['type'][] = [
             'character',
+            'story_contract',
             'item',
             'world_rule',
             'ending',
@@ -184,6 +199,7 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
       title: input.title,
       genre: input.genre,
       narrativeConstitution: input.narrativeConstitution,
+      storyContract: input.storyContract,
       targetEnding: input.targetEnding,
       themeAndTone: input.themeAndTone,
       targetChapters: input.targetChapters,
@@ -286,6 +302,80 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
     }
 
     throw lastError || new Error('Outline Engine output was not valid JSON after retries.')
+  }
+
+  /**
+   * AI Semantic Validator: second validation layer after deterministic checks.
+   *
+   * This uses Gemini thinking as an evaluator, not as canon. The validator must
+   * return only issue objects; callers still treat deterministic BLOCKERs as the
+   * hard source of truth.
+   */
+  public async validateStorySemanticsWithThinking(
+    input: SemanticValidationInput,
+    options?: { thinkingBudget?: number; signal?: AbortSignal }
+  ): Promise<SemanticValidationResponse> {
+    const systemInstruction = `You are VibeNovel's Story Contract semantic validator.
+Evaluate whether a generated chapter outline violates the approved Story Contract.
+Return ONLY valid JSON with this shape:
+{
+  "passed": boolean,
+  "issues": [
+    {
+      "severity": "BLOCKER" | "WARNING",
+      "code": "SHORT_CODE",
+      "message": "Indonesian explanation",
+      "suggestion": "Indonesian fix suggestion"
+    }
+  ]
+}
+
+Use BLOCKER only for fatal canon contradictions, wrong opening timeline/state, impossible causal order, early reveal, or relationship/addressing logic that would confuse readers.
+Use WARNING for ambiguity, weak setup, or facts that may need to be clearer.
+Do not invent new canon. The Story Contract is the source of truth.`
+
+    const prompt = `STORY CONTRACT:
+${JSON.stringify(input.storyContract, null, 2)}
+
+CHAPTER OUTLINE TO VALIDATE:
+${JSON.stringify(input.outline, null, 2)}
+
+Chapter number: ${input.chapterNumber}
+
+Return validation JSON only.`
+
+    try {
+      const result = await geminiPool.generateContentV2(
+        prompt,
+        systemInstruction,
+        true,
+        'gemini-flash-latest',
+        options?.signal,
+        options?.thinkingBudget ?? 2048
+      )
+      const cleaned = result.text.replace(/^```json\s*/i, '').replace(/```$/, '').trim()
+      const parsed = JSON.parse(cleaned) as SemanticValidationResponse
+      if (!parsed || !Array.isArray(parsed.issues)) {
+        throw new Error('Semantic validator returned invalid result shape.')
+      }
+      return {
+        passed: !parsed.issues.some((issue) => issue.severity === 'BLOCKER'),
+        issues: parsed.issues
+      }
+    } catch (e) {
+      console.warn('AI semantic validation failed; continuing with deterministic validation only:', e)
+      return {
+        passed: true,
+        issues: [
+          {
+            severity: 'WARNING',
+            code: 'AI_SEMANTIC_VALIDATOR_UNAVAILABLE',
+            message: 'Validator semantik AI gagal berjalan, sehingga hanya validator deterministik yang dipakai.',
+            suggestion: 'Coba regenerate outline dengan Deep Outline aktif jika hasil terasa meragukan.'
+          }
+        ]
+      }
+    }
   }
 
   /**

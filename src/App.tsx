@@ -20,9 +20,11 @@ function AuthLoader() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
-        <span className="material-symbols-outlined text-primary text-5xl animate-pulse" style={{ fontVariationSettings: "'FILL' 1" }}>
-          history_edu
-        </span>
+        <img
+          src="/Logo11.webp"
+          alt="VibeNovel Logo"
+          className="h-12 w-auto object-contain animate-pulse"
+        />
         <p className="text-on-surface-variant text-body-md">Memuat VibeNovel...</p>
       </div>
     </div>

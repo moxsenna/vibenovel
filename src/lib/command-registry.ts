@@ -1,7 +1,7 @@
 /**
  * Command Registry — Sprint 9.6
  *
- * Static command list untuk Cmd+K Aksi Cepat palette.
+ * Static command list untuk Ctrl/Cmd+K Menu Pintas palette.
  * Setiap command bisa langsung di-handle saat user pilih, atau parameterized
  * (e.g., navigate to chapter N — disolve di runtime via context).
  *
@@ -11,6 +11,8 @@
  *  - Pengaturan: toggle focus mode, theme, free write, open settings
  *  - Lainnya: meta (logout, dll — future)
  */
+
+import { WORKSPACE_MODES } from './workspace-modes'
 
 export type CommandGroup = 'navigasi' | 'tools' | 'pengaturan' | 'lainnya'
 
@@ -46,63 +48,23 @@ export interface CommandContext {
 // ── Navigation Commands ──────────────────────────────────────────────────
 
 const navigationCommands: PaletteCommand[] = [
-  {
-    id: 'mode.brainstorm',
-    label: 'Mode Brainstorm',
-    description: 'Diskusi ide dengan Co-Author AI',
-    icon: 'chat',
+  ...WORKSPACE_MODES.map((mode): PaletteCommand => ({
+    id: `mode.${mode.id}`,
+    label: mode.commandLabel,
+    description: mode.description,
+    icon: mode.icon,
     group: 'navigasi',
-    keywords: ['brainstorm', 'chat', 'diskusi', 'ide', 'co-author', 'ngobrol'],
-    shortcut: 'Ctrl+1',
-    handler: (ctx) => ctx.setMode('brainstorm')
-  },
-  {
-    id: 'mode.outline',
-    label: 'Mode Outline',
-    description: 'Susun outline + lorebook',
-    icon: 'list_alt',
-    group: 'navigasi',
-    keywords: ['outline', 'rangka', 'storyboard', 'lorebook', 'compass'],
-    shortcut: 'Ctrl+2',
-    handler: (ctx) => ctx.setMode('outline')
-  },
-  {
-    id: 'mode.write',
-    label: 'Mode Menulis',
-    description: 'Tulis prosa beat-by-beat',
-    icon: 'edit',
-    group: 'navigasi',
-    keywords: ['write', 'menulis', 'prose', 'tulis', 'edit'],
-    shortcut: 'Ctrl+3',
-    handler: (ctx) => ctx.setMode('write')
-  },
-  {
-    id: 'mode.review',
-    label: 'Mode Review',
-    description: 'Plot Radar QA + Thread Tracker',
-    icon: 'radar',
-    group: 'navigasi',
-    keywords: ['review', 'qa', 'plot radar', 'tinjau', 'cek'],
-    shortcut: 'Ctrl+4',
-    handler: (ctx) => ctx.setMode('review')
-  },
-  {
-    id: 'mode.visualize',
-    label: 'Mode Visualisasi',
-    description: 'Heatmap, Constellation, Timeline, Word Count',
-    icon: 'analytics',
-    group: 'navigasi',
-    keywords: ['visualize', 'visualisasi', 'chart', 'grafik', 'heatmap'],
-    shortcut: 'Ctrl+5',
-    handler: (ctx) => ctx.setMode('visualize')
-  },
+    keywords: mode.keywords,
+    shortcut: mode.shortcut,
+    handler: (ctx) => ctx.setMode(mode.id)
+  })),
   {
     id: 'panel.toggle',
     label: 'Buka / Tutup Panel Konteks',
-    description: 'Tampilkan atau sembunyikan sidebar',
+    description: 'Tampilkan atau sembunyikan catatan cerita di samping',
     icon: 'menu',
     group: 'navigasi',
-    keywords: ['panel', 'sidebar', 'context', 'toggle', 'buka', 'tutup'],
+    keywords: ['panel', 'sidebar', 'context', 'catatan', 'toggle', 'buka', 'tutup'],
     handler: (ctx) => ctx.toggleContextPanel()
   }
 ]
@@ -112,7 +74,7 @@ const navigationCommands: PaletteCommand[] = [
 const toolsCommands: PaletteCommand[] = [
   {
     id: 'tool.recap',
-    label: 'Generate Recap',
+    label: 'Buat Recap Pembaca',
     description: '"Sebelumnya..." untuk pembaca',
     icon: 'auto_stories',
     group: 'tools',
@@ -126,16 +88,16 @@ const toolsCommands: PaletteCommand[] = [
   {
     id: 'tool.mimicry',
     label: 'Buka Gaya Tulisanmu',
-    description: 'Ekstrak voice DNA proyek dari sample',
+    description: 'Pelajari gaya tulisan dari contoh naskah',
     icon: 'auto_fix_high',
     group: 'tools',
     keywords: ['mimicry', 'gaya', 'voice dna', 'tulisan', 'style'],
-    handler: (ctx) => ctx.openModal('mimicry')
+    handler: (ctx) => ctx.openModal('settings')
   },
   {
     id: 'tool.reindex',
     label: 'Sinkronisasi Memori AI',
-    description: 'Build ulang state snapshot + ringkasan untuk bab manual',
+    description: 'Rapikan ingatan AI setelah import atau tulis manual',
     icon: 'memory',
     group: 'tools',
     keywords: ['reindex', 'sinkronisasi', 'memori', 'sync', 'rebuild'],
@@ -148,8 +110,8 @@ const toolsCommands: PaletteCommand[] = [
 const settingsCommands: PaletteCommand[] = [
   {
     id: 'setting.focus',
-    label: 'Toggle Mode Fokus',
-    description: 'Sembunyikan toolbar + sidebar untuk menulis lebih lapang',
+    label: 'Mode Fokus',
+    description: 'Sembunyikan panel agar layar menulis lebih lapang',
     icon: 'center_focus_strong',
     group: 'pengaturan',
     keywords: ['focus', 'fokus', 'distraction', 'mode', 'lapang', 'bersih'],
@@ -157,7 +119,7 @@ const settingsCommands: PaletteCommand[] = [
   },
   {
     id: 'setting.theme',
-    label: 'Toggle Tema (Dark / Light)',
+    label: 'Ganti Tema',
     description: 'Ganti antara Malam Kreatif dan Jurnal Cantik',
     icon: 'palette',
     group: 'pengaturan',
@@ -166,8 +128,8 @@ const settingsCommands: PaletteCommand[] = [
   },
   {
     id: 'setting.freewrite',
-    label: 'Toggle Mode Bebas (Free Write)',
-    description: 'Lepas semua enforcement KBM untuk drafting bebas',
+    label: 'Tulis Bebas',
+    description: 'Menulis manual tanpa arahan beat dari AI',
     icon: 'lock_open',
     group: 'pengaturan',
     keywords: ['free write', 'bebas', 'drafting', 'lepas'],
@@ -176,7 +138,7 @@ const settingsCommands: PaletteCommand[] = [
   {
     id: 'setting.open',
     label: 'Buka Pengaturan',
-    description: 'API Keys, Mimicry, Tutorial',
+    description: 'API keys, gaya tulisan, dan tutorial',
     icon: 'settings',
     group: 'pengaturan',
     keywords: ['settings', 'pengaturan', 'config', 'api key', 'byok'],

@@ -14,9 +14,10 @@ interface BeatEditorProps {
   onNext: () => void
   isLastBeat: boolean
   onSelectionChange?: (sel: SelectionInfo | null) => void
-  /** Sprint 9.7 — Deep Think indicator state. Optional for backward compat. */
   isThinking?: boolean
   currentThought?: string
+  onUndo?: () => void
+  onRedo?: () => void
 }
 
 export interface BeatEditorHandle {
@@ -37,7 +38,9 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
     isLastBeat,
     onSelectionChange,
     isThinking = false,
-    currentThought = ''
+    currentThought = '',
+    onUndo,
+    onRedo
   },
   ref
 ) {
@@ -295,6 +298,16 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
             onChange={(e) => onEdit(e.target.value)}
             onSelect={detectSelection}
             onKeyUp={detectSelection}
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault()
+                if (e.shiftKey) onRedo?.()
+                else onUndo?.()
+              } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+                e.preventDefault()
+                onRedo?.()
+              }
+            }}
             onBlur={() => {
               // Defer so click on the floating toolbar still has a valid selection.
               setTimeout(() => {

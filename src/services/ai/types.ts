@@ -1,7 +1,8 @@
+import type { StoryContract, StoryValidationResult } from '../../types/project'
+
 export interface AISettings {
   geminiKeys: string[]
   openRouterKey: string | null
-  activeProseProvider: 'gemini' | 'openrouter'
   activeProseModel: string
 }
 
@@ -34,7 +35,7 @@ export interface BrainstormInput {
 export interface BrainstormResponse {
   reply: string
   draftData?: {
-    type: 'character' | 'item' | 'world_rule' | 'ending' | 'mystery' | 'character_state'
+    type: 'story_contract' | 'character' | 'item' | 'world_rule' | 'ending' | 'mystery' | 'character_state'
     data: Record<string, unknown>
   }
 }
@@ -45,6 +46,7 @@ export interface OutlineGenerateInput {
   narrativeConstitution: string
   targetEnding: string
   themeAndTone: string
+  storyContract?: StoryContract | Record<string, unknown> | null
   targetChapters: number
   mysteryLayers: Array<{
     layer_number: number
@@ -100,6 +102,7 @@ export interface ProseGenerateInput {
   title: string
   genre: string
   narrativeConstitution: string
+  storyContract?: StoryContract | Record<string, unknown> | null
   chapterTitle: string
   chapterNumber: number
   synopsis: string
@@ -113,6 +116,7 @@ export interface ProseGenerateInput {
   slidingWindowPrevChapter?: string // Last 500 words of previous chapter
   loreContext?: string // Stringified relevant lore/characters/items
   characterStates?: string // Stringified Layer 2 dynamic character states
+  ragMemory?: string // Stringified Layer 3 long-term memory matches
   voiceDna?: Record<string, Record<string, unknown>>
   /**
    * Sprint 9 — Mimicry Engine. Project-wide voice DNA extracted from a
@@ -144,6 +148,14 @@ export interface QARadarResponse {
   loreContradictions: string[]
   danglingThreads: string[]
 }
+
+export interface SemanticValidationInput {
+  storyContract: StoryContract | Record<string, unknown>
+  chapterNumber: number
+  outline: OutlineResponse
+}
+
+export type SemanticValidationResponse = StoryValidationResult
 
 // ── Import Analyzer Shapes ────────────────────────────────────────────────
 

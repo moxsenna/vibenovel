@@ -1,5 +1,5 @@
 /**
- * CommandPalette ("Aksi Cepat") — Sprint 9.6
+ * CommandPalette ("Menu Pintas") — Sprint 9.6
  *
  * Cmd+K / Ctrl+K command palette inspired by Notion / Linear / Raycast.
  * Notion-grade calm — dark glass, fuzzy search, keyboard nav.
@@ -10,8 +10,8 @@
  *   [Search input — autofocus]
  *   ─── Recent (collapsed if no recent or query active) ───
  *   ─── Navigasi ───
- *     • Mode Brainstorm
- *     • Mode Outline
+ *     • Ide Cerita
+ *     • Rencana Bab
  *     ...
  *   ─── Tools ───
  *   ─── Pengaturan ───
@@ -41,7 +41,7 @@ const RECENT_LIMIT = 5
 
 const GROUP_LABEL: Record<CommandGroup, string> = {
   navigasi: 'Navigasi',
-  tools: 'Tools AI',
+  tools: 'Bantuan AI',
   pengaturan: 'Pengaturan',
   lainnya: 'Lainnya'
 }
@@ -278,7 +278,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onOpenRecap }) =
         onClick={() => setPaletteOpen(false)}
         onKeyDown={handleKeyDown}
         role="dialog"
-        aria-label="Aksi Cepat"
+        aria-label="Menu Pintas"
         aria-modal="true"
       >
         <motion.div
@@ -298,7 +298,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onOpenRecap }) =
             <input
               ref={inputRef}
               type="text"
-              placeholder="Ketik untuk cari fitur... (Aksi Cepat)"
+              placeholder="Ketik yang ingin kamu lakukan..."
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value)

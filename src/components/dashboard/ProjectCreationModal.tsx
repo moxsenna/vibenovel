@@ -175,7 +175,7 @@ export const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
                   <span className="text-2xl">🌱</span>
                   <span className="text-body-sm font-bold text-on-surface">Mulai Dari Nol</span>
                   <span className="text-label-md text-on-surface-variant">
-                    Brainstorm dulu dengan AI Co-Author.
+                    Rapikan ide dulu dengan AI Co-Author.
                   </span>
                 </button>
                 <button

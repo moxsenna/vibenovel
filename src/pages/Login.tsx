@@ -107,19 +107,12 @@ export const Login: React.FC = () => {
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <span
-              className="material-symbols-outlined text-primary text-4xl"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              history_edu
-            </span>
-            <h1
-              className="text-display-md font-bold bg-clip-text text-transparent"
-              style={{ backgroundImage: 'linear-gradient(135deg, var(--m3-primary), var(--m3-tertiary))' }}
-            >
-              VibeNovel
-            </h1>
+          <div className="flex items-center justify-center mb-2">
+            <img
+              src={theme === 'dark' ? '/Logo11.webp' : '/Logo22.webp'}
+              alt="VibeNovel Logo"
+              className="h-16 w-auto object-contain transition-all duration-300"
+            />
           </div>
           <p className="text-on-surface-variant text-body-sm">
             Platform AI untuk Penulis Novel KBM Indonesia

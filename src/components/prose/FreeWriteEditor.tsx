@@ -6,6 +6,8 @@ interface FreeWriteEditorProps {
   chapterId: string
   prose: string
   onEdit: (text: string) => void
+  onUndo?: () => void
+  onRedo?: () => void
 }
 
 /**
@@ -16,7 +18,9 @@ interface FreeWriteEditorProps {
 export const FreeWriteEditor: React.FC<FreeWriteEditorProps> = ({
   chapterId,
   prose,
-  onEdit
+  onEdit,
+  onUndo,
+  onRedo
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { isOnline, loadDraft, clearDraft } = useOfflineDraft()
@@ -104,6 +108,16 @@ export const FreeWriteEditor: React.FC<FreeWriteEditorProps> = ({
         ref={textareaRef}
         value={prose}
         onChange={(e) => onEdit(e.target.value)}
+        onKeyDown={(e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            e.preventDefault()
+            if (e.shiftKey) onRedo?.()
+            else onUndo?.()
+          } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+            e.preventDefault()
+            onRedo?.()
+          }
+        }}
         placeholder="Mulai menulis bebas... Tanpa beat indicator, tanpa auto-QA. Hanya kamu dan kalimatmu."
         className="flex-1 w-full p-6 bg-transparent text-text-primary font-serif text-base leading-relaxed resize-none focus:outline-none"
       />

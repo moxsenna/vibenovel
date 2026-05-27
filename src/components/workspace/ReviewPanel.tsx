@@ -16,7 +16,7 @@ interface MobileTabsProps {
 
 const MOBILE_TABS: { id: MobileTab; label: string; icon: string }[] = [
   { id: 'prose', label: 'Prosa', icon: 'menu_book' },
-  { id: 'qa', label: 'QA', icon: 'radar' },
+  { id: 'qa', label: 'Cek', icon: 'radar' },
   { id: 'context', label: 'Konteks', icon: 'hub' }
 ]
 
@@ -65,7 +65,7 @@ export const ReviewPanel: React.FC = () => {
   if (!activeChapter) {
     return (
       <div className="flex-1 p-8 flex items-center justify-center text-on-surface-variant text-center">
-        Pilih bab dari daftar untuk mereview prosa dan mengecek Plot Radar.
+        Pilih bab dari daftar untuk mengecek naskah.
       </div>
     )
   }
@@ -105,10 +105,10 @@ export const ReviewPanel: React.FC = () => {
       <div className="bg-surface-container-high p-5 rounded-2xl border border-outline-variant/20 shadow-sm inner-glow">
         <h3 className="text-title-md text-on-surface font-bold flex items-center gap-2">
           <span className="material-symbols-outlined text-primary">radar</span>
-          Plot Radar QA
+          Cek Cerita
         </h3>
         <p className="text-body-sm text-on-surface-variant mt-2 leading-relaxed">
-          Analisis mendalam plot hole, emosi, Chekhov's Gun, dan filler.
+          Periksa alur, emosi, benda penting, dan bagian yang terasa mengisi halaman saja.
         </p>
         <div className="mt-4">
           <button

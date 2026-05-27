@@ -5,6 +5,149 @@ export type CharacterGenesis = 'BRAINSTORMED' | 'IMPORTED' | 'AUTO_EXTRACTED' | 
 export type ItemCategory = 'WEAPON' | 'MAGICAL' | 'DOCUMENT' | 'JEWELRY' | 'VEHICLE' | 'KEY_ITEM' | 'OTHER'
 export type LoreCategory = 'MAGIC_SYSTEM' | 'SOCIAL_RULE' | 'GEOGRAPHY' | 'TECHNOLOGY' | 'OTHER'
 
+export type StoryValidationSeverity = 'BLOCKER' | 'WARNING'
+
+export interface OpeningContract {
+  must_start_with: string
+  must_not_start_with: string[]
+  opening_timeline?: string
+  opening_relationship_state?: string
+  first_chapter_required_facts: string[]
+}
+
+export interface NarrativeMechanic {
+  type:
+    | 'linear'
+    | 'regression'
+    | 'reincarnation'
+    | 'transmigration'
+    | 'secret_identity'
+    | 'whodunit'
+    | 'revenge'
+    | 'slow_burn'
+    | 'forced_marriage'
+    | 'multi_timeline'
+    | 'other'
+  description: string
+  trigger?: string
+  constraints: string[]
+}
+
+export interface CausalityRule {
+  id: string
+  rule: string
+  applies_from_chapter?: number
+  applies_until_chapter?: number
+  severity: StoryValidationSeverity
+}
+
+export interface CanonEntity {
+  name: string
+  entity_type: 'character' | 'item' | 'location' | 'organization'
+  db_role?: CharacterRole
+  story_tags: string[]
+  aliases: string[]
+  required_presence?: {
+    chapter_range: [number, number]
+    reason: string
+  }
+}
+
+export interface RelationshipAddressRule {
+  speaker: string
+  addressee: string
+  relationship: string
+  allowed_terms: string[]
+  default_term: string
+  context_rules: string[]
+  intimacy_stage?: string
+}
+
+export interface StoryArcStep {
+  id: string
+  label: string
+  chapter_range?: [number, number]
+  required_events: string[]
+  forbidden_events: string[]
+}
+
+export interface ForbiddenContradiction {
+  id: string
+  description: string
+  severity: StoryValidationSeverity
+}
+
+export interface RequiredReveal {
+  id: string
+  reveal: string
+  target_chapter?: number
+  not_before_chapter?: number
+}
+
+export interface ToneContract {
+  description: string
+  must_include?: string[]
+  must_avoid?: string[]
+}
+
+export interface StoryContract {
+  core_promise: string
+  reader_promise: string
+  opening_contract: OpeningContract
+  narrative_mechanics: NarrativeMechanic[]
+  causality_rules: CausalityRule[]
+  canon_entities: CanonEntity[]
+  relationship_addressing: RelationshipAddressRule[]
+  arc_order: StoryArcStep[]
+  forbidden_contradictions: ForbiddenContradiction[]
+  required_reveals: RequiredReveal[]
+  tone_contract: ToneContract
+}
+
+export interface StoryValidationIssue {
+  severity: StoryValidationSeverity
+  code: string
+  message: string
+  suggestion: string
+}
+
+export interface StoryValidationResult {
+  passed: boolean
+  issues: StoryValidationIssue[]
+}
+
+export type UnknownEntityClassification =
+  | 'CANON_ALIAS'
+  | 'RELATIONSHIP_ADDRESS_TERM'
+  | 'GENERIC_BACKGROUND_ROLE'
+  | 'NEW_CANON_REQUIRED'
+  | 'ILLEGAL_HALLUCINATION'
+
+export type CanonProposalSource = 'outline' | 'prose' | 'co_author' | 'validator'
+export type CanonProposalType = 'character' | 'item' | 'location' | 'world_rule' | 'relationship_addressing'
+export type CanonProposalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'MERGED'
+
+export interface CanonProposal {
+  id: string
+  group_id: string
+  project_id: string
+  chapter_number: number
+  source: CanonProposalSource
+  source_id?: string
+  proposal_type: CanonProposalType
+  status: CanonProposalStatus
+  classification: UnknownEntityClassification
+  reason: string
+  evidence: string[]
+  payload: Record<string, unknown>
+  suggested_contract_patch?: Partial<StoryContract>
+  validation_issues: StoryValidationIssue[]
+  candidate_chapter?: Omit<Chapter, 'id'>
+  existing_chapter_id?: string
+  created_at: string
+  resolved_at?: string
+}
+
 export interface Project {
   id: string
   user_id: string
@@ -21,6 +164,7 @@ export interface Project {
   narrative_constitution: string | null
   target_ending: string | null
   theme_and_tone: string | null
+  story_contract?: StoryContract | Record<string, unknown>
   // Sprint 5 — Hook Chain (top-level project hooks)
   series_hook: string | null
   season_hooks: string[]
@@ -218,6 +362,16 @@ export interface ChapterSummary {
   created_at?: string
 }
 
+export interface ChapterVersion {
+  id: string
+  chapter_id: string
+  prose: string
+  word_count: number
+  change_summary: string
+  beats?: BeatOutline[]
+  created_at?: string
+}
+
 export interface EmotionalPattern {
   id: string
   project_id: string
@@ -294,4 +448,3 @@ export interface BatchProgress {
   /** Hard error counter — resets on a clean chapter. */
   consecutiveErrors: number
 }
-

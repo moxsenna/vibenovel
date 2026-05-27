@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { Chapter } from '../../types/project'
 import { useProjectStore } from '../../store/useProjectStore'
 import { useUiStore } from '../../store/useUiStore'
+import { isNonEmptyStoryContract } from '../../services/story-contract-validator'
 
 interface ChapterOutlineCardProps {
   chapter: Chapter
@@ -38,6 +39,7 @@ export const ChapterOutlineCard: React.FC<ChapterOutlineCardProps> = ({
     return (
       !!activeProject.title &&
       !!activeProject.genre &&
+      isNonEmptyStoryContract(activeProject.story_contract) &&
       characters.some((c) => c.role === 'PROTAGONIST') &&
       characters.some((c) => c.role === 'ANTAGONIST') &&
       !!activeProject.target_ending &&
@@ -441,7 +443,7 @@ export const ChapterOutlineCard: React.FC<ChapterOutlineCardProps> = ({
                     <button
                       onClick={(e) => { e.stopPropagation(); handleRegenerate() }}
                       disabled={regenerating || ch.is_locked || !isCompassComplete}
-                      title={!isCompassComplete ? 'Story Compass belum lengkap — lengkapi di Brainstorm terlebih dahulu' : undefined}
+                      title={!isCompassComplete ? 'Kompas Cerita belum lengkap — lengkapi di Ide Cerita terlebih dahulu' : undefined}
                       className="h-8 px-3 rounded-lg bg-surface-container border border-outline-variant/30 text-on-surface-variant text-label-md cursor-pointer hover:bg-surface-variant/30 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
                       {regenerating ? (

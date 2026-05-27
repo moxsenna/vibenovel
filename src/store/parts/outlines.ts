@@ -1,24 +1,144 @@
 import type { StateCreator } from 'zustand'
-import type { OutlineProgress, Chapter } from '../../types/project'
+import type {
+  CanonProposal,
+  Chapter,
+  ItemCategory,
+  OutlineProgress,
+  StoryContract
+} from '../../types/project'
 import type { ProjectStore } from '../useProjectStore'
 import { aiRouter } from '../../services/ai/ai-router'
 import { useSettingsStore } from '../useSettingsStore'
 import { validatePacing, validateFalseResolution, validateHookChainCoverage, validateDanglingThreads } from '../../lib/kbm-pacing'
 import type { OutlineResponse } from '../../services/ai/types'
+import { buildOutlineCanonProposals } from '../../services/canon-proposal-service'
+import {
+  isNonEmptyStoryContract,
+  mergeValidationResults,
+  normalizeCharacterRole,
+  validateOutlineAgainstStoryContract,
+  validationHasBlocker
+} from '../../services/story-contract-validator'
 
 export interface OutlinesPart {
   outlineGenerating: boolean
   outlineProgress: OutlineProgress | null
+  canonProposals: CanonProposal[]
   _outlineAbortFlag: boolean
   generateOutlineBatch: (startChapter: number, endChapter: number) => Promise<{ generated: number; skipped: number; warnings: string[] }>
   abortOutlineGeneration: () => void
   regenerateOutline: (chapterId: string) => Promise<void>
+  approveCanonProposal: (proposalId: string) => Promise<void>
+  rejectCanonProposal: (proposalId: string) => void
+  clearCanonProposals: () => void
   lockOutline: (chapterId: string, locked: boolean) => Promise<void>
 }
 
 // Helper: Arc Position Description
 // (moved to `src/lib/kbm-pacing.ts` so visualization components can import
 // the structured `computeArcBands` helper without pulling the outline store.)
+
+const VALID_ITEM_CATEGORIES: ItemCategory[] = [
+  'WEAPON',
+  'MAGICAL',
+  'DOCUMENT',
+  'JEWELRY',
+  'VEHICLE',
+  'KEY_ITEM',
+  'OTHER'
+]
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function readPayloadString(payload: Record<string, unknown>, key: string, fallback = ''): string {
+  const value = payload[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback
+}
+
+function readPayloadNumber(payload: Record<string, unknown>, key: string, fallback: number): number {
+  const value = payload[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function readPayloadStringArray(payload: Record<string, unknown>, key: string, fallback: string[]): string[] {
+  const value = payload[key]
+  if (!Array.isArray(value)) return fallback
+  const list = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+  return list.length > 0 ? list : fallback
+}
+
+function readPayloadRecord(payload: Record<string, unknown>, key: string): Record<string, unknown> {
+  const value = payload[key]
+  return isRecord(value) ? value : {}
+}
+
+function normalizeItemCategory(value: unknown): ItemCategory {
+  return VALID_ITEM_CATEGORIES.includes(value as ItemCategory)
+    ? (value as ItemCategory)
+    : 'OTHER'
+}
+
+function proposalName(proposal: CanonProposal): string {
+  return readPayloadString(proposal.payload, 'name')
+}
+
+function proposalDedupeKey(proposal: CanonProposal): string {
+  return [
+    proposal.project_id,
+    proposal.chapter_number,
+    proposal.source,
+    proposal.proposal_type,
+    proposalName(proposal).toLowerCase()
+  ].join(':')
+}
+
+function appendCanonProposals(current: CanonProposal[], incoming: CanonProposal[]): CanonProposal[] {
+  if (incoming.length === 0) return current
+  const incomingKeys = new Set(incoming.map(proposalDedupeKey))
+  return [
+    ...current.filter((proposal) => {
+      if (proposal.status !== 'PENDING') return true
+      return !incomingKeys.has(proposalDedupeKey(proposal))
+    }),
+    ...incoming
+  ]
+}
+
+function mergeStoryContractPatch(
+  contract: StoryContract | Record<string, unknown> | undefined,
+  patch?: Partial<StoryContract>
+): Record<string, unknown> {
+  const base: Record<string, unknown> = isRecord(contract) ? { ...contract } : {}
+  const existing = Array.isArray(base.canon_entities)
+    ? base.canon_entities.filter(isRecord)
+    : []
+  const incoming = Array.isArray(patch?.canon_entities)
+    ? patch.canon_entities
+    : []
+
+  if (incoming.length === 0) return base
+
+  const merged = [...existing]
+  const seen = new Set(
+    existing.map((entity) =>
+      `${String(entity.entity_type || '').toLowerCase()}:${String(entity.name || '').toLowerCase()}`
+    )
+  )
+
+  for (const entity of incoming) {
+    const key = `${entity.entity_type.toLowerCase()}:${entity.name.toLowerCase()}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    merged.push(entity as unknown as Record<string, unknown>)
+  }
+
+  return {
+    ...base,
+    canon_entities: merged
+  }
+}
 
 export const outlinesPart: StateCreator<
   ProjectStore,
@@ -28,6 +148,7 @@ export const outlinesPart: StateCreator<
 > = (set, get) => ({
   outlineGenerating: false,
   outlineProgress: null,
+  canonProposals: [],
   _outlineAbortFlag: false,
 
   generateOutlineBatch: async (startChapter, endChapter) => {
@@ -37,12 +158,13 @@ export const outlinesPart: StateCreator<
     // ── Story Compass completeness guard (safety net) ──────────────────
     const compassMissing: string[] = []
     if (!activeProject.title || !activeProject.genre) compassMissing.push('Premis & Genre')
+    if (!isNonEmptyStoryContract(activeProject.story_contract)) compassMissing.push('Story Contract')
     if (!characters.some((c) => c.role === 'PROTAGONIST')) compassMissing.push('Tokoh Utama (Protagonis)')
     if (!characters.some((c) => c.role === 'ANTAGONIST')) compassMissing.push('Antagonis')
     if (!activeProject.target_ending) compassMissing.push('Target Ending')
     if (mysteryLayers.length === 0) compassMissing.push('Lapisan Misteri')
     if (compassMissing.length > 0) {
-      throw new Error(`Story Compass belum lengkap! Belum terisi: ${compassMissing.join(', ')}. Lengkapi di mode Brainstorm terlebih dahulu.`)
+      throw new Error(`Kompas Cerita belum lengkap! Belum terisi: ${compassMissing.join(', ')}. Lengkapi di Ide Cerita terlebih dahulu.`)
     }
 
     const totalToGenerate = endChapter - startChapter + 1
@@ -65,6 +187,7 @@ export const outlinesPart: StateCreator<
     const allWarnings: string[] = []
     const generatedSynopses: string[] = []
     const emotionalHistory: string[] = []
+    const cliffhangerHistory: string[] = []
     const falseResolutionFlags: boolean[] = []
 
     const priorChapters = chapters
@@ -72,6 +195,7 @@ export const outlinesPart: StateCreator<
       .sort((a, b) => a.chapter_number - b.chapter_number)
     for (const ch of priorChapters) {
       if (ch.emotional_tone) emotionalHistory.push(ch.emotional_tone)
+      if (ch.cliffhanger_type) cliffhangerHistory.push(ch.cliffhanger_type)
       if (ch.synopsis) generatedSynopses.push(ch.synopsis)
       falseResolutionFlags.push(ch.false_resolution || false)
     }
@@ -113,6 +237,7 @@ export const outlinesPart: StateCreator<
             allWarnings.push(`Bab ${chapNum} di-skip (imported — unlock dulu di card untuk regenerate).`)
             if (existingChapter.synopsis) generatedSynopses.push(existingChapter.synopsis)
             if (existingChapter.emotional_tone) emotionalHistory.push(existingChapter.emotional_tone)
+            if (existingChapter.cliffhanger_type) cliffhangerHistory.push(existingChapter.cliffhanger_type)
             continue
           }
           if (existingChapter.outline_source === 'MANUAL') {
@@ -120,6 +245,7 @@ export const outlinesPart: StateCreator<
             allWarnings.push(`Bab ${chapNum} di-skip (outline manual).`)
             if (existingChapter.synopsis) generatedSynopses.push(existingChapter.synopsis)
             if (existingChapter.emotional_tone) emotionalHistory.push(existingChapter.emotional_tone)
+            if (existingChapter.cliffhanger_type) cliffhangerHistory.push(existingChapter.cliffhanger_type)
             continue
           }
           if (existingChapter.is_locked) {
@@ -127,6 +253,7 @@ export const outlinesPart: StateCreator<
             allWarnings.push(`Bab ${chapNum} di-skip (terkunci).`)
             if (existingChapter.synopsis) generatedSynopses.push(existingChapter.synopsis)
             if (existingChapter.emotional_tone) emotionalHistory.push(existingChapter.emotional_tone)
+            if (existingChapter.cliffhanger_type) cliffhangerHistory.push(existingChapter.cliffhanger_type)
             continue
           }
           if (existingChapter.prose) {
@@ -134,6 +261,7 @@ export const outlinesPart: StateCreator<
             allWarnings.push(`Bab ${chapNum} di-skip (sudah ada prosa).`)
             if (existingChapter.synopsis) generatedSynopses.push(existingChapter.synopsis)
             if (existingChapter.emotional_tone) emotionalHistory.push(existingChapter.emotional_tone)
+            if (existingChapter.cliffhanger_type) cliffhangerHistory.push(existingChapter.cliffhanger_type)
             continue
           }
         }
@@ -150,7 +278,7 @@ export const outlinesPart: StateCreator<
             : null
         }))
 
-        const pacingResult = validatePacing(emotionalHistory, [])
+        const pacingResult = validatePacing(emotionalHistory, cliffhangerHistory)
         const pacingWarnings = pacingResult.warnings
 
         // Sprint 9.8 — Deep Outline gating in batch mode. Master AND batch
@@ -165,6 +293,7 @@ export const outlinesPart: StateCreator<
             title: activeProject.title,
             genre: activeProject.genre,
             narrativeConstitution: activeProject.narrative_constitution || '',
+            storyContract: activeProject.story_contract || {},
             targetEnding: activeProject.target_ending || '',
             themeAndTone: activeProject.theme_and_tone || '',
             targetChapters: activeProject.target_chapters,
@@ -236,6 +365,62 @@ export const outlinesPart: StateCreator<
             is_locked: false
           }
 
+          const deterministicValidation = validateOutlineAgainstStoryContract({
+            storyContract: activeProject.story_contract,
+            chapter: chapterData,
+            characters,
+            items,
+            mysteryLayers
+          })
+          const semanticValidation =
+            isNonEmptyStoryContract(activeProject.story_contract) && effectiveOutlineBudget > 0
+              ? await aiRouter.validateStorySemanticsWithThinking(
+                  {
+                    storyContract: activeProject.story_contract || {},
+                    chapterNumber: chapNum,
+                    outline
+                  },
+                  { thinkingBudget: Math.max(1024, effectiveOutlineBudget) }
+                )
+              : { passed: true, issues: [] }
+          const storyValidation = mergeValidationResults(deterministicValidation, semanticValidation)
+          if (storyValidation.issues.length > 0) {
+            allWarnings.push(
+              ...storyValidation.issues.map(
+                (issue) => `Bab ${chapNum}: [${issue.severity}] ${issue.code} - ${issue.message}`
+              )
+            )
+          }
+          if (validationHasBlocker(storyValidation)) {
+            const proposals = buildOutlineCanonProposals({
+              projectId: activeProject.id,
+              chapter: chapterData,
+              existingChapterId: existingChapter?.id,
+              characters,
+              items,
+              issues: storyValidation.issues
+            })
+
+            if (proposals.length > 0) {
+              const message = `Bab ${chapNum} tertahan: AI mengusulkan ${proposals.length} canon baru. Setujui atau tolak proposal di panel Rencana Bab sebelum melanjutkan.`
+              allWarnings.push(message)
+              set((state) => ({
+                canonProposals: appendCanonProposals(state.canonProposals, proposals),
+                outlineProgress: state.outlineProgress
+                  ? { ...state.outlineProgress, warnings: allWarnings }
+                  : null
+              }))
+              break
+            }
+
+            throw new Error(
+              `Outline melanggar Story Contract: ${storyValidation.issues
+                .filter((issue) => issue.severity === 'BLOCKER')
+                .map((issue) => issue.message)
+                .join('; ')}`
+            )
+          }
+
           if (existingChapter) {
             await get().updateChapter(existingChapter.id, chapterData)
           } else {
@@ -244,6 +429,7 @@ export const outlinesPart: StateCreator<
 
           generatedSynopses.push(outline.synopsis || '')
           emotionalHistory.push(outline.emotionalTone || '')
+          if (outline.cliffhangerType) cliffhangerHistory.push(outline.cliffhangerType)
           falseResolutionFlags.push(outline.falseResolution || false)
           generated++
 
@@ -297,12 +483,13 @@ export const outlinesPart: StateCreator<
     // ── Story Compass completeness guard (safety net) ──────────────────
     const compassMissing: string[] = []
     if (!activeProject.title || !activeProject.genre) compassMissing.push('Premis & Genre')
+    if (!isNonEmptyStoryContract(activeProject.story_contract)) compassMissing.push('Story Contract')
     if (!characters.some((c) => c.role === 'PROTAGONIST')) compassMissing.push('Tokoh Utama (Protagonis)')
     if (!characters.some((c) => c.role === 'ANTAGONIST')) compassMissing.push('Antagonis')
     if (!activeProject.target_ending) compassMissing.push('Target Ending')
     if (mysteryLayers.length === 0) compassMissing.push('Lapisan Misteri')
     if (compassMissing.length > 0) {
-      throw new Error(`Story Compass belum lengkap! Belum terisi: ${compassMissing.join(', ')}. Lengkapi di mode Brainstorm terlebih dahulu.`)
+      throw new Error(`Kompas Cerita belum lengkap! Belum terisi: ${compassMissing.join(', ')}. Lengkapi di Ide Cerita terlebih dahulu.`)
     }
 
     const chapter = chapters.find((ch) => ch.id === chapterId)
@@ -313,7 +500,8 @@ export const outlinesPart: StateCreator<
       .sort((a, b) => a.chapter_number - b.chapter_number)
     const prevSummaries = priorChapters.map((ch) => ch.synopsis || '').filter(Boolean).slice(-5)
     const emotionalHistory = priorChapters.map((ch) => ch.emotional_tone || '').filter(Boolean).slice(-5)
-    const pacingResult = validatePacing(emotionalHistory, [])
+    const cliffhangerHistory = priorChapters.map((ch) => ch.cliffhanger_type || '').filter(Boolean).slice(-5)
+    const pacingResult = validatePacing(emotionalHistory, cliffhangerHistory)
 
     // Sprint 9.8 — Single regenerate uses master toggle directly. Default
     // ON since user regenerates because they're not happy with previous —
@@ -326,6 +514,7 @@ export const outlinesPart: StateCreator<
         title: activeProject.title,
         genre: activeProject.genre,
         narrativeConstitution: activeProject.narrative_constitution || '',
+        storyContract: activeProject.story_contract || {},
         targetEnding: activeProject.target_ending || '',
         themeAndTone: activeProject.theme_and_tone || '',
         targetChapters: activeProject.target_chapters,
@@ -354,7 +543,7 @@ export const outlinesPart: StateCreator<
         seasonHooks: activeProject.season_hooks
       }, { thinkingBudget: effectiveOutlineBudget })
 
-      await get().updateChapter(chapterId, {
+      const chapterPatch: Partial<Chapter> = {
         title: outline.title,
         synopsis: outline.synopsis,
         key_events: outline.keyEvents || [],
@@ -379,11 +568,155 @@ export const outlinesPart: StateCreator<
         must_connect_to: outline.mustConnectTo,
         filler_risk: outline.fillerRisk,
         outline_source: 'GENERATED'
+      }
+
+      const validationChapter: Chapter = { ...chapter, ...chapterPatch }
+      const deterministicValidation = validateOutlineAgainstStoryContract({
+        storyContract: activeProject.story_contract,
+        chapter: validationChapter,
+        characters,
+        items,
+        mysteryLayers
       })
+      const semanticValidation =
+        isNonEmptyStoryContract(activeProject.story_contract) && effectiveOutlineBudget > 0
+          ? await aiRouter.validateStorySemanticsWithThinking(
+              {
+                storyContract: activeProject.story_contract || {},
+                chapterNumber: chapter.chapter_number,
+                outline
+              },
+              { thinkingBudget: Math.max(1024, effectiveOutlineBudget) }
+            )
+          : { passed: true, issues: [] }
+      const storyValidation = mergeValidationResults(deterministicValidation, semanticValidation)
+      if (validationHasBlocker(storyValidation)) {
+        const proposals = buildOutlineCanonProposals({
+          projectId: activeProject.id,
+          chapter: validationChapter,
+          existingChapterId: chapter.id,
+          characters,
+          items,
+          issues: storyValidation.issues
+        })
+
+        if (proposals.length > 0) {
+          set((state) => ({
+            canonProposals: appendCanonProposals(state.canonProposals, proposals)
+          }))
+          throw new Error(
+            `Outline Bab ${chapter.chapter_number} tertahan karena butuh approval canon baru: ${proposals
+              .map((proposal) => proposalName(proposal))
+              .filter(Boolean)
+              .join(', ')}.`
+          )
+        }
+
+        throw new Error(
+          `Outline melanggar Story Contract: ${storyValidation.issues
+            .filter((issue) => issue.severity === 'BLOCKER')
+            .map((issue) => issue.message)
+            .join('; ')}`
+        )
+      }
+
+      await get().updateChapter(chapterId, chapterPatch)
     } catch (e: unknown) {
       console.error('Failed to regenerate outline:', e)
       throw e
     }
+  },
+
+  approveCanonProposal: async (proposalId) => {
+    const proposal = get().canonProposals.find((item) => item.id === proposalId)
+    if (!proposal || proposal.status !== 'PENDING') return
+
+    const name = proposalName(proposal)
+    if (!name) {
+      throw new Error('Proposal canon tidak memiliki nama yang valid.')
+    }
+
+    if (proposal.proposal_type === 'character') {
+      const exists = get().characters.some((character) => character.name.toLowerCase() === name.toLowerCase())
+      if (!exists) {
+        await get().addCharacter({
+          project_id: proposal.project_id,
+          name,
+          role: normalizeCharacterRole(proposal.payload.role),
+          description: readPayloadString(proposal.payload, 'description', `Karakter pendukung: ${name}.`),
+          voice_dna: readPayloadRecord(proposal.payload, 'voice_dna'),
+          activation_keys: readPayloadStringArray(proposal.payload, 'activation_keys', [name]),
+          priority: readPayloadNumber(proposal.payload, 'priority', 5),
+          is_locked: false,
+          genesis: 'BRAINSTORMED'
+        })
+      }
+    }
+
+    if (proposal.proposal_type === 'item') {
+      const exists = get().items.some((item) => item.name.toLowerCase() === name.toLowerCase())
+      if (!exists) {
+        await get().addItem({
+          project_id: proposal.project_id,
+          name,
+          category: normalizeItemCategory(proposal.payload.category),
+          description: readPayloadString(proposal.payload, 'description', `Item canon: ${name}.`),
+          significance: readPayloadString(proposal.payload, 'significance', 'Diusulkan oleh AI saat validasi outline.'),
+          activation_keys: readPayloadStringArray(proposal.payload, 'activation_keys', [name]),
+          current_owner: readPayloadString(proposal.payload, 'current_owner'),
+          priority: readPayloadNumber(proposal.payload, 'priority', 5),
+          genesis: 'BRAINSTORMED'
+        })
+      }
+    }
+
+    const activeProject = get().activeProject
+    if (activeProject?.id === proposal.project_id && proposal.suggested_contract_patch) {
+      await get().updateProject(proposal.project_id, {
+        story_contract: mergeStoryContractPatch(activeProject.story_contract, proposal.suggested_contract_patch)
+      })
+    }
+
+    const resolvedAt = new Date().toISOString()
+    set((state) => ({
+      canonProposals: state.canonProposals.map((item) =>
+        item.id === proposalId
+          ? { ...item, status: 'APPROVED', resolved_at: resolvedAt }
+          : item
+      )
+    }))
+
+    const remainingPendingInGroup = get().canonProposals.filter(
+      (item) => item.group_id === proposal.group_id && item.status === 'PENDING'
+    )
+    if (remainingPendingInGroup.length > 0) return
+
+    const group = get().canonProposals.filter((item) => item.group_id === proposal.group_id)
+    const candidateChapter = proposal.candidate_chapter || group.find((item) => item.candidate_chapter)?.candidate_chapter
+    const existingChapterId = proposal.existing_chapter_id || group.find((item) => item.existing_chapter_id)?.existing_chapter_id
+    if (candidateChapter) {
+      if (existingChapterId) {
+        await get().updateChapter(existingChapterId, candidateChapter)
+      } else {
+        await get().addChapter(candidateChapter)
+      }
+    }
+
+    set((state) => ({
+      canonProposals: state.canonProposals.filter((item) => item.group_id !== proposal.group_id)
+    }))
+  },
+
+  rejectCanonProposal: (proposalId) => {
+    const proposal = get().canonProposals.find((item) => item.id === proposalId)
+    if (!proposal) return
+    set((state) => ({
+      canonProposals: state.canonProposals.filter((item) => item.group_id !== proposal.group_id)
+    }))
+  },
+
+  clearCanonProposals: () => {
+    set({ canonProposals: [] })
   },
 
   lockOutline: async (chapterId, locked) => {

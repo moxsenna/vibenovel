@@ -2,9 +2,179 @@
 
 ---
 
+## Session: Refactor Audit Follow-up - Maintainability Hardening
+**Date**: 2026-05-25
+**Status**: Completed - Lint, TypeScript, and production preview zero errors
+
+### Temuan Masalah
+- `useSettingsStore` masih menyimpan beberapa field provider yang sudah tidak dipakai sebagai source of truth.
+- Dokumentasi arsitektur belum mencerminkan pembaruan refaktor terakhir, terutama di area settings, onboarding helpers, dan persisted memory surfaces.
+- Developer baru akan lebih mudah onboarding kalau jejak refaktor yang sudah aman tercatat terpisah dari sesi fitur.
+
+### Rangkuman Pekerjaan
+- Menyelaraskan [architecture.md](D:/Coding/vibenovel/architecture.md) dengan kontrak settings terbaru.
+- Menjadikan `activeProseModel` sebagai satu-satunya pilihan model prosa yang dipersist dan dipakai routing AI.
+- Menegaskan bahwa helper onboarding dipisah ke `onboarding-flags.ts` dan `onboarding-steps.ts` agar komponen tour tetap export-clean.
+- Menegaskan dokumentasi bahwa `projects.ts` dan `chapters.ts` aman dipakai dalam mode offline/demo karena Supabase call sekarang di-guard saat konfigurasi belum tersedia.
+- Menyelaraskan dokumentasi memori persisten untuk `chapter_versions` dan `recaps`.
+- Menambahkan catatan sesi ini ke [task.md](D:/Coding/vibenovel/task.md) dan [walkthrough.md](D:/Coding/vibenovel/walkthrough.md).
+
+### Verification Results
+- `npm.cmd run lint` -> SUCCESS
+- `npx.cmd tsc -b --noEmit` -> SUCCESS
+- `npm.cmd run build` -> SUCCESS
+- `npm.cmd run preview -- --host 127.0.0.1 --port 4173` + HTTP smoke check -> SUCCESS (`200`)
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `architecture.md` | Updated settings contract notes and maintainability guidance |
+| `session_reports.md` | Added refactor audit follow-up session entry |
+| `task.md` | Added refactor audit checklist |
+| `walkthrough.md` | Added user-facing refactor summary |
+
+---
+
+## Session: Story Contract & Canon Guardrails Implementation
+**Date**: 2026-05-25
+**Waktu Update**: 2026-05-25 12:39:39 +07:00
+**Status**: Completed - Build and TypeScript zero errors
+
+### Temuan Masalah
+- Canon cerita belum dipaksa menjadi kontrak terstruktur sebelum outline dibuat.
+- Bab 1 bisa melanggar premis pembuka (contoh: loncat langsung ke timeline/suami yang salah) karena belum ada guardrail runtime.
+- Thinking mode sebelumnya hanya membantu reasoning generasi, belum dipakai sebagai lapisan evaluator validator.
+- Nama/panggilan relasi antar karakter belum menjadi aturan canon yang bisa dibaca engine (`Mas`, `Sayang`, dll).
+- Draft lore dari AI masih berisiko inkonsisten (role karakter custom, breadcrumb mystery tidak ternormalisasi) jika tidak divalidasi dulu.
+
+### Rangkuman Yang Dilakukan di Sesi Ini
+- Menetapkan implementasi opsi `story_contract` JSONB sebagai sumber canon utama project.
+- Menambahkan tipe `StoryContract` universal (lintas genre) + `relationship_addressing` + tipe hasil validasi.
+- Mengubah alur Co-Author agar fase awal fokus ke ekstraksi `story_contract`, bukan langsung karakter.
+- Mengunci progress Story Compass supaya tidak dianggap lengkap tanpa Story Contract.
+- Menambahkan service validator baru:
+  - validator deterministik (hard checks / blocker)
+  - AI semantic validator dengan thinking (lapisan evaluasi tambahan)
+- Menghubungkan validator ke jalur generate outline agar outline invalid diblok sebelum save.
+- Menambahkan editor Story Contract di modal edit draft dan jalur simpan ke project store.
+- Menyambungkan Story Contract + Layer 2 character state ke prompt prose.
+- Menyelaraskan dokumentasi kerja: `rencana_implementasi.md`, `architecture.md`, `task.md`, `walkthrough.md`.
+- Verifikasi akhir:
+  - `npx.cmd tsc -b --noEmit` -> SUCCESS
+  - `npm.cmd run build` -> SUCCESS
+
+### File Yang Diedit Dulu (Urutan Kerja)
+1. `rencana_implementasi.md`
+2. `task.md`
+3. `architecture.md`
+4. `supabase/schema.sql`
+5. `src/types/project.ts`
+6. `src/lib/database.types.ts`
+7. `src/store/parts/projects.ts`
+8. `src/lib/compassProgress.ts`
+9. `src/components/compass/StoryCompassPreview.tsx`
+10. `src/components/workspace/ContextPanel.tsx`
+11. `src/services/story-contract-validator.ts` (file baru)
+12. `src/prompts/brainstorm-agent.ts`
+13. `src/store/useChatStore.ts`
+14. `src/services/ai/types.ts`
+15. `src/prompts/outline-engine.ts`
+16. `src/services/ai/ai-router.ts`
+17. `src/prompts/prose-writer.ts`
+18. `src/services/prose-context.ts`
+19. `src/components/modals/EditDraftModal.tsx`
+20. `src/store/parts/outlines.ts`
+21. `walkthrough.md`
+
+### Catatan
+- Workspace sedang dirty dari perubahan lain sebelumnya; sesi ini hanya menambah/mengubah bagian yang relevan dengan Story Contract & validator pipeline.
+
+---
+
+## Session: UX Revamp P0 - Novice Writer Entry
+**Date**: 2026-05-25
+**Status**: Completed - Build and TypeScript zero errors
+
+### What Was Done
+
+#### Step 1: Novice-friendly workspace flow
+- Reworked the main entry path so a first-time writer lands in a calmer "Writing Desk" style flow instead of a crowded cockpit.
+- Updated the dashboard card action to open the project directly in `Naskah` mode with the side context panel closed by default.
+- Added a friendly empty state for writers who have not built an outline yet, with clear actions to start free writing, create a chapter plan, or tidy the story idea first.
+
+#### Step 2: Humanized labels and commands
+- Replaced technical labels with more writer-friendly Indonesian names across the app:
+  - `Ide Cerita`
+  - `Rencana Bab`
+  - `Naskah`
+  - `Cek Cerita`
+  - `Peta Cerita`
+- Renamed the command palette and its groups to feel less technical:
+  - `Aksi Cepat` -> `Menu Pintas`
+  - `Tools AI` -> `Bantuan AI`
+- Updated several CTA and helper texts so the app feels calmer and less like a system console.
+
+#### Step 3: Shared workspace mode metadata
+- Added `src/lib/workspace-modes.ts` as a shared source of truth for workspace mode labels, icons, descriptions, shortcuts, and command names.
+- Wired the Lobby, Workspace, ModeSwitcher, command palette, and mobile footer to use the same shared mode metadata so labels stay consistent everywhere.
+
+#### Step 4: Command and settings behavior
+- Updated the command palette so `Pengaturan` actually opens the settings modal from inside the workspace.
+- Remapped command labels like `Buka Naskah`, `Buka Rencana Bab`, `Buka Peta Cerita`, and `Cek Cerita` to match the new novice-friendly wording.
+- Softened error and helper messages in chat, review, and state-related screens so they read like guidance instead of internal tooling.
+
+#### Step 5: UI polish across key panels
+- Updated the Prose Writer empty state to be more inviting and action-oriented.
+- Refined Story Compass, Season Architect, Review Panel, Context Panel, Visualization, onboarding, and project cards to use the new humanized vocabulary.
+- Improved the active mode text contrast in light theme so the selected state is readable and polished.
+
+### Verification Results
+- `npx.cmd tsc -b --noEmit` -> **SUCCESS**
+- `npm.cmd run build` -> **SUCCESS**
+- Browser verification completed on the running local app:
+  - Dashboard project card flow
+  - Workspace `Naskah` entry state
+  - Menu Pintas behavior
+  - Settings modal behavior
+  - Light and dark theme readability
+
+### Files Created
+| File | Description |
+|---|---|
+| `src/lib/workspace-modes.ts` | Shared metadata for workspace mode labels, icons, and command names |
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `src/pages/Lobby.tsx` | Direct-to-writing project entry, friendlier project copy |
+| `src/pages/Workspace.tsx` | Shared mode labels, Menu Pintas wording, mobile footer sync |
+| `src/components/workspace/ModeSwitcher.tsx` | Shared mode metadata and improved selected-state contrast |
+| `src/lib/command-registry.ts` | Humanized command labels and settings routing |
+| `src/components/ui/CommandPalette.tsx` | Menu Pintas wording and friendlier copy |
+| `src/components/workspace/ProseWriterPanel.tsx` | Novice-friendly empty state and starter actions |
+| `src/components/compass/StoryCompassPreview.tsx` | Calmer Kompas Cerita copy and clearer guidance |
+| `src/components/workspace/SeasonArchitectPanel.tsx` | Rencana Bab wording and softer helper text |
+| `src/components/dashboard/ProjectCard.tsx` | Friendlier status labels and CTA copy |
+| `src/App.tsx` | Global settings modal rendering for command palette access |
+| `src/store/useChatStore.ts` | Softer guidance text and renamed feature copy |
+| `src/components/workspace/ContextPanel.tsx` | New humanized copy for story context sections |
+| `src/components/workspace/ReviewPanel.tsx` | Cek Cerita wording and softer review language |
+| `src/components/visualization/VisualizationPanel.tsx` | Peta Cerita wording and cleaner empty state |
+| `src/components/onboarding/*` | Onboarding labels updated to match the new novice-friendly vocabulary |
+| `task.md` | Added completion checklist for the UX revamp session |
+| `walkthrough.md` | Added a short implementation summary and verification notes |
+
+### Notes
+- This pass focused on first-impression clarity, not on changing the core writing engine.
+- Existing unrelated dirty files in the workspace were left untouched.
+
+---
+
+---
+
 ## Session: Sprint 1C — Brainstorm Agent (Real AI)
-**Date**: 2026-05-21  
-**Duration**: ~15 minutes  
+**Date**: 2026-05-21
+**Duration**: ~15 minutes
 **Status**: ✅ COMPLETED — Build & TypeScript zero errors
 
 ### What Was Done
@@ -70,7 +240,7 @@
 ---
 
 ## Session: Sprint 1D — Outline Engine (Real AI)
-**Date**: 2026-05-21  
+**Date**: 2026-05-21
 **Status**: ✅ COMPLETED — Build & TypeScript zero errors
 
 ### What Was Done
@@ -138,7 +308,7 @@
 ---
 
 ## Session: Sprint 2A — Beat-by-Beat Prose Writer
-**Date**: 2026-05-22  
+**Date**: 2026-05-22
 **Status**: ✅ COMPLETED — Build & TypeScript zero errors
 
 ### What Was Done
@@ -181,7 +351,7 @@
 ---
 
 ## Session: Sprint 2B — State Tracker & Context Injection Upgrade
-**Date**: 2026-05-24  
+**Date**: 2026-05-24
 **Status**: ✅ COMPLETED — Build & TypeScript zero errors
 
 ### What Was Done
@@ -232,7 +402,7 @@
 ---
 
 ## Session: Refactoring — Zustand Parts Modularization (useProjectStore Refactor)
-**Date**: 2026-05-24  
+**Date**: 2026-05-24
 **Status**: ✅ COMPLETED — Build & TypeScript zero errors
 
 ### What Was Done
@@ -268,7 +438,7 @@
 ---
 
 ## Session: Sprint 3A — Plot Radar & Lore Extraction
-**Date**: 2026-05-24  
+**Date**: 2026-05-24
 **Status**: ✅ COMPLETED — Build & TypeScript zero errors
 
 ### What Was Done
@@ -309,7 +479,7 @@
 ---
 
 ## Session: Sprint 3B — Review Mode & PWA
-**Date**: 2026-05-24  
+**Date**: 2026-05-24
 **Status**: ✅ COMPLETED — Build & TypeScript zero errors
 
 ### What Was Done
@@ -601,7 +771,7 @@ Add `npm run lint` to the per-sprint verification gate alongside `tsc -b --noEmi
 ---
 
 ## Session: Hotfix — Model Locking & Co-Author Chat Stop/Regenerate
-**Date**: 2026-05-24  
+**Date**: 2026-05-24
 **Status**: ✅ COMPLETED — Build & TypeScript zero errors
 
 ### What Was Done
@@ -901,7 +1071,7 @@ See `task.md` for full breakdown.
 ---
 
 ## Session: Visual Polish — Premium Themed Edit Draft Modal
-**Date**: 2026-05-24  
+**Date**: 2026-05-24
 **Status**: ✅ COMPLETED — Build & TypeScript zero errors
 
 ### What Was Done
@@ -1087,7 +1257,7 @@ Installed Recharts (~370 KB) and three discrete D3 packages — `d3-force` (~15 
 ---
 
 ## Session: Visual Polish — Premium Themed Dialogs & Toasts Engine
-**Date**: 2026-05-24  
+**Date**: 2026-05-24
 **Status**: ✅ COMPLETED — TypeScript, ESLint, and Production Build all zero errors
 
 ### What Was Done
@@ -1155,7 +1325,7 @@ Replaced all pre-existing native popups with our themed custom dialogs:
 ---
 
 ## Session: Bug Fix — Story Compass Validation & Safeguards
-**Date**: 2026-05-24  
+**Date**: 2026-05-24
 **Status**: ✅ COMPLETED — TypeScript, ESLint, and Production Build all zero errors
 
 ### What Was Done
@@ -1609,7 +1779,7 @@ Reasons (per task.md):
 - `npm run build` → **SUCCESS (685ms)** ✅
 
 ### Bundle Sizes (vs Sprint 9.5)
-| Asset | 9.5 | 9.6 | Δ |
+| Asset | 9.5 | 9.6 | Î” |
 |---|---|---|---|
 | Main entry (raw) | 260.24 KB | **271.10 KB** | +10.86 KB |
 | Main entry (gzip) | 77.44 KB | **80.78 KB** | +3.34 KB |
@@ -1686,7 +1856,7 @@ Estimated 6+ jam — Sprint 9.6 jadi monolithic if shipped together. Decision: s
 ---
 
 ## Session: Sprint 9.7 — Deep Think Mode (Prose Writer Reasoning Engine)
-**Date**: 2026-05-24  
+**Date**: 2026-05-24
 **Status**: ✅ COMPLETED — TypeScript, ESLint, and Production Build all zero errors
 
 ### What Was Done
@@ -1799,7 +1969,7 @@ Tambahkan kemampuan reasoning native ke agen Magic Write — model "berpikir dul
 ---
 
 ## Session: Sprint 9.8 — Deep Outline (Outline Generator Reasoning Engine)
-**Date**: 2026-05-24  
+**Date**: 2026-05-24
 **Status**: ✅ COMPLETED — TypeScript, ESLint, and Production Build all zero errors
 
 ### What Was Done
@@ -1907,7 +2077,7 @@ Extend reasoning capability ke Outline Engine. Berbeda dari Sprint 9.7 (streamin
 ---
 
 ## Session: UX Polish - Co-Author Auto-Advance & Story Compass
-**Date**: 2026-05-25  
+**Date**: 2026-05-25
 **Status**: ✅ COMPLETED - TypeScript, ESLint, Production Build, and logged-in browser smoke test all pass
 
 ### Background
@@ -2029,3 +2199,262 @@ User logged in through the in-app browser, then the following manual QA flow was
 
 ### Known Limitation
 The auto-advance implementation is code-verified and build-verified, but live AI continuation requires at least one Gemini API key in Settings.
+
+
+## Session: UX Revamp P0.1 - Section Onboarding
+**Date**: 2026-05-25
+**Status**: Completed - Build and TypeScript zero errors
+
+### What Was Done
+
+#### Step 1: Reusable onboarding engine
+- Refactored `OnboardingTour` so it supports custom `tourId` and custom step lists.
+- Added separate localStorage flags per section, so each onboarding appears only the first time that specific section is opened.
+- Kept the legacy Home flag for backwards compatibility.
+
+#### Step 2: Home and Workspace tours
+- Home now uses a shorter dashboard-focused tour.
+- Workspace now mounts a contextual tour for each mode:
+  - `Ide Cerita`
+  - `Rencana Bab`
+  - `Naskah`
+  - `Cek Cerita`
+  - `Peta Cerita`
+- Added stable tour targets for the active canvas, Menu Pintas, mode indicator, and panel toggle.
+
+#### Step 3: Reset all onboarding
+- Updated Settings so `Reset Onboarding` clears every Home and Workspace onboarding flag.
+- Updated the Settings helper copy so users understand that tutorials can return per section.
+
+### Verification Results
+- `npx.cmd tsc -b --noEmit` -> **SUCCESS**
+- `npm.cmd run build` -> **SUCCESS**
+- Browser smoke check -> localhost 200; headless Chrome profile bersih masuk layar login, jadi visual tour perlu dicek dari sesi browser user yang sudah login.
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `src/components/onboarding/OnboardingTour.tsx` | Reusable multi-tour onboarding with per-section flags |
+| `src/pages/Lobby.tsx` | Dashboard now uses the Home onboarding steps explicitly |
+| `src/pages/Workspace.tsx` | Workspace mode tours mounted per active section |
+| `src/components/modals/SettingsModal.tsx` | Reset Onboarding clears all tour flags |
+| `task.md` | Added P0.1 checklist |
+| `walkthrough.md` | Added P0.1 implementation summary |
+
+---
+
+## Session: Hotfix - AI Draft UI Rendering
+**Date**: 2026-05-25
+**Status**: Completed - Build and TypeScript zero errors
+
+### What Was Done
+
+#### Step 1: Fix Mystery Draft Rendering
+- Fixed a bug where the Co-Author AI's proposed 'Mystery' draft would render as raw JSON text in the chat bubble.
+- Updated `src/components/chat/AiMessageBubble.tsx` to explicitly check for `draftData.type === 'mystery'` and format its fields (`central_question`, `answer`, `revealed_at_chapter`, `opens_next_question`, and `breadcrumbs`) into an elegant, readable UI block with icons.
+
+#### Step 2: Fix Item, Character, and World Rule Name Fallbacks
+- Discovered that the AI occasionally returns specific keys like `item_name`, `character_name`, or `rule_name` instead of the generic `name` property.
+- Updated `src/components/chat/AiMessageBubble.tsx` to handle these specific keys for display fallback.
+- Updated `src/components/modals/EditDraftModal.tsx` to correctly pre-fill the name field using these fallback keys if `name` is missing.
+- Updated `src/store/useChatStore.ts` to correctly extract the name when saving the draft to the project/lorebook, preventing items and characters from being saved as "Tanpa Nama" due to the strict `name` property check.
+
+#### Step 3: Syntax Error Fix
+- Fixed a missing closing `</div>` tag in `src/components/prose/ProseToolbar.tsx` which was causing a TypeScript compilation error.
+
+### Verification Results
+- `npx.cmd tsc -b --noEmit` -> **SUCCESS (Zero errors)**
+- Build tested implicitly via continuous TS checks.
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `src/components/chat/AiMessageBubble.tsx` | Added Mystery formatting and name fallbacks |
+| `src/components/modals/EditDraftModal.tsx` | Added fallback for pre-filling item, character, and rule names |
+| `src/store/useChatStore.ts` | Extracted names properly for saving to avoid "Tanpa Nama" |
+| `src/components/prose/ProseToolbar.tsx` | Added missing closing div tag |
+
+---
+
+## Session: Hotfix - Prose Writer Empty State UX Polish
+**Date**: 2026-05-25
+**Status**: Completed - Build and TypeScript zero errors
+
+### What Was Done
+
+#### Step 1: Redesigned Prose Writer Empty State
+- Addressed the UX issue where opening a project with a completed Story Compass but no active chapter selected resulted in a completely blank workspace with a confusing prompt to open the sidebar.
+- Replaced the simple empty text with a premium, Notion-grade, highly actionable dashboard card in `src/components/workspace/ProseWriterPanel.tsx`.
+- Implemented decorative glassmorphic background glows, a beautifully themed gradient icon block, and typography built around Nunito Sans and Playfair Display.
+
+#### Step 2: Dynamic Project State Actions
+- **No Chapters Scenario**: Displayed a warm suggestion to create an outline and an easy-to-use primary button ("Buat Rencana Bab Pertama") that takes the user directly to the "Rencana Bab" (Outline Architect) tab.
+- **Has Chapters Scenario**: Provided a fast-access toggle button ("Buka Panel Bab (Sidebar)") that opens the Context Panel sidebar in one click if it's currently hidden, eliminating confusion.
+- **Interactive Fast-Access Chapter List**: Rendered a highly aesthetic, hover-responsive list of existing chapters inside the card so users can select a chapter and instantly begin writing without even needing to open the sidebar context panel!
+- Added status chip mapping (Rencana, Draft, Selesai, Menulis, Impor) with custom themed badge styles and pulse animations matching their writing state.
+
+### Verification Results
+- `npx.cmd tsc -b --noEmit` -> **SUCCESS (Zero errors)**
+- `npm.cmd run build` -> **SUCCESS (Zero errors)**
+- Verified that all states render seamlessly without layout shifts.
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `src/components/workspace/ProseWriterPanel.tsx` | Replaced legacy simple empty state with a premium interactive chapter-select and navigation hub |
+
+---
+
+## Session: Hotfix - Remove All Dummy Data
+**Date**: 2026-05-25
+**Status**: Completed - Build and TypeScript zero errors
+
+### What Was Done
+
+#### Step 1: Cleared Projects Dummy Data
+- Emptied `DUMMY_PROJECTS` array inside `src/store/parts/projects.ts`.
+- Set initial state values (`projects: []` and `activeProject: null`) safely to prevent reading properties of undefined and provide a clean dashboard/workspace start.
+
+#### Step 2: Cleared Chapters and Context Mock Data
+- Removed `DUMMY_CHARACTERS`, `DUMMY_ITEMS`, and `DUMMY_CHAPTERS` mock objects inside `src/store/parts/chapters.ts`.
+- Removed the hardcoded `if (projectId === 'd1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d')` check inside `loadProjectData`, allowing the application to load cleanly without relying on hardcoded dummy IDs or mock resources.
+- Optimized slice state compilation by deleting unused local declarations, resolving TypeScript compile-time dead-code warnings.
+
+### Verification Results
+- `npx.cmd tsc -b --noEmit` -> **SUCCESS (Zero errors)**
+- `npm.cmd run build` -> **SUCCESS (Zero errors)**
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `src/store/parts/projects.ts` | Removed hardcoded dummy projects and initialized store state cleanly |
+| `src/store/parts/chapters.ts` | Removed hardcoded dummy chapters, characters, items and removed unused imports/variables |
+
+---
+
+## Session: Hotfix - Dynamic Lobby Welcome Subtitle
+**Date**: 2026-05-25
+**Status**: Completed - Build and TypeScript zero errors
+
+### What Was Done
+
+#### Step 1: Integrated Dynamic Welcome Subtitle
+- Made the dashboard lobby welcome subtitle under "Selamat malam, Bima ✨" completely dynamic instead of hardcoded to "Novel Istri Sah".
+- Programmed a sorting algorithm to find the most recently updated uncompleted novel (`updated_at || created_at` in descending order) from the project store list.
+- Renders `Novel [Judul] menunggu kelanjutannya! ✦` dynamically based on the current active writing progress.
+
+#### Step 2: Added Custom Prompts for Edge Cases
+- **No Projects (0 projects)**: Welcomes first-time users with an inspiring prompt: `Setiap mahakarya dimulai dari kalimat pertama. Mari buat novel pertama Anda! ✦`.
+- **All Projects Completed (0 active projects)**: Celebrates the completion of all stories with: `Semua karya Anda telah selesai ditulis dengan indah. Siap merajut kisah baru berikutnya? ✦`.
+
+### Verification Results
+- `npx.cmd tsc -b --noEmit` -> **SUCCESS (Zero errors)**
+- `npm.cmd run build` -> **SUCCESS (Zero errors)**
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `src/pages/Lobby.tsx` | Added dynamic sorting logic for uncompleted projects and customizable welcome subtitles for different user progress states |
+
+---
+
+## Session: Hotfix - Live Productivity & Achievement Stats
+**Date**: 2026-05-25
+**Status**: Completed - Build and TypeScript zero errors
+
+### What Was Done
+
+#### Step 1: Real-Time Productivity Calculations
+- Replaced the hardcoded productivity stat calculations inside `src/pages/Lobby.tsx` which used to fall back to a mock value of `30` chapters per project.
+- Integrated a live Supabase chapter fetcher inside Lobby's `useEffect` hook to dynamically query written chapters (`DRAFT`, `FINAL`, or `IMPORTED` states) across all user projects.
+- Programmed a real-time progress compiler `getProjectMeta` that maps real chapter counts, word counts, current active phase (e.g. `Naskah — Bab 95` or `Rencana — Bab 33`), and computes relative last-activity tags (e.g., `Baru saja`, `2 jam lalu`, `3 hari lalu`).
+
+#### Step 2: Purged Faked Achievement Placeholders
+- Removed the confusing hardcoded completed mock novels ("Cinta di Bawah Hujan" and "Melodi Senja") from the Archive section that used to render when the user had 0 completed works.
+- Replaced them with an elegant, dashed motivational empty-state card encouraging the user to complete their active novels to earn archive slots.
+- Synchronized top Achievement stats cards (`completedCount`) with this dynamic database state, ensuring "0 Tamat" perfectly aligns with a clean archive block.
+
+#### Step 3: Cleared Final Hardcoded Dummy Nav ID
+- Replaced the last remaining hardcoded project ID reference (`d1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d`) inside mobile's `BottomNavBar` callback with a dynamic targeter that safely opens the last uncompleted project or falls back to lobby settings.
+
+### Verification Results
+- `npx.cmd tsc -b --noEmit` -> **SUCCESS (Zero errors)**
+- `npm.cmd run build` -> **SUCCESS (Zero errors)**
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `src/pages/Lobby.tsx` | Swapped static mock meta metrics, archive cards, and mobile nav links with dynamic live-compiled database states |
+
+---
+
+## Session: Hotfix - Debug Mode Story Data Export
+**Date**: 2026-05-25
+**Status**: Completed - Build and TypeScript zero errors
+
+### What Was Done
+
+#### Step 1: Integrated Settings Debug Tab
+- Refactored `src/components/modals/SettingsModal.tsx` to introduce a dedicated `Debug` tab (🐞) alongside Keys, Naskah, and Tutorial.
+- Enabled sliding Framer Motion pill animations for the newly added tab, matching the global premium visual styling.
+
+#### Step 2: Dynamic Project Asset Metrics Summary
+- Coded a dynamic visual dashboard panel inside the Debug tab summarizing the currently active project.
+- Displays counts of actual loaded assets: Chapter Outlines, Characters, Mystery Layers, Benda/Artefak, Aturan Dunia, and Plot Threads.
+- Safely handles edge cases by displaying a warning message if no project is actively loaded (e.g. from the Lobby before entering workspace).
+
+#### Step 3: Single-Click Full Story JSON Downloader
+- Implemented `handleDownloadDebugData` which compiles all key active project assets—Story Compass (project meta & mystery layers), Lorebook (characters, items, world rules, plot threads), Outline (naskah/chapters), and dynamic state timeline (character states)—into a beautifully formatted, indent-spaced JSON file.
+- Programmed automatic browser download triggers using dynamic, project-specific, date-stamped file naming (e.g. `vibenovel_debug_novel_title_2026-05-25.json`).
+
+### Verification Results
+- `npx.cmd tsc -b --noEmit` -> **SUCCESS (Zero errors)**
+- `npm.cmd run build` -> **SUCCESS (Zero errors)**
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `src/components/modals/SettingsModal.tsx` | Added a Debug tab with live counts and single-click full project JSON downloads |
+
+---
+
+## Session: Canon Proposal Flow - Unknown Entity Approval
+**Date/Time**: 2026-05-25 17:52:59 +07:00
+**Status**: Completed - TypeScript and production build zero errors
+
+### Temuan Masalah
+- Validator unknown active character/item sebelumnya hanya bisa memblokir output, sehingga kebutuhan karakter baru yang sah akan terasa terlalu kaku.
+- Sistem belum punya jalur tengah antara "tolak halusinasi" dan "langsung simpan ke Lorebook".
+- Story Contract guard belum konsisten di semua permukaan UI: Season Architect sudah dijaga di store, tetapi beberapa tombol/empty state masih memakai cek compass lama.
+
+### Rangkuman Pekerjaan
+- Menambahkan model `CanonProposal` untuk menahan draft outline yang memakai karakter/item belum canon.
+- Membuat service proposal dari issue validator `UNKNOWN_ACTIVE_CHARACTER` dan `UNKNOWN_ACTIVE_ITEM`.
+- Mengubah outline generation agar draft bab dengan entitas baru tidak disimpan dulu; sistem menampilkan approval di Rencana Bab.
+- Menambahkan perlakuan khusus untuk relationship addressing: panggilan seperti Mas/Sayang menjadi warning jika salah masuk `activeCharacters`, bukan karakter baru.
+- Menambahkan aksi approve/reject:
+  - Approve menambahkan karakter/item ke Lorebook, patch `story_contract.canon_entities`, lalu menyimpan draft bab jika semua proposal grup sudah selesai.
+  - Reject membuang draft tertahan agar user bisa regenerate dengan canon lama.
+- Menyamakan guard Story Contract di Season Architect, Chapter Outline Card, dan Prose Writer empty state.
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `src/types/project.ts` | Added Canon Proposal types and unknown entity classification |
+| `src/services/canon-proposal-service.ts` | New service to convert unknown active character/item blockers into approval proposals |
+| `src/services/story-contract-validator.ts` | Treats relationship address terms as warnings instead of new character proposals |
+| `src/store/parts/outlines.ts` | Added proposal queue, approve/reject actions, and blocked-save proposal flow |
+| `src/store/parts/projects.ts` | Reset transient canon proposals when switching project |
+| `src/components/workspace/CanonProposalCard.tsx` | New approval UI card |
+| `src/components/workspace/SeasonArchitectPanel.tsx` | Shows pending proposals and handles approval/rejection |
+| `src/components/workspace/ChapterOutlineCard.tsx` | Regenerate guard now requires Story Contract |
+| `src/components/workspace/ProseWriterPanel.tsx` | Empty-state compass guard now requires Story Contract |
+| `task.md` | Added implementation checklist |
+| `walkthrough.md` | Added user-facing implementation summary |
+
+### Verification Results
+- `npx.cmd tsc -b --noEmit` -> **SUCCESS (Zero errors)**
+- `npm.cmd run build` -> **SUCCESS (Zero errors)**
+
+### Follow-up
+- Add merge-to-existing entity flow, proposal editing before approve, location/world rule proposal support, and prose-side canon proposal after outline flow is proven stable.

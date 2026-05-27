@@ -1,4 +1,4 @@
-import type { Character, Item, WorldRule, MysteryLayer } from '../types/project'
+import type { Character, Item, WorldRule, MysteryLayer, StoryContract } from '../types/project'
 import { COMPASS_SLOT_LABELS, getCompassProgress } from '../lib/compassProgress'
 import type { CompassSlot } from '../lib/compassProgress'
 
@@ -9,6 +9,7 @@ export interface CompassState {
   genre: string
   targetChapters: number
   narrativeConstitution: string | null
+  storyContract: StoryContract | Record<string, unknown> | null
   targetEnding: string | null
   themeAndTone: string | null
   characters: Character[]
@@ -25,6 +26,7 @@ export function detectCompassGap(state: CompassState): CompassGap {
   return getCompassProgress({
     title: state.title,
     genre: state.genre,
+    storyContract: state.storyContract,
     targetEnding: state.targetEnding,
     characters: state.characters,
     mysteryLayers: state.mysteryLayers
@@ -44,23 +46,71 @@ function getGapGuidance(gap: CompassGap, state: CompassState): string {
   switch (gap) {
     case 'PREMISE':
       return `
-## MISI SAAT INI: PREMIS & GENRE
-User belum memiliki premis dan genre yang jelas.
-Tugas utamamu: Gali dari user ide mentah ceritanya, lalu rumuskan menjadi premis yang tajam dan genre yang tepat.
-Tanyakan: Apa konflik utama? Siapa yang terlibat? Apa yang dipertaruhkan? Apakah ada unsur fantasi/supranatural?
-Setelah cukup informasi, ajukan draf premis untuk disetujui user.
+## MISI SAAT INI: PREMIS & STORY CONTRACT
+User belum memiliki Story Contract yang disetujui.
+Tugas utamamu: ekstrak ide mentah user menjadi kontrak logika cerita yang bisa menjadi canon aplikasi.
+Jangan langsung mengajukan karakter sebelum kontrak cerita disetujui.
 
-Saat mengajukan premis, sertakan DRAFT_DATA dengan type "world_rule" dan category "PREMISE":
+Ekstrak:
+- core_promise dan reader_promise
+- opening_contract: kondisi pembuka cerita, fakta wajib bab 1, dan kondisi yang tidak boleh menjadi pembuka
+- narrative_mechanics: trope/mekanisme seperti linear, regression, whodunit, revenge, forced_marriage, dsb.
+- causality_rules: aturan sebab-akibat yang tidak boleh dilanggar
+- canon_entities: karakter/item/lokasi/organisasi yang sudah disebut user, dengan story_tags dan aliases
+- relationship_addressing: panggilan relasi yang wajar antar karakter, misal istri ke suami "Mas", "Sayang", "Abang"; suami ke istri "Sayang", nama kecil, dsb.
+- arc_order kasar: urutan fase cerita
+- forbidden_contradictions dan required_reveals jika sudah jelas
+- tone_contract
+
+Saat mengajukan kontrak, sertakan DRAFT_DATA dengan type "story_contract":
 <DRAFT_DATA>
 {
-  "type": "world_rule",
+  "type": "story_contract",
   "data": {
-    "category": "OTHER",
-    "name": "Premis Utama",
-    "description": "...(premis yang kamu rumuskan)...",
-    "priority": 10,
-    "activation_keys": [],
-    "genesis": "BRAINSTORMED"
+    "core_promise": "...",
+    "reader_promise": "...",
+    "opening_contract": {
+      "must_start_with": "...",
+      "must_not_start_with": ["..."],
+      "opening_timeline": "...",
+      "opening_relationship_state": "...",
+      "first_chapter_required_facts": ["..."]
+    },
+    "narrative_mechanics": [
+      { "type": "other", "description": "...", "trigger": "...", "constraints": ["..."] }
+    ],
+    "causality_rules": [
+      { "id": "rule_1", "rule": "...", "severity": "BLOCKER" }
+    ],
+    "canon_entities": [
+      {
+        "name": "...",
+        "entity_type": "character",
+        "db_role": "SUPPORTING",
+        "story_tags": ["..."],
+        "aliases": ["..."]
+      }
+    ],
+    "relationship_addressing": [
+      {
+        "speaker": "...",
+        "addressee": "...",
+        "relationship": "...",
+        "allowed_terms": ["Mas", "Sayang"],
+        "default_term": "Mas",
+        "context_rules": ["..."]
+      }
+    ],
+    "arc_order": [
+      { "id": "arc_1", "label": "...", "chapter_range": [1, 10], "required_events": ["..."], "forbidden_events": ["..."] }
+    ],
+    "forbidden_contradictions": [
+      { "id": "contradiction_1", "description": "...", "severity": "BLOCKER" }
+    ],
+    "required_reveals": [
+      { "id": "reveal_1", "reveal": "...", "target_chapter": 50 }
+    ],
+    "tone_contract": { "description": "...", "must_include": ["..."], "must_avoid": ["..."] }
   }
 }
 </DRAFT_DATA>`
@@ -176,11 +226,11 @@ Ajukan draf mystery layer:
     case 'COMPLETE':
       return `
 ## MODE: KONSULTASI BEBAS
-Story Compass sudah lengkap! 🎉 Semua 5 elemen fundamental (Premis, Protagonis, Antagonis, Ending, Mystery) sudah terisi.
+Kompas Cerita sudah lengkap! 🎉 Semua 5 elemen fundamental (Premis, Protagonis, Antagonis, Ending, Mystery) sudah terisi.
 Sekarang kamu bertindak sebagai konsultan cerita yang siap membantu:
 - Menambah karakter pendukung, item penting, atau aturan dunia baru.
 - Mendiskusikan plot twist, sub-arc, atau konflik tambahan.
-- Mereview dan memperbaiki elemen Story Compass yang sudah ada.
+- Mereview dan memperbaiki elemen Kompas Cerita yang sudah ada.
 - Memberikan saran pacing dan struktur bab.
 - **Mengupdate state/kondisi karakter** (lokasi, pengetahuan, tujuan, rahasia, dll).
 
@@ -222,6 +272,9 @@ function buildLorebookSummary(state: CompassState): string {
 
   if (state.narrativeConstitution) {
     sections.push(`[KONSTITUSI NARATIF]: ${state.narrativeConstitution}`)
+  }
+  if (state.storyContract && Object.keys(state.storyContract).length > 0) {
+    sections.push(`[STORY CONTRACT APPROVED]:\n${JSON.stringify(state.storyContract, null, 2)}`)
   }
   if (state.targetEnding) {
     sections.push(`[TARGET ENDING]: ${state.targetEnding}`)
@@ -273,6 +326,7 @@ export function buildCoAuthorSystemInstruction(
   const progress = getCompassProgress({
     title: compassState.title,
     genre: compassState.genre,
+    storyContract: compassState.storyContract,
     targetEnding: compassState.targetEnding,
     characters: compassState.characters,
     mysteryLayers: compassState.mysteryLayers
@@ -312,7 +366,7 @@ ATURAN KOMUNIKASI (WAJIB DIPATUHI)
    - Cliffhanger di akhir setiap bab
    - Dialog yang penuh subtext (karakter tidak selalu bilang apa yang mereka rasakan)
    - Pacing cepat, paragraf pendek, mobile-friendly
-4. **FORMAT DRAF**: Jika kamu mengajukan elemen konkret (karakter baru, item, aturan dunia, ending, atau mystery layer) yang perlu persetujuan user, WAJIB sertakan data dalam format XML di akhir pesanmu:
+4. **FORMAT DRAF**: Jika kamu mengajukan elemen konkret (story_contract, karakter baru, item, aturan dunia, ending, mystery layer, atau state karakter) yang perlu persetujuan user, WAJIB sertakan data dalam format XML di akhir pesanmu:
    <DRAFT_DATA>
    { "type": "...", "data": { ... } }
    </DRAFT_DATA>
@@ -324,5 +378,5 @@ ATURAN KOMUNIKASI (WAJIB DIPATUHI)
 7. **PROAKTIF**: Jangan hanya bertanya terus. Setelah 2-3 pertanyaan, BERANI ajukan draf konkret untuk ditinjau user. Jangan takut salah — user bisa menolak atau mengedit.
 8. **JANGAN HALUSINASI**: Jangan mengarang elemen yang bertentangan dengan Pustaka Lore yang sudah disimpan di atas. Jika ada konflik, tanyakan ke user dulu.
 9. **JSON VALID**: Pastikan JSON di dalam blok DRAFT_DATA selalu valid dan bisa di-parse. Gunakan tanda kutip ganda untuk string. Jangan gunakan trailing comma.
-10. **CONVERSATIONAL BRIDGE**: Jangan biarkan obrolan berhenti setelah menyodorkan draf. Setiap pesan yang mengandung DRAFT_DATA wajib menutup bagian yang terlihat user dengan arahan aksi yang jelas: "Klik Setuju! jika sudah pas, atau Edit Dulu kalau ingin mengubah." Jika sebuah elemen baru saja disetujui atau diedit oleh user, akui singkat lalu langsung tuntun ke slot Compass berikutnya: ${progress.isComplete ? 'Story Compass sudah lengkap, arahkan user ke Outline.' : progress.nextLabel}. Jika user sudah menyebut bahan untuk slot berikutnya di percakapan sebelumnya, jangan bertanya dari nol; rumuskan draf konfirmasi berdasarkan bahan itu.`
+10. **CONVERSATIONAL BRIDGE**: Jangan biarkan obrolan berhenti setelah menyodorkan draf. Setiap pesan yang mengandung DRAFT_DATA wajib menutup bagian yang terlihat user dengan arahan aksi yang jelas: "Klik Setuju! jika sudah pas, atau Edit Dulu kalau ingin mengubah." Jika sebuah elemen baru saja disetujui atau diedit oleh user, akui singkat lalu langsung tuntun ke slot Compass berikutnya: ${progress.isComplete ? 'Kompas Cerita sudah lengkap, arahkan user ke Rencana Bab.' : progress.nextLabel}. Jika user sudah menyebut bahan untuk slot berikutnya di percakapan sebelumnya, jangan bertanya dari nol; rumuskan draf konfirmasi berdasarkan bahan itu.`
 }

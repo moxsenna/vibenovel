@@ -227,11 +227,8 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose }) =
           is_locked: false,
           genesis: 'IMPORTED' satisfies CharacterGenesis
         }
-        await addCharacter(payload)
-        // We can't get the assigned id back synchronously, but lookup by name
-        // works reliably since names are unique within a project.
-        const newest = useProjectStore.getState().characters.find((c) => c.name === ch.name)
-        if (newest) characterIdMap.set(ch.name, newest.id)
+        const characterId = await addCharacter(payload)
+        characterIdMap.set(ch.name, characterId)
       }
 
       // 4. Import items (best-effort from itemNames)
@@ -303,8 +300,9 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose }) =
 
         // 7. Hydrate character states from the deep-analyzed chapters
         if (ch.outline?.characterStates && ch.outline.characterStates.length > 0) {
-          const states = ch.outline.characterStates.map((s) => {
-            const charId = characterIdMap.get(s.character_name) ?? s.character_name
+          const states = ch.outline.characterStates.flatMap((s) => {
+            const charId = characterIdMap.get(s.character_name)
+            if (!charId) return []
             return {
               id: crypto.randomUUID(),
               character_id: charId,
@@ -794,7 +792,7 @@ const Step4Confirm: React.FC<{
 
       {!editedTargetEnding && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-sm text-amber-300">
-          💡 Target ending belum diisi. Bisa ditambahkan nanti via Brainstorm chat.
+          💡 Akhir cerita belum diisi. Bisa ditambahkan nanti lewat chat Ide Cerita.
         </div>
       )}
 

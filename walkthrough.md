@@ -4,6 +4,171 @@ Dokumen penutupan yang merinci keberhasilan penyelarasan integrasi Supabase (Spr
 
 ---
 
+## Story Contract & Canon Guardrails
+
+Perubahan ini menutup celah utama yang membuat outline bisa melanggar premis user: premis obrolan sekarang harus diekstrak menjadi `Story Contract` yang disetujui sebelum Story Compass dianggap lengkap dan sebelum Rencana Bab dibuat.
+
+### Ringkasan Perubahan
+
+1. **Story Contract menjadi canon eksplisit**
+   - `projects.story_contract` ditambahkan sebagai kolom JSONB.
+   - Tipe `StoryContract` mencakup `opening_contract`, `narrative_mechanics`, `causality_rules`, `canon_entities`, `relationship_addressing`, `arc_order`, `required_reveals`, dan `tone_contract`.
+   - Co-Author kini mengajukan draft `story_contract` di fase awal, bukan langsung melompat ke karakter.
+
+2. **Story Compass tidak lengkap tanpa kontrak**
+   - Slot pertama berubah menjadi `Premis & Kontrak Cerita`.
+   - Rencana Bab akan ditolak jika Story Contract belum tersedia.
+   - Panel Kompas Cerita menyediakan edit JSON untuk Story Contract.
+
+3. **Guardrail outline sebelum save**
+   - Outline Engine menerima Story Contract di prompt.
+   - Validator deterministik memblokir karakter/item aktif yang belum canon, pelanggaran opening contract, pelanggaran urutan arc, dan reveal mystery terlalu awal.
+   - AI Semantic Validator dengan thinking ditambahkan sebagai lapisan evaluasi opsional saat Deep Outline aktif.
+
+4. **Panggilan relasi didukung**
+   - `relationship_addressing` menggantikan ide daftar nama terlarang.
+   - Kontrak dapat menyimpan panggilan seperti `Mas`, `Sayang`, atau nama kecil berdasarkan speaker/addressee.
+   - Prompt outline dan prose sama-sama menerima instruksi agar panggilan dialog mengikuti kontrak relasi.
+
+5. **Memory prose lebih tersambung**
+   - `buildProseInput()` kini mengirim Story Contract ke prose prompt.
+   - Prompt prose sekarang memuat Layer 2 character state agar lokasi, emosi, pengetahuan, rahasia, relasi, dan tujuan aktif karakter tidak diabaikan.
+
+### Verifikasi
+
+- `npx.cmd tsc -b --noEmit` sukses tanpa error.
+- `npm.cmd run build` sukses tanpa error.
+
+---
+
+## 2026-05-27 - Engine Hardening Before Continuity Gate
+
+Batch hardening ini merapikan mesin inti sebelum fitur Continuity Gate, Repair Loop, Timeline Ledger, dan scoring ratusan bab masuk.
+
+### Ringkasan Perubahan
+
+1. Supabase write guard ditambahkan untuk mode demo/offline agar penulisan lokal tidak spam error saat Supabase belum dikonfigurasi.
+2. Free Write offline draft sekarang direplay ke `chapter.prose`, sedangkan beat draft tetap masuk ke beat yang benar.
+3. Auto-Pilot menunggu memory artifacts penting sebelum melanjutkan bab berikutnya, supaya state dan summary tidak stale.
+4. Prose Writer sekarang bisa menerima Layer 3 RAG memory lewat `buildProseInputWithRag()` dan prompt `[LONG-TERM MEMORY - LAYER 3 RAG]`.
+5. Co-Author duplicate approval tidak lagi menandai draft sebagai approved sebelum user memperbaiki konflik.
+6. Character state hanya memakai ID karakter canonical dari Lorebook, bukan fallback nama/non-UUID.
+7. Outline pacing kembali mengecek variasi cliffhanger lintas bab.
+8. Workspace compass effect memakai dependency lengkap sehingga guard Story Compass tidak stale.
+9. Version History menyimpan beat snapshot dan restore bab secara utuh, sekaligus membersihkan pending save/generation sebelum restore.
+
+### Verifikasi
+
+- `npm.cmd run test` sukses: 1 file test, 3 test pass.
+- `npx.cmd tsc -b --noEmit` sukses tanpa error.
+- `npm.cmd run lint` sukses tanpa error.
+- `npm.cmd run build` sukses tanpa error.
+
+---
+
+# Refactor Audit Follow-up - Maintainability Hardening
+
+Refaktor ini menutup temuan audit yang paling berisiko untuk developer baru:
+typing Supabase yang masih longgar, sumber setting AI yang ganda, export helper
+di file komponen, dependency Supabase yang belum aman untuk mode demo/offline,
+dan beberapa pola React 19 yang membuat lint gagal.
+
+### Ringkasan Perubahan
+
+1. **Database dan tipe kembali sinkron**
+   - Schema Supabase sekarang memuat `qa_logs`, field state karakter lengkap,
+     `chapter_versions`, `recaps`, RLS, dan migration guard.
+   - `database.types.ts` diperbarui agar client Supabase bisa typed tanpa
+     fallback `any`.
+   - `architecture.md` ikut mencatat `recaps` supaya dokumentasi dan schema
+     tidak jalan sendiri-sendiri.
+
+2. **Setting AI lebih mudah dipahami**
+   - Pilihan model prosa sekarang bersumber dari `activeProseModel`.
+   - Field lama yang overlap (`openRouterModel`, `defaultProseProvider`, dan
+     provider setting redundant) dihapus dari store/types.
+   - Settings modal menampilkan lineup model secara eksplisit dan tetap menjaga
+     prinsip BYOK lokal.
+
+3. **Komponen onboarding lebih bersih**
+   - Step tour dan helper localStorage dipindahkan ke modul terpisah.
+   - `OnboardingTour.tsx` kembali menjadi file komponen murni tanpa disable lint
+     `react-refresh/only-export-components`.
+
+4. **Mode offline/demo lebih aman**
+   - Lobby tidak memanggil query Supabase ketika env belum dikonfigurasi.
+   - Store project/chapter tidak memaksa load/update/delete remote saat Supabase
+     unavailable, sehingga demo lokal tidak crash karena konfigurasi kosong.
+
+5. **Lint React 19/Compiler dibersihkan**
+   - Reset editor/history di `useBeatWriter` dipindahkan ke pola guarded render
+     dan ref sync yang aman.
+   - Mapping status bab di `ProseWriterPanel`, welcome subtitle di `Lobby`, dan
+     loading `VersionHistoryModal` dirapikan agar tidak memakai assignment
+     sementara yang membingungkan.
+   - `AiMessageBubble` dan `gemini-pool` tidak lagi memakai `any` di jalur yang
+     disentuh refaktor.
+
+### Verifikasi
+
+- `npm.cmd run lint` sukses tanpa error.
+- `npx.cmd tsc -b --noEmit` sukses tanpa error.
+- `npm.cmd run build` sukses tanpa error.
+- Production preview smoke check di `http://127.0.0.1:4173/` merespons `200`.
+
+### Catatan Developer Baru
+
+- Tidak ada script test otomatis di `package.json`; guard utama saat ini adalah
+  lint, TypeScript build mode, dan production build.
+- Worktree sudah berisi banyak perubahan sebelum refaktor; perubahan unrelated
+  sengaja tidak disentuh.
+
+---
+
+## UX Revamp P0 — Novice Writer Entry
+
+Perubahan ini menjalankan hasil audit visual dari perspektif penulis awam: fitur canggih tetap ada, tetapi jalur masuk utama sekarang lebih tenang dan langsung mengarah ke naskah.
+
+### Ringkasan Perubahan
+
+1. **Entry menulis diperbaiki**
+   - Tombol proyek di dashboard sekarang bertuliskan `Lanjutkan Naskah`.
+   - Klik proyek aktif langsung membuka mode `Naskah`, memilih Bab 1, dan menutup panel konteks agar layar terasa lebih lapang.
+
+2. **Mode utama memakai bahasa penulis**
+   - `Brainstorm` menjadi `Ide Cerita`.
+   - `Outline` menjadi `Rencana Bab`.
+   - `Menulis` menjadi `Naskah`.
+   - `Review` menjadi `Cek Cerita`.
+   - `Visualisasi` menjadi `Peta Cerita`.
+
+3. **Writing desk empty state**
+   - Jika belum ada bab atau rencana, layar Naskah menampilkan CTA yang jelas:
+     - `Tulis bebas sekarang`
+     - `Buat rencana bab dulu`
+     - `Rapikan ide cerita dengan Co-Author`
+   - Tidak lagi menampilkan pesan buntu seperti "Silakan pilih bab" ketika Bab 1 sudah terlihat di UI.
+
+4. **Menu Pintas dan Settings lebih ramah**
+   - `Aksi Cepat` menjadi `Menu Pintas`.
+   - Command palette memakai label aksi manusiawi seperti `Buka Naskah`, `Buka Rencana Bab`, dan `Cek Cerita`.
+   - Settings dari command palette kini bisa terbuka di workspace.
+   - Copy settings dikurangi istilah teknis seperti `Core Engine`, `state tracker`, dan `mimicry` pada permukaan utama.
+
+5. **Kompas Cerita lebih actionable**
+   - `Story Compass` menjadi `Kompas Cerita`.
+   - `Target Ending` menjadi `Akhir Cerita`.
+   - `Lapisan Misteri` menjadi `Rahasia / Twist`.
+   - Slot aktif sekarang memberi arahan langsung, termasuk tombol `Isi akhir cerita`.
+
+### Verifikasi
+
+- `npx.cmd tsc -b --noEmit` sukses tanpa error.
+- `npm.cmd run build` sukses tanpa error.
+- Browser visual check sukses untuk dashboard -> `Lanjutkan Naskah`, writing desk empty state, light/dark theme, Menu Pintas, dan Settings modal.
+
+---
+
 ## 🚀 Sprint 1B — Component Extraction & UI Polish
 
 Pada Sprint 1B, kita memecah monolith `Lobby.tsx` dan `Workspace.tsx` menjadi komponen-komponen terpisah, mengintegrasikan **Framer Motion** untuk efek micro-animations kelas premium, dan memoles responsivitas mobile (375px).
@@ -1328,3 +1493,63 @@ npm run build        → 791ms, 0 errors ✅
 - Test abort di tengah thinking phase → state clean reset
 - First-launch toast muncul sekali per device
 
+# UX Revamp P0.1 - Section Onboarding
+
+Perubahan ini memperluas onboarding dari satu tour di Home menjadi tour kontekstual per bagian. User sekarang mendapat panduan pendek saat pertama kali membuka Home, Ide Cerita, Rencana Bab, Naskah, Cek Cerita, dan Peta Cerita.
+
+### Ringkasan Perubahan
+
+1. **Tour reusable per section**
+   - `OnboardingTour` sekarang menerima `tourId` dan daftar langkah custom.
+   - Setiap section menyimpan flag sendiri di localStorage, jadi tour hanya muncul sekali per bagian.
+
+2. **Workspace punya onboarding kontekstual**
+   - Mode `Ide Cerita` menjelaskan Co-Author dan Kompas Cerita.
+   - Mode `Rencana Bab` menjelaskan fungsi rancangan bab dan catatan cerita.
+   - Mode `Naskah` menjelaskan meja tulis, panel catatan, dan Menu Pintas.
+   - Mode `Cek Cerita` menjelaskan review konsistensi dan radar cerita.
+   - Mode `Peta Cerita` menjelaskan tampilan besar timeline, emosi, relasi, dan statistik.
+
+3. **Reset onboarding lebih lengkap**
+   - Tombol Reset Onboarding di Settings sekarang menghapus semua flag tour, bukan hanya flag Home lama.
+
+### Verifikasi
+
+- `npx.cmd tsc -b --noEmit` sukses tanpa error.
+- `npm.cmd run build` sukses tanpa error.
+- Browser smoke check: localhost merespons 200. Headless Chrome profile bersih masuk layar login, jadi tour visual perlu dicek dari sesi browser user yang sudah login.
+
+---
+
+# Canon Proposal Flow - Unknown Entity Approval
+
+Perubahan ini menambahkan jalur aman ketika AI membutuhkan karakter atau item
+baru saat membuat outline. Output tidak langsung masuk ke chapter jika validator
+menemukan `UNKNOWN_ACTIVE_CHARACTER` atau `UNKNOWN_ACTIVE_ITEM`; sistem membuat
+proposal canon yang harus disetujui user lebih dulu.
+
+### Ringkasan Perubahan
+
+1. **Proposal canon transient**
+   - `outlines` store sekarang punya `canonProposals`.
+   - Proposal dibuat dari draft outline yang tertahan, lengkap dengan bukti dari sinopsis/key events.
+
+2. **Approval masuk Lorebook**
+   - Jika disetujui, karakter/item baru ditambahkan ke Lorebook.
+   - Story Contract ikut dipatch pada `canon_entities`.
+   - Draft chapter baru disimpan hanya setelah semua proposal dalam grup bab tersebut selesai.
+
+3. **Reject membuang draft**
+   - Jika ditolak, grup proposal dihapus dan draft bab tidak disimpan.
+   - User bisa regenerate agar AI memakai canon yang sudah ada.
+
+4. **Guard UI lebih konsisten**
+   - Rencana Bab, regenerate outline, dan empty state Naskah sekarang sama-sama menganggap Story Contract sebagai syarat lengkap.
+
+5. **Panggilan relasi tidak dianggap karakter baru**
+   - Term di `relationship_addressing` seperti Mas/Sayang diperlakukan sebagai warning jika salah masuk `activeCharacters`, bukan proposal karakter baru.
+
+### Verifikasi
+
+- `npx.cmd tsc -b --noEmit` sukses tanpa error.
+- `npm.cmd run build` sukses tanpa error.

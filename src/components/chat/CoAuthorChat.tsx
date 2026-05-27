@@ -72,10 +72,10 @@ export const CoAuthorChat: React.FC<CoAuthorChatProps> = ({ projectId }) => {
               background: 'radial-gradient(circle at 0% 0%, var(--color-primary-container, rgba(232, 160, 191, 0.08)) 0%, var(--color-surface-container-high, #1F1B1D) 100%)'
             }}
           >
-            Halo! Saya Co-Author Anda. Mari kita rancang novel hebat bergenre <strong>{activeProject.genre}</strong> dengan target <strong>{activeProject.target_chapters} Bab</strong>! 🚀
+            Halo! Saya Co-Author Anda. Mari kita rancang novel hebat bergenre <strong>{activeProject.genre}</strong> dengan target <strong>{activeProject.target_chapters} Bab</strong>.
             <br />
             <br />
-            Ceritakan tentang premis, konflik utama, atau tokoh utama yang Anda bayangkan untuk memulai brainstorming.
+            Ceritakan premis, konflik utama, atau tokoh yang Anda bayangkan untuk mulai merapikan ide cerita.
           </div>
         </motion.div>
 

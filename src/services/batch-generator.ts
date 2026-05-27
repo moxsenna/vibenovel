@@ -17,7 +17,7 @@
 
 import { aiRouter } from './ai/ai-router'
 import { stateTracker } from './state-tracker'
-import { buildProseInput, ensureBeatsForChapter } from './prose-context'
+import { buildProseInputWithRag, ensureBeatsForChapter } from './prose-context'
 import { analyzeChapterThreads } from './thread-tracker'
 import { generateChapterSummary, buildSummaryUpsertPayload } from './chapter-summary'
 import { useSettingsStore } from '../store/useSettingsStore'
@@ -304,6 +304,7 @@ export class BatchGenerator {
 
       this.currentProgress.currentBeatIndex = beatIndex
       callbacks.onProgress({ ...this.currentProgress })
+      this.abortController = new AbortController()
 
       // Build prose input using the SAME helper as useBeatWriter.
       const previousStates = snapshot.getLatestStatesForChapter(chapter.chapter_number)
@@ -311,7 +312,7 @@ export class BatchGenerator {
         .slice(0, beatIndex)
         .map((b) => b.prose || '')
         .filter((p) => p.trim().length > 0)
-      const input = buildProseInput({
+      const input = await buildProseInputWithRag({
         project,
         chapter: { ...chapter, beats: liveBeats },
         beatIndex,
@@ -321,9 +322,10 @@ export class BatchGenerator {
         previousStates,
         allChapters: snapshot.chapters,
         overrideBeatsProse: previousBeatsProse
+      }, {
+        signal: this.abortController.signal
       })
 
-      this.abortController = new AbortController()
       // Sprint 9.7 — Deep Think gating in batch mode. Master toggle AND
       // batch sub-toggle must both be ON. Defaults to OFF for batch since
       // 200 chapters × +2-3s per beat would add ~10 minutes total.
@@ -376,11 +378,10 @@ export class BatchGenerator {
       status: 'DRAFT'
     })
 
-    // Fire-and-forget background tasks — state snapshot + plot radar +
-    // lore extraction. We don't await them in the main loop because they
-    // can reuse the same gemini-pool slot; the next chapter just needs
-    // the state once it's persisted.
-    void this.runBackgroundTasks(chapter, fullProse, snapshot)
+    // Await memory tasks before the next chapter. Auto-Pilot depends on
+    // freshly persisted Layer 2 state and summaries so chapter N+1 does not
+    // continue from stale memory.
+    await this.runBackgroundTasks(chapter, fullProse, snapshot)
 
     this.currentProgress.completed.push({
       chapterId: chapter.id,

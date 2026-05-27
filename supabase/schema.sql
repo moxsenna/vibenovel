@@ -1,6 +1,6 @@
 -- VibeNovel v2 — Supabase Database Schema
 -- Run this in Supabase SQL Editor: https://supabase.com/dashboard/project/_/sql
--- 13 tables + RLS + pgvector extension
+-- 15 tables + RLS + pgvector extension
 
 -- ============================================================
 -- 0. EXTENSIONS
@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS projects (
   narrative_constitution TEXT,
   target_ending         TEXT,
   theme_and_tone        TEXT,
+  story_contract        JSONB NOT NULL DEFAULT '{}'::jsonb,
   -- Sprint 5 — Hook Chain (top-level project hooks)
   series_hook           TEXT,
   season_hooks          JSONB NOT NULL DEFAULT '[]',
@@ -169,6 +170,7 @@ CREATE TABLE IF NOT EXISTS chapters (
   prose_source        TEXT NOT NULL DEFAULT 'GENERATED'
                       CHECK (prose_source IN ('GENERATED','MANUAL_WRITE','IMPORTED','MIXED')),
   is_locked           BOOLEAN NOT NULL DEFAULT FALSE,
+  qa_logs             JSONB NOT NULL DEFAULT '[]',
 
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -190,6 +192,11 @@ CREATE TABLE IF NOT EXISTS character_states (
   inventory           TEXT[] NOT NULL DEFAULT '{}',
   relationships       JSONB NOT NULL DEFAULT '{}',
   last_action         TEXT NOT NULL DEFAULT '',
+  knowledge_state     TEXT[] NOT NULL DEFAULT '{}',
+  active_goal         TEXT NOT NULL DEFAULT '',
+  secrets             TEXT[] NOT NULL DEFAULT '{}',
+  appearance_notes    TEXT NOT NULL DEFAULT '',
+  alliances           TEXT[] NOT NULL DEFAULT '{}',
   source              TEXT NOT NULL DEFAULT 'AUTO_GENERATED'
                       CHECK (source IN ('AUTO_GENERATED','MANUAL_EDIT','IMPORTED')),
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -277,6 +284,34 @@ CREATE TABLE IF NOT EXISTS archived_outlines (
   chapter_number INT  NOT NULL,
   outline_data   JSONB NOT NULL DEFAULT '{}',
   archived_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================
+-- 14. CHAPTER_VERSIONS  (prose version history)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS chapter_versions (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chapter_id     UUID NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+  prose          TEXT NOT NULL DEFAULT '',
+  word_count     INT NOT NULL DEFAULT 0,
+  change_summary TEXT NOT NULL DEFAULT '',
+  beats          JSONB NOT NULL DEFAULT '[]',
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE chapter_versions
+  ADD COLUMN IF NOT EXISTS beats JSONB NOT NULL DEFAULT '[]';
+
+-- ============================================================
+-- 15. RECAPS  ("Sebelumnya..." reusable reader recap)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS recaps (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id          UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  chapter_range_start INT NOT NULL DEFAULT 1,
+  chapter_range_end   INT NOT NULL DEFAULT 1,
+  content             TEXT NOT NULL DEFAULT '',
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ============================================================
@@ -410,8 +445,29 @@ CREATE POLICY "archived_outlines_owner_policy" ON archived_outlines
     project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
   );
 
+-- CHAPTER_VERSIONS
+ALTER TABLE chapter_versions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "chapter_versions_owner_policy" ON chapter_versions;
+CREATE POLICY "chapter_versions_owner_policy" ON chapter_versions
+  FOR ALL USING (
+    chapter_id IN (
+      SELECT ch.id FROM chapters ch
+      JOIN projects p ON ch.project_id = p.id
+      WHERE p.user_id = auth.uid()
+    )
+  );
+
 -- ============================================================
--- DONE! 13 tables created with RLS.
+-- RECAPS
+ALTER TABLE recaps ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "recaps_owner_policy" ON recaps;
+CREATE POLICY "recaps_owner_policy" ON recaps
+  FOR ALL USING (
+    project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
+  );
+
+-- ============================================================
+-- DONE! 15 tables created with RLS.
 -- Next: Enable Google OAuth in Supabase Auth dashboard,
 --       then copy VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local
 -- ============================================================
@@ -429,7 +485,15 @@ ALTER TABLE projects
   ADD COLUMN IF NOT EXISTS season_hooks JSONB NOT NULL DEFAULT '[]';
 
 ALTER TABLE chapters
-  ADD COLUMN IF NOT EXISTS false_resolution BOOLEAN NOT NULL DEFAULT FALSE;
+  ADD COLUMN IF NOT EXISTS false_resolution BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS qa_logs JSONB NOT NULL DEFAULT '[]';
+
+ALTER TABLE character_states
+  ADD COLUMN IF NOT EXISTS knowledge_state TEXT[] NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS active_goal TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS secrets TEXT[] NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS appearance_notes TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS alliances TEXT[] NOT NULL DEFAULT '{}';
 
 
 -- ============================================================
@@ -480,3 +544,14 @@ $$;
 
 ALTER TABLE projects
   ADD COLUMN IF NOT EXISTS voice_dna_project JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+
+-- ============================================================
+-- STORY CONTRACT & CANON GUARDRAILS
+-- ============================================================
+-- Machine-readable canon contract used by Co-Author, Outline Engine,
+-- Prose Writer, and validators. `narrative_constitution` remains the
+-- human-readable prose summary; this JSONB field is the validation source.
+
+ALTER TABLE projects
+  ADD COLUMN IF NOT EXISTS story_contract JSONB NOT NULL DEFAULT '{}'::jsonb;

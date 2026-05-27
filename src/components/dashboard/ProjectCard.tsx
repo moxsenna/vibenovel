@@ -23,9 +23,9 @@ interface ProjectCardProps {
 }
 
 const STATUS_CONFIG: Record<ProjectStatus, { dot: string; label: string }> = {
-  BRAINSTORMING: { dot: 'bg-blue-400', label: 'Brainstorm' },
-  OUTLINING: { dot: 'bg-yellow-500', label: 'Bikin Outline' },
-  WRITING: { dot: 'bg-emerald-400', label: 'Menulis' },
+  BRAINSTORMING: { dot: 'bg-blue-400', label: 'Ide Cerita' },
+  OUTLINING: { dot: 'bg-yellow-500', label: 'Rencana Bab' },
+  WRITING: { dot: 'bg-emerald-400', label: 'Naskah' },
   PAUSED: { dot: 'bg-orange-400', label: 'Dijeda' },
   COMPLETED: { dot: 'bg-secondary', label: 'Tamat' }
 }
@@ -153,7 +153,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         {/* Dual Progress Bars */}
         <div className="mb-3">
           <div className="flex justify-between text-label-md text-on-surface-variant mb-1">
-            <span>Outline</span>
+            <span>Rencana</span>
             <span>{outlineProgress}%</span>
           </div>
           <div className="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden">
@@ -205,7 +205,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 : 'bg-gradient-to-r from-secondary-container to-on-secondary text-on-surface-variant hover:opacity-90'
             }`}
           >
-            Lanjut Menulis
+            Lanjutkan Naskah
             <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
           </button>
         </div>

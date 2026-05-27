@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
@@ -23,20 +23,7 @@ const _client = createClient<Database>(
   }
 )
 
-/**
- * The strictly-typed Supabase client. The handcrafted `Database` type in
- * `database.types.ts` is comprehensive but its strict generic chaining
- * interacts awkwardly with the current TypeScript build (table builders
- * collapse to `never` at insert/update sites). For the storefront CRUD
- * layer we re-export a loosely-typed wrapper so call sites can keep their
- * own row-shape assertions without fighting the Supabase generics.
- *
- * Strict access remains available via `supabaseStrict` for code paths that
- * benefit from full row inference (e.g. analytics queries).
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const supabase: SupabaseClient<any, 'public'> = _client as unknown as SupabaseClient<any, 'public'>
-export const supabaseStrict = _client
+export const supabase = _client
 
 export const isSupabaseConfigured = () =>
   Boolean(

@@ -5,201 +5,63 @@ import type {
   Item,
   WorldRule,
   MysteryLayer,
-  PlotThread
+  PlotThread,
+  ChapterVersion
 } from '../../types/project'
 import type { ProjectStore } from '../useProjectStore'
-import type { Database } from '../../lib/database.types'
+import type { Database, Json } from '../../lib/database.types'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 
 type ChapterInsert = Database['public']['Tables']['chapters']['Insert']
 type ChapterUpdate = Database['public']['Tables']['chapters']['Update']
+type ChapterVersionRow = Database['public']['Tables']['chapter_versions']['Row']
 
-const DUMMY_CHARACTERS: Character[] = [
-  {
-    id: 'c1',
-    project_id: 'd1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-    name: 'Kania Savitri',
-    role: 'PROTAGONIST',
-    description:
-      'Keras kepala tapi rapuh di dalam. Dia menderita dalam keheningan demi menyelamatkan Dirga.',
-    voice_dna: { tone: 'lembut tapi tegas', betawi: true },
-    activation_keys: ['Kania', 'Savitri'],
-    priority: 10,
-    is_locked: false,
-    genesis: 'BRAINSTORMED'
-  },
-  {
-    id: 'c2',
-    project_id: 'd1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-    name: 'Ardan Wijaya',
-    role: 'ANTAGONIST',
-    description: 'Ambisius, manipulatif, tampan, kaya raya, menghalalkan segala cara.',
-    voice_dna: { tone: 'dingin, berwibawa, tajam' },
-    activation_keys: ['Ardan', 'Wijaya'],
-    priority: 8,
-    is_locked: false,
-    genesis: 'BRAINSTORMED'
-  },
-  {
-    id: 'c3',
-    project_id: 'd1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-    name: 'Dirga Pratama',
-    role: 'SUPPORTING',
-    description: 'Tulus, pekerja keras, sabar, mencintai Kania sepenuh jiwanya.',
-    voice_dna: { tone: 'hangat, rendah, penuh cinta' },
-    activation_keys: ['Dirga', 'Pratama'],
-    priority: 9,
-    is_locked: false,
-    genesis: 'BRAINSTORMED'
-  }
-]
+const DUMMY_CHAPTERS: Chapter[] = []
 
-const DUMMY_ITEMS: Item[] = [
-  {
-    id: 'i1',
-    project_id: 'd1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-    name: 'Jam Saku Perak',
-    category: 'MAGICAL',
-    description: 'Jam saku perak tua berdenyut milik ayah Kania, pemicu time-travel.',
-    significance: 'Alat time travel utama Kania untuk memutar waktu.',
-    activation_keys: ['jam saku', 'saku perak'],
-    current_owner: 'Kania Savitri',
-    priority: 10,
-    genesis: 'BRAINSTORMED'
-  },
-  {
-    id: 'i2',
-    project_id: 'd1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-    name: 'Cincin Berlian',
-    category: 'JEWELRY',
-    description: 'Cincin murah yang dibeli Dirga setelah menabung berbulan-bulan.',
-    significance: 'Simbol lamaran gagal Dirga ke Kania di awal cerita.',
-    activation_keys: ['cincin', 'lamaran'],
-    current_owner: 'Dirga Pratama',
-    priority: 9,
-    genesis: 'BRAINSTORMED'
-  }
-]
+function isJsonRecord(value: Json): value is { [key: string]: Json | undefined } {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
 
-const DUMMY_CHAPTERS: Chapter[] = [
-  {
-    id: 'ch1',
-    project_id: 'd1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-    chapter_number: 51,
-    title: 'Pasar Malam yang Berubah',
-    status: 'OUTLINE_ONLY',
-    synopsis:
-      'Kania menyusuri pasar malam mencari petunjuk tentang masa lalu Dirga. Di tengah keramaian, ia tak sengaja bertabrakan dengan seorang pria tua yang memegang jam saku persis seperti milik ayahnya.',
-    key_events: [
-      'Kania mencari petunjuk',
-      'Bertabrakan dengan Pria Tua',
-      'Menemukan jam saku serupa'
-    ],
-    active_characters: ['Kania Savitri', 'Pria Tua'],
-    active_items: ['Jam Saku Perak'],
-    location: 'Pasar Malam, Jakarta Selatan',
-    time_in_story: 'Sabtu malam, 10 tahun lalu',
-    emotional_tone: 'TENSION',
-    cliffhanger_type: 'REVELATION',
-    cliffhanger_setup: 'Pria tua itu menghilang namun meninggalkan jam saku identik.',
-    dopamine_beat: false,
-    false_resolution: false,
-    paywall_advice: 'FREE',
-    arc_position: { season: 2, subArc: 'Pencarian Jam Saku' },
-    open_threads: ['Siapa Pria Tua itu?'],
-    resolved_threads: [],
-    foreshadowing: ['Denyut jam saku memicu ingatan baru'],
-    chapter_end_state: { Kania: { location: 'Tengah pasar malam', emotion: 'shock' } },
-    do_not_include: ['Ardan'],
-    must_connect_to: 'Bab 50',
-    filler_risk: 'low',
-    prose: null,
-    word_count: 0,
-    beats: [
-      {
-        id: 'b1',
-        number: 1,
-        direction:
-          'Kania menyusuri ramainya pasar malam, merasa asing di timeline masa lalu ini.'
-      },
-      {
-        id: 'b2',
-        number: 2,
-        direction: 'Dia melihat pedagang arum manis dan mainan kayu, teringat janjinya dengan Dirga.'
-      },
-      {
-        id: 'b3',
-        number: 3,
-        direction: 'Seseorang dengan jubah lusuh menabraknya keras. Itu pria tua bermata sendu.'
-      },
-      {
-        id: 'b4',
-        number: 4,
-        direction:
-          'Pria itu pergi cepat, tapi benda logam jatuh berdenting di dekat kaki Kania. Jam saku perak.'
-      }
-    ],
-    outline_source: 'GENERATED',
-    prose_source: 'GENERATED',
-    is_locked: false
-  },
-  {
-    id: 'ch2',
-    project_id: 'd1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-    chapter_number: 52,
-    title: 'Jam Saku Berdenyut',
-    status: 'OUTLINE_ONLY',
-    synopsis:
-      'Pria tua itu menghilang di kerumunan, meninggalkan jam saku yang jatuh. Saat Kania menyentuhnya, jam itu berdenyut aneh, memicu sekelebat ingatan yang bukan miliknya.',
-    key_events: [
-      'Pria tua menghilang',
-      'Kania memegang jam saku baru',
-      'Merasakan denyut ingatan asing'
-    ],
-    active_characters: ['Kania Savitri'],
-    active_items: ['Jam Saku Perak'],
-    location: 'Gang Belakang Pasar Malam',
-    time_in_story: 'Sabtu malam, beberapa menit kemudian',
-    emotional_tone: 'MYSTERY',
-    cliffhanger_type: 'COUNTDOWN',
-    cliffhanger_setup: 'Jam saku berdetik berlawanan arah.',
-    dopamine_beat: true,
-    false_resolution: false,
-    paywall_advice: 'FREE',
-    arc_position: { season: 2, subArc: 'Pencarian Jam Saku' },
-    open_threads: ['Darimana ingatan asing itu berasal?'],
-    resolved_threads: [],
-    foreshadowing: [],
-    chapter_end_state: { Kania: { location: 'Gang sepi', emotion: 'cemas' } },
-    do_not_include: [],
-    must_connect_to: 'Bab 51',
-    filler_risk: 'low',
-    prose: null,
-    word_count: 0,
-    beats: [
-      { id: 'b5', number: 1, direction: 'Kania mengambil jam saku perak tersebut dari tanah.' },
-      {
-        id: 'b6',
-        number: 2,
-        direction: 'Ketika menyentuhnya, getaran listrik hangat menjalar ke dadanya.'
-      },
-      {
-        id: 'b7',
-        number: 3,
-        direction:
-          'Sekelebat bayangan Dirga berdarah-darah di sebuah kecelakaan mobil muncul di pikirannya.'
-      },
-      {
-        id: 'b8',
-        number: 4,
-        direction: 'Dia menatap jam itu, jarum detiknya bergerak mundur dengan cepat.'
-      }
-    ],
-    outline_source: 'GENERATED',
-    prose_source: 'GENERATED',
-    is_locked: false
+function parseChapterVersionBeats(value: Json): Chapter['beats'] {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((entry) => {
+    if (!isJsonRecord(entry)) return []
+
+    const { id, number, direction, prose } = entry
+    if (typeof id !== 'string' || typeof number !== 'number' || typeof direction !== 'string') {
+      return []
+    }
+
+    return [{
+      id,
+      number,
+      direction,
+      ...(typeof prose === 'string' ? { prose } : {})
+    }]
+  })
+}
+
+function serializeChapterVersionBeats(beats: Chapter['beats'] = []): Json {
+  return beats.map((beat): Json => ({
+    id: beat.id,
+    number: beat.number,
+    direction: beat.direction,
+    prose: beat.prose
+  }))
+}
+
+function mapChapterVersionRow(row: ChapterVersionRow): ChapterVersion {
+  return {
+    id: row.id,
+    chapter_id: row.chapter_id,
+    prose: row.prose,
+    word_count: row.word_count,
+    change_summary: row.change_summary,
+    beats: parseChapterVersionBeats(row.beats),
+    created_at: row.created_at
   }
-]
+}
 
 export interface ChaptersPart {
   chapters: Chapter[]
@@ -207,6 +69,14 @@ export interface ChaptersPart {
   updateChapter: (id: string, data: Partial<Chapter>) => Promise<void>
   addChapter: (chapter: Omit<Chapter, 'id'>) => Promise<string>
   deleteChapter: (id: string) => Promise<void>
+  fetchChapterVersions: (chapterId: string) => Promise<ChapterVersion[]>
+  createChapterVersion: (
+    chapterId: string,
+    prose: string,
+    wordCount: number,
+    summary: string,
+    beats?: Chapter['beats']
+  ) => Promise<void>
 }
 
 export const chaptersPart: StateCreator<
@@ -218,59 +88,8 @@ export const chaptersPart: StateCreator<
   chapters: DUMMY_CHAPTERS,
 
   loadProjectData: async (projectId) => {
-    if (projectId === 'd1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d') {
-      const dummyState: Partial<ProjectStore> = {
-        chapters: DUMMY_CHAPTERS,
-        characters: DUMMY_CHARACTERS,
-        items: DUMMY_ITEMS,
-        worldRules: [],
-        mysteryLayers: [
-          {
-            id: 'm1',
-            project_id: projectId,
-            layer_number: 1,
-            central_question: 'Kenapa Kania menolak lamaran Dirga di awal?',
-            revealed_at_chapter: 15,
-            answer:
-              'Karena Kania telah memutar waktu dan melihat Dirga hancur berkeping-keping jika bersamanya.',
-            opens_next_question: 'Bagaimana Kania bisa melihat masa depan?',
-            breadcrumbs: [
-              { chapter: 3, hint: 'Kania mencengkeram jam saku tua ayahnya' },
-              { chapter: 8, hint: 'Kania menggumamkan tanggal kecelakaan yang belum terjadi' }
-            ],
-            status: 'REVEALED'
-          },
-          {
-            id: 'm2',
-            project_id: projectId,
-            layer_number: 2,
-            central_question: 'Bagaimana Kania memutar waktu?',
-            revealed_at_chapter: 52,
-            answer:
-              'Menggunakan jam saku perak berdenyut pemberian pria misterius di pasar malam.',
-            opens_next_question: 'Siapa sebenarnya pria tua misterius itu?',
-            breadcrumbs: [
-              { chapter: 51, hint: 'Pria tua lusuh menabrak Kania dan menjatuhkan jam saku' }
-            ],
-            status: 'ACTIVE'
-          }
-        ],
-        plotThreads: [
-          {
-            id: 'pt1',
-            project_id: projectId,
-            title: 'Misteri Pria Tua Pasar Malam',
-            planted_at: 51,
-            status: 'ACTIVE',
-            resolved_at: null,
-            urgency: 'HIGH',
-            related_characters: ['c1'],
-            related_items: ['i1'],
-            notes: 'Pria tua misterius yang menjatuhkan jam saku perak di pasar malam.'
-          }
-        ]
-      }
-      set(dummyState)
+    if (!isSupabaseConfigured()) {
+      set({ loading: false })
       return
     }
 
@@ -341,6 +160,8 @@ export const chaptersPart: StateCreator<
       chapters: state.chapters.map((ch) => (ch.id === id ? { ...ch, ...data } : ch))
     }))
 
+    if (!isSupabaseConfigured()) return
+
     try {
       const { error } = await supabase
         .from('chapters')
@@ -397,6 +218,38 @@ export const chaptersPart: StateCreator<
       }
     } catch (e) {
       console.error('Supabase deleteChapter error:', e)
+    }
+  },
+
+  fetchChapterVersions: async (chapterId) => {
+    try {
+      if (!isSupabaseConfigured()) return []
+      const { data, error } = await supabase
+        .from('chapter_versions')
+        .select('*')
+        .eq('chapter_id', chapterId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data || []).map(mapChapterVersionRow)
+    } catch (e) {
+      console.error('Supabase fetchChapterVersions error:', e)
+      return []
+    }
+  },
+
+  createChapterVersion: async (chapterId, prose, wordCount, summary, beats) => {
+    try {
+      if (!isSupabaseConfigured()) return
+      const { error } = await supabase.from('chapter_versions').insert([{
+        chapter_id: chapterId,
+        prose,
+        word_count: wordCount,
+        change_summary: summary,
+        beats: serializeChapterVersionBeats(beats)
+      }])
+      if (error) throw error
+    } catch (e) {
+      console.error('Supabase createChapterVersion error:', e)
     }
   }
 })

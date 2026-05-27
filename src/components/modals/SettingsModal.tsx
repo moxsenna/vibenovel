@@ -11,38 +11,75 @@
 
 import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useSettingsStore } from '../../store/useSettingsStore'
+import { useSettingsStore, type ProseModelChoice } from '../../store/useSettingsStore'
 import { useUiStore } from '../../store/useUiStore'
 import { MimicryEngineCard } from '../compass/MimicryEngineCard'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
+import { resetAllOnboardingFlags } from '../onboarding/onboarding-flags'
+import { useProjectStore } from '../../store/useProjectStore'
+import { useChatStore } from '../../store/useChatStore'
 
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
-type Tab = 'keys' | 'writing' | 'tutorial'
+type Tab = 'keys' | 'writing' | 'tutorial' | 'debug'
 
 const TABS: Array<{ id: Tab; label: string; icon: string }> = [
-  { id: 'keys', label: 'Keys', icon: '🔑' },
-  { id: 'writing', label: 'Writing', icon: '✍' },
-  { id: 'tutorial', label: 'Tutorial', icon: '🎓' }
+  { id: 'keys', label: 'Kunci', icon: '🔑' },
+  { id: 'writing', label: 'Naskah', icon: '✍' },
+  { id: 'tutorial', label: 'Tutorial', icon: '🎓' },
+  { id: 'debug', label: 'Debug', icon: '🐞' }
 ]
 
-const ONBOARDING_FLAG = 'vn_onboarding_done_v1'
+const PROSE_MODELS: Array<{
+  value: ProseModelChoice
+  label: string
+  helper: string
+  icon: string
+  requiresOpenRouter: boolean
+}> = [
+  {
+    value: 'gemini',
+    label: 'Gemini Flash',
+    helper: 'Gratis, memakai key Gemini.',
+    icon: 'auto_awesome',
+    requiresOpenRouter: false
+  },
+  {
+    value: 'claude',
+    label: 'Claude Sonnet 4.6',
+    helper: 'OpenRouter, kualitas prosa premium.',
+    icon: 'diamond',
+    requiresOpenRouter: true
+  },
+  {
+    value: 'deepseek',
+    label: 'DeepSeek V4 Flash',
+    helper: 'OpenRouter, cepat dan hemat.',
+    icon: 'bolt',
+    requiresOpenRouter: true
+  },
+  {
+    value: 'deepseek-pro',
+    label: 'DeepSeek V4 Pro',
+    helper: 'OpenRouter, opsi kualitas tertinggi.',
+    icon: 'psychology',
+    requiresOpenRouter: true
+  }
+]
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const {
     geminiKeys,
     openRouterKey,
-    openRouterModel,
-    defaultProseProvider,
+    activeProseModel,
     freeWriteMode,
     addGeminiKey,
     removeGeminiKey,
     setOpenRouterKey,
-    setOpenRouterModel,
-    setDefaultProseProvider,
+    setActiveProseModel,
     setFreeWriteMode
   } = useSettingsStore()
   const theme = useUiStore((s) => s.theme)
@@ -50,8 +87,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const addToast = useUiStore((s) => s.addToast)
   const openModal = useUiStore((s) => s.openModal)
 
+  const {
+    activeProject,
+    mysteryLayers,
+    characters,
+    items,
+    worldRules,
+    plotThreads,
+    chapters,
+    characterStates
+  } = useProjectStore()
+
+  const chatMessagesCount = useChatStore((s) => s.getProjectMessages(activeProject?.id || '').length)
+
   const [activeTab, setActiveTab] = useState<Tab>('keys')
   const [newKeyInput, setNewKeyInput] = useState('')
+  const [newKeyLabel, setNewKeyLabel] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
   useFocusTrap(containerRef, isOpen, onClose)
 
@@ -59,11 +110,58 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   const handleResetOnboarding = () => {
     try {
-      localStorage.removeItem(ONBOARDING_FLAG)
-      addToast('Tutorial onboarding direset. Reload halaman untuk melihatnya lagi.', 'success')
+      resetAllOnboardingFlags()
+      addToast('Semua tutorial direset. Buka ulang halaman atau pindah bagian untuk melihatnya lagi.', 'success')
     } catch {
       addToast('Gagal reset tutorial.', 'error')
     }
+  }
+
+  const handleDownloadDebugData = () => {
+    if (!activeProject) {
+      addToast('Buka proyek terlebih dahulu untuk mengekspor data debug.', 'warning')
+      return
+    }
+
+    const chatMessages = useChatStore.getState().getProjectMessages(activeProject.id)
+
+    const debugData = {
+      exported_at: new Date().toISOString(),
+      app_version: 'VibeNovel v2 - Sprint 9',
+      story_compass: {
+        project: activeProject,
+        mystery_layers: mysteryLayers
+      },
+      lorebook: {
+        characters: characters,
+        items: items,
+        world_rules: worldRules,
+        plot_threads: plotThreads
+      },
+      outline: {
+        chapters: chapters
+      },
+      states: {
+        character_states: characterStates
+      },
+      co_author_chat_history: chatMessages
+    }
+
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(debugData, null, 2)
+    )}`
+
+    const downloadAnchor = document.createElement('a')
+    downloadAnchor.setAttribute('href', jsonString)
+    downloadAnchor.setAttribute(
+      'download',
+      `vibenovel_debug_${activeProject.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`
+    )
+    document.body.appendChild(downloadAnchor)
+    downloadAnchor.click()
+    downloadAnchor.remove()
+
+    addToast('Seluruh data Story Compass, Lorebook, dan Outline berhasil diunduh! 🐞', 'success')
   }
 
   return (
@@ -127,57 +225,72 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 className="space-y-5"
               >
                 <p className="text-[11px] text-on-surface-variant/70 italic">
-                  🔒 Kunci API tersimpan lokal di browser. Tidak pernah meninggalkan device-mu.
+                  Kunci API tersimpan lokal di browser dan hanya dipakai saat request langsung ke provider.
                 </p>
 
                 {/* Gemini Section */}
                 <section className="bg-surface-container p-5 rounded-2xl border border-outline-variant/40">
                   <h4 className="font-bold text-on-surface flex items-center gap-2 mb-3 text-body-md">
                     <span className="material-symbols-outlined text-[18px] text-tertiary">auto_awesome</span>
-                    Gemini (Core Engine — Gratis)
+                    Gemini untuk Bantuan AI (Gratis)
                   </h4>
                   <p className="text-label-md text-on-surface-variant mb-4 leading-relaxed">
-                    Untuk brainstorm, outline, state tracker, mimicry, dan QA. Tambah lebih dari 1 key untuk rotasi.
+                    Dipakai untuk chat ide, rencana bab, cek cerita, dan bantuan AI lain. Tambah lebih dari 1 key untuk rotasi.
                   </p>
 
                   {geminiKeys.length > 0 && (
                     <div className="space-y-2 mb-4">
-                      {geminiKeys.map((key, idx) => (
-                        <div
-                          key={idx}
-                          className="flex justify-between items-center bg-surface-container-low px-3 py-2 rounded-xl border border-outline-variant/30"
-                        >
-                          <span className="font-mono text-label-md text-on-surface">
-                            {key.substring(0, 8)}••••••{key.substring(key.length - 4)}
-                          </span>
-                          <button
-                            onClick={() => removeGeminiKey(idx)}
-                            className="w-7 h-7 rounded-lg bg-error-container/20 border border-error/20 text-error hover:bg-error-container/30 cursor-pointer flex items-center justify-center"
-                            aria-label={`Hapus key #${idx}`}
+                      {geminiKeys.map((item, idx) => {
+                        const keyStr = typeof item === 'string' ? item : item.key
+                        const labelStr = typeof item === 'string' ? null : item.label
+                        return (
+                          <div
+                            key={idx}
+                            className="flex justify-between items-center bg-surface-container-low px-3 py-2 rounded-xl border border-outline-variant/30"
                           >
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex flex-col">
+                              {labelStr && <span className="text-[11px] text-on-surface-variant font-bold uppercase">{labelStr}</span>}
+                              <span className="font-mono text-label-md text-on-surface">
+                                {keyStr.substring(0, 8)}••••••{keyStr.substring(keyStr.length - 4)}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => removeGeminiKey(idx)}
+                              className="w-7 h-7 rounded-lg bg-error-container/20 border border-error/20 text-error hover:bg-error-container/30 cursor-pointer flex items-center justify-center"
+                              aria-label={`Hapus key #${idx}`}
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="password"
                       placeholder="Masukkan Gemini API Key..."
                       value={newKeyInput}
                       onChange={(e) => setNewKeyInput(e.target.value)}
-                      className="flex-1 h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline text-body-sm focus:outline-none focus:border-primary-container transition-all"
+                      className="w-full sm:flex-[2] h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline text-body-sm focus:outline-none focus:border-primary-container transition-all"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Label (Opsional)"
+                      value={newKeyLabel}
+                      onChange={(e) => setNewKeyLabel(e.target.value)}
+                      className="w-full sm:flex-1 h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline text-body-sm focus:outline-none focus:border-primary-container transition-all"
                     />
                     <button
                       onClick={() => {
                         if (newKeyInput.trim()) {
-                          addGeminiKey(newKeyInput.trim())
+                          addGeminiKey({ key: newKeyInput.trim(), label: newKeyLabel.trim() })
                           setNewKeyInput('')
+                          setNewKeyLabel('')
                         }
                       }}
-                      className="h-10 px-4 rounded-xl btn-gradient text-white text-label-md cursor-pointer flex items-center gap-1.5 hover-glow"
+                      className="w-full sm:w-auto h-10 px-4 rounded-xl btn-gradient text-white text-label-md cursor-pointer flex items-center justify-center gap-1.5 hover-glow shrink-0"
                     >
                       <span className="material-symbols-outlined text-[16px]">add</span>
                       Tambah
@@ -185,37 +298,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   </div>
                 </section>
 
-                {/* Prose Provider */}
+                {/* Prose Model */}
                 <section className="bg-surface-container p-5 rounded-2xl border border-outline-variant/40">
                   <h4 className="font-bold text-on-surface flex items-center gap-2 mb-3 text-body-md">
                     <span className="material-symbols-outlined text-[18px] text-primary">history_edu</span>
-                    Prose Writer (Menulis Cerita)
+                    AI Penulis Naskah
                   </h4>
                   <p className="text-label-md text-on-surface-variant mb-4 leading-relaxed">
-                    Penyedia AI untuk menulis bab. Gunakan Gemini gratis atau OpenRouter (Claude/Deepseek).
+                    Pilihan ini adalah sumber utama yang dipakai Prose Writer dan menu Naskah.
                   </p>
-                  <div className="flex gap-4 mb-4">
-                    <label className="flex items-center gap-2 text-body-sm font-semibold text-on-surface cursor-pointer">
-                      <input
-                        type="radio"
-                        checked={defaultProseProvider === 'gemini'}
-                        onChange={() => setDefaultProseProvider('gemini')}
-                        className="cursor-pointer accent-primary"
-                      />
-                      Gemini (Gratis)
-                    </label>
-                    <label className="flex items-center gap-2 text-body-sm font-semibold text-on-surface cursor-pointer">
-                      <input
-                        type="radio"
-                        checked={defaultProseProvider === 'openrouter'}
-                        onChange={() => setDefaultProseProvider('openrouter')}
-                        className="cursor-pointer accent-primary"
-                      />
-                      OpenRouter (Berbayar)
-                    </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                    {PROSE_MODELS.map((model) => {
+                      const selected = activeProseModel === model.value
+                      return (
+                        <button
+                          key={model.value}
+                          type="button"
+                          onClick={() => setActiveProseModel(model.value)}
+                          className={`text-left rounded-xl border px-3 py-3 transition-all cursor-pointer ${
+                            selected
+                              ? 'border-primary bg-primary/12 text-on-surface'
+                              : 'border-outline-variant/30 bg-surface-container-low hover:border-primary/40 text-on-surface'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[18px] text-primary">
+                              {model.icon}
+                            </span>
+                            <span className="font-bold text-body-sm">{model.label}</span>
+                            {selected && (
+                              <span className="material-symbols-outlined text-[16px] text-primary ml-auto">
+                                check
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-on-surface-variant mt-1 leading-snug">
+                            {model.helper}
+                          </p>
+                        </button>
+                      )
+                    })}
                   </div>
-                  {defaultProseProvider === 'openrouter' && (
-                    <div className="space-y-3 pt-3 border-t border-outline-variant/30">
+                  <div className="space-y-3 pt-3 border-t border-outline-variant/30">
                       <div>
                         <label className="block text-label-md text-on-surface-variant uppercase tracking-wider mb-2">
                           OpenRouter API Key
@@ -227,23 +351,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           onChange={(e) => setOpenRouterKey(e.target.value)}
                           className="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface text-body-sm focus:outline-none focus:border-primary-container"
                         />
-                      </div>
-                      <div>
-                        <label className="block text-label-md text-on-surface-variant uppercase tracking-wider mb-2">
-                          Model Cerita
-                        </label>
-                        <select
-                          value={openRouterModel}
-                          onChange={(e) => setOpenRouterModel(e.target.value)}
-                          className="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface focus:outline-none focus:border-primary-container text-body-sm cursor-pointer"
-                        >
-                          <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-                          <option value="deepseek/deepseek-chat">Deepseek V3 (Ekonomis)</option>
-                          <option value="google/gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
-                        </select>
+                        <p className="text-[11px] text-on-surface-variant/70 mt-2">
+                          Wajib hanya jika memilih Claude atau DeepSeek.
+                        </p>
                       </div>
                     </div>
-                  )}
                 </section>
               </motion.div>
             )}
@@ -316,7 +428,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 <section className="bg-surface-container p-5 rounded-2xl border border-outline-variant/40">
                   <h4 className="font-bold text-on-surface text-body-md mb-2">Tutorial Onboarding</h4>
                   <p className="text-[12px] text-on-surface-variant/80 leading-relaxed mb-4">
-                    Tour singkat 5 step yang muncul pertama kali kamu buka VibeNovel. Reset di sini kalau mau ulang.
+                    Tour singkat muncul saat pertama kali kamu membuka Home dan tiap ruang kerja. Reset di sini kalau mau ulang.
                   </p>
                   <button
                     onClick={handleResetOnboarding}
@@ -355,6 +467,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <p className="text-[11px] text-on-surface-variant/60 italic mt-2">
                     Sprint 9 — Genre Blueprints & Polish.
                   </p>
+                </section>
+              </motion.div>
+            )}
+
+            {activeTab === 'debug' && (
+              <motion.div
+                key="debug"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                className="space-y-5"
+              >
+                <section className="bg-surface-container p-5 rounded-2xl border border-outline-variant/40">
+                  <h4 className="font-bold text-on-surface text-body-md mb-2 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[20px] text-primary">download</span>
+                    Ekspor Data Proyek (Debug Mode)
+                  </h4>
+                  <p className="text-[12px] text-on-surface-variant/80 leading-relaxed mb-4">
+                    Unduh salinan lengkap Story Compass, Lorebook, dan Outline naskah cerita Anda dalam satu berkas JSON terstruktur. Sangat berguna untuk pencadangan manual atau analisis naskah.
+                  </p>
+
+                  {activeProject ? (
+                    <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/30 space-y-3 mb-4">
+                      <div className="flex justify-between items-center text-body-sm">
+                        <span className="text-on-surface-variant">Judul Novel:</span>
+                        <span className="font-bold text-on-surface">{activeProject.title}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-on-surface-variant pt-2.5 border-t border-outline-variant/20">
+                        <div>📖 {chapters.length} Bab Outline</div>
+                        <div>👥 {characters.length} Karakter</div>
+                        <div>✨ {mysteryLayers.length} Lapisan Misteri</div>
+                        <div>📦 {items.length} Benda & Artefak</div>
+                        <div>📜 {worldRules.length} Aturan Dunia</div>
+                        <div>🧵 {plotThreads.length} Plot Threads</div>
+                        <div className="col-span-2 pt-1 border-t border-outline-variant/10 text-primary font-semibold flex items-center gap-1.5">
+                          <span>💬</span>
+                          <span>{chatMessagesCount} Riwayat Diskusi Co-Author</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-error-container/10 p-4 rounded-xl border border-error/20 text-xs text-error mb-4">
+                      ⚠️ Tidak ada proyek aktif terdeteksi. Silakan buka proyek terlebih dahulu dari dashboard.
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleDownloadDebugData}
+                    disabled={!activeProject}
+                    className="w-full h-11 rounded-full btn-gradient text-white text-label-md font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover-glow"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">download_for_offline</span>
+                    Unduh Seluruh Data (.json)
+                  </button>
                 </section>
               </motion.div>
             )}

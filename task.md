@@ -1,3 +1,31 @@
+# UX Revamp P0 — Novice Writer Entry
+
+## Status: Completed
+
+Tujuan: menjalankan perbaikan UX paling berdampak dari audit visual tanpa mengubah arsitektur data.
+
+### Checklist Per File
+- [x] `src/lib/workspace-modes.ts` — shared label mode yang lebih ramah penulis awam.
+- [x] `src/pages/Lobby.tsx` — `Lanjut Menulis` masuk eksplisit ke mode Naskah.
+- [x] `src/pages/Workspace.tsx` — header, mobile nav, dan mode copy memakai label baru.
+- [x] `src/components/workspace/ModeSwitcher.tsx` — tab mode lebih jelas dengan icon + label manusiawi.
+- [x] `src/lib/command-registry.ts` — command palette lebih ramah, istilah teknis diturunkan.
+- [x] `src/components/workspace/ProseWriterPanel.tsx` — empty state Bab 1 menjadi writing desk yang actionable.
+- [x] `src/components/compass/StoryCompassPreview.tsx` — checklist aktif punya CTA langsung.
+- [x] `src/lib/compassProgress.ts` — label compass lebih awam.
+- [x] `src/components/workspace/SeasonArchitectPanel.tsx` — copy Outline menjadi Rencana Bab.
+- [x] `src/components/dashboard/ProjectCard.tsx` — CTA proyek lebih sesuai entry menulis.
+- [x] `src/App.tsx` — Settings dari command palette bisa terbuka di workspace.
+- [x] `src/components/onboarding/OnboardingTour.tsx` — onboarding mengikuti istilah baru.
+- [x] `walkthrough.md` — ringkasan perubahan setelah verifikasi.
+
+### Verification
+- [x] `npx.cmd tsc -b --noEmit` — sukses tanpa error.
+- [x] `npm.cmd run build` — sukses tanpa error.
+- [x] Browser visual check — Dashboard -> Lanjutkan Naskah -> writing desk empty state, light/dark theme, Menu Pintas.
+
+---
+
 # Sprint 9.7 — Deep Think Mode (Prose Writer Reasoning Engine)
 
 ## ✅ Status: Phase 1-7 COMPLETED — Backend + UI Foundation Ready
@@ -606,3 +634,175 @@ ChapterOutlineCard.tsx ──► label "🧠 Deep Outline" di card jika regenera
 - [x] `src/components/compass/StoryCompassPreview.tsx` - interactive capsules + CTA Outline
 - [x] `src/components/workspace/ContextPanel.tsx` - wiring edit dari Compass dan pindah Outline
 - [x] Verification - `npx.cmd tsc -b --noEmit`, `npm.cmd run lint`, `npm.cmd run build`, dan cek UI lokal di `/login` tanpa console error
+# UX Revamp P0.1 - Section Onboarding
+
+## Status: Completed
+
+Tujuan: onboarding tidak hanya muncul di Home, tetapi juga saat user pertama kali membuka tiap ruang kerja utama.
+
+### Checklist Per File
+- [x] `src/components/onboarding/OnboardingTour.tsx` - tour reusable dengan `tourId`, langkah custom, flag localStorage per section, dan reset helper.
+- [x] `src/pages/Lobby.tsx` - Home memakai daftar langkah onboarding khusus dashboard.
+- [x] `src/pages/Workspace.tsx` - tiap mode Workspace memunculkan onboarding pertama kali dibuka.
+- [x] `src/components/modals/SettingsModal.tsx` - Reset Onboarding menghapus semua flag Home dan Workspace.
+- [x] `task.md` - checklist sesi diperbarui.
+- [x] `walkthrough.md` - ringkasan perubahan diperbarui.
+- [x] `session_reports.md` - laporan sesi diperbarui.
+
+### Verification
+- [x] `npx.cmd tsc -b --noEmit` - sukses tanpa error.
+- [x] `npm.cmd run build` - sukses tanpa error.
+- [x] Browser smoke check - localhost 200; headless Chrome profile bersih masuk layar login, jadi tour perlu dicek di sesi browser user yang sudah login.
+
+---
+# Story Contract & Canon Guardrails
+
+## Status: Completed
+
+Tujuan: membuat canon cerita eksplisit dan tervalidasi sebelum Outline/Prose
+Generator menyimpan output, agar premis user tidak berubah diam-diam menjadi
+alur yang bertentangan.
+
+### Checklist Per File
+- [x] `architecture.md` - dokumentasikan `story_contract` JSONB, flow Co-Author -> Story Contract -> Outline validation.
+- [x] `supabase/schema.sql` - tambah kolom `projects.story_contract`.
+- [x] `src/lib/database.types.ts` - tambah field `story_contract` di projects.
+- [x] `src/types/project.ts` - tambah tipe `StoryContract`, relationship addressing, validator issue, dan field project.
+- [x] `src/lib/compassProgress.ts` - Story Compass wajib punya Story Contract.
+- [x] `src/prompts/brainstorm-agent.ts` - fase awal Co-Author mengekstrak Story Contract.
+- [x] `src/services/ai/types.ts` - dukung draft `story_contract`.
+- [x] `src/services/ai/ai-router.ts` - parse draft baru + AI semantic validator dengan thinking.
+- [x] `src/store/useChatStore.ts` - simpan draft Story Contract, normalisasi role karakter, dan validasi breadcrumb.
+- [x] `src/components/modals/EditDraftModal.tsx` - form edit Story Contract.
+- [x] `src/services/story-contract-validator.ts` - deterministic validator + relationship addressing resolver.
+- [x] `src/store/parts/outlines.ts` - validate/block outline sebelum save.
+- [x] `src/services/prose-context.ts` - kirim Story Contract dan Layer 2 state ke prompt prose.
+- [x] `src/prompts/prose-writer.ts` - masukkan Story Contract dan Layer 2 character state ke prompt prose.
+- [x] `walkthrough.md` - ringkasan setelah implementasi dan verifikasi.
+
+### Verification
+- [x] `npx.cmd tsc -b --noEmit`
+- [x] `npm.cmd run build`
+
+### Follow-up
+- Dedicated Arc Roadmap approval/storage and correction-prompt retry loop are still next-phase work. Current implementation blocks invalid outline saves and supports AI semantic validation when Deep Outline/thinking is active.
+
+---
+
+# Canon Proposal Flow - Unknown Entity Approval
+
+## Status: Completed
+
+Tujuan: jika AI outline membutuhkan karakter/item baru, sistem tidak langsung
+menyimpan halusinasi ke chapter dan tidak menolak mentah-mentah. Draft bab
+ditahan sebagai proposal canon sampai user menyetujui atau menolak.
+
+### Checklist Per File
+- [x] `src/types/project.ts` - tambah tipe `CanonProposal` dan klasifikasi unknown entity.
+- [x] `src/services/canon-proposal-service.ts` - bangun proposal dari blocker unknown active character/item.
+- [x] `src/services/story-contract-validator.ts` - panggilan relasi seperti Mas/Sayang jadi warning, bukan karakter baru.
+- [x] `src/store/parts/outlines.ts` - tambah queue proposal, approve/reject action, dan pause save ketika proposal canon muncul.
+- [x] `src/store/parts/projects.ts` - reset proposal saat pindah project.
+- [x] `src/components/workspace/CanonProposalCard.tsx` - UI approval/reject proposal.
+- [x] `src/components/workspace/SeasonArchitectPanel.tsx` - tampilkan panel approval canon dan toast tertahan.
+- [x] `src/components/workspace/ChapterOutlineCard.tsx` - regenerate guard wajib Story Contract.
+- [x] `src/components/workspace/ProseWriterPanel.tsx` - empty-state guard wajib Story Contract.
+
+### Verification
+- [x] `npx.cmd tsc -b --noEmit`
+- [x] `npm.cmd run build`
+
+### Follow-up
+- Tambahkan merge-to-existing entity, proposal untuk location/world rule, dan prose-side proposal setelah outline flow stabil.
+
+---
+
+# Refactor Audit Follow-up - Maintainability Hardening
+
+## Status: Completed
+
+Tujuan: menjalankan refaktor dari hasil audit agar codebase lebih mudah
+dipahami developer baru, mengurangi workaround typing, dan memastikan fitur
+existing tetap lolos lint, typecheck, dan build.
+
+### Checklist Per File
+- [x] `architecture.md` - dokumentasikan tabel `recaps` agar perubahan schema tetap selaras dengan arsitektur.
+- [x] `supabase/schema.sql` - selaraskan schema dengan tipe aplikasi: `qa_logs`, state karakter 10-field, `chapter_versions`, `recaps`, RLS, dan migration guard.
+- [x] `src/lib/database.types.ts` - tambah tipe database untuk tabel/kolom baru dan RPC `match_chapter_summaries`.
+- [x] `src/lib/supabase.ts` - hapus fallback `SupabaseClient<any>` dan pakai client typed sebagai satu sumber.
+- [x] `src/store/useSettingsStore.ts` - rapikan sumber kebenaran model prosa ke `activeProseModel`.
+- [x] `src/services/ai/types.ts` - hapus field provider lama yang sudah redundant.
+- [x] `src/components/modals/SettingsModal.tsx` - sederhanakan pilihan model AI dan copy BYOK lokal.
+- [x] `src/components/onboarding/onboarding-flags.ts` - pindahkan helper flag onboarding dari komponen.
+- [x] `src/components/onboarding/onboarding-steps.ts` - pindahkan definisi step onboarding dari komponen.
+- [x] `src/components/onboarding/OnboardingTour.tsx` - hapus disable lint React Refresh dengan memisah export non-komponen.
+- [x] `src/pages/Lobby.tsx` - guard Supabase stats, hapus refetch loop, hilangkan `any`, dan ganti `alert` dengan toast.
+- [x] `src/store/parts/projects.ts` - hindari load/update/delete Supabase saat konfigurasi Supabase belum tersedia.
+- [x] `src/store/parts/chapters.ts` - guard `loadProjectData` untuk mode offline/demo.
+- [x] `src/components/workspace/ProseWriterPanel.tsx` - pindahkan mapping badge status bab ke konstanta typed.
+- [x] `src/hooks/useBeatWriter.ts` - rapikan reset editor/history agar patuh lint React Hooks/Compiler.
+- [x] `src/components/modals/VersionHistoryModal.tsx` - turunkan loading state dari chapter yang sedang dimuat.
+- [x] `src/components/chat/AiMessageBubble.tsx` - hapus `any` pada rendering Story Contract.
+- [x] `src/services/ai/gemini-pool.ts` - ketatkan tipe sinkronisasi Gemini key.
+- [x] `task.md` - catatan checklist refaktor diperbarui.
+- [x] `walkthrough.md` - ringkasan perubahan refaktor diperbarui.
+
+### Verification
+- [x] `npm.cmd run lint` - sukses tanpa error.
+- [x] `npx.cmd tsc -b --noEmit` - sukses tanpa error.
+- [x] `npm.cmd run build` - sukses tanpa error.
+- [x] `npm.cmd run preview -- --host 127.0.0.1 --port 4173` + HTTP smoke check - halaman utama merespons `200`.
+
+### Catatan
+- `package.json` belum memiliki script test otomatis selain lint/build.
+- Worktree sudah berisi banyak perubahan sebelum refaktor ini; perubahan unrelated tidak disentuh atau direvert.
+
+---
+
+# Follow-up - Version History Modal
+
+## Status: Pending
+
+- [ ] Migrasikan restore confirmation di `src/components/modals/VersionHistoryModal.tsx` dari `window.confirm` ke `PremiumConfirmModal` / confirm store agar UX konsisten dengan dialog destruktif lain.
+
+---
+
+# Engine Hardening - Pre Continuity Gate
+
+## Status: Completed
+
+### Checklist Per File
+- [x] `package.json` / `package-lock.json` - tambah Vitest dan script test.
+- [x] `vitest.config.ts` - konfigurasi focused service tests.
+- [x] `src/test/factories.ts` - factory typed untuk test project/chapter.
+- [x] `src/services/__tests__/offline-draft-sync.test.ts` - coverage replay draft offline.
+- [x] `src/services/offline-draft-sync.ts` - pure helper untuk replay Free Write dan beat draft.
+- [x] `src/store/parts/chapters.ts` - demo/offline update guard, version snapshot beats, dan validasi beats JSON.
+- [x] `src/hooks/useBeatWriter.ts` - Free Write offline replay, RAG prose input, auto snapshot beats, dan restore buffer sync.
+- [x] `src/services/batch-generator.ts` - awaited memory tasks between chapters dan RAG prose input batch.
+- [x] `src/services/ai/types.ts` - `ragMemory` pada `ProseGenerateInput`.
+- [x] `src/services/prose-context.ts` - async `buildProseInputWithRag()`.
+- [x] `src/prompts/prose-writer.ts` - Layer 3 RAG prompt block.
+- [x] `src/store/useChatStore.ts` - duplicate approval dan unknown character-state guard.
+- [x] `src/store/parts/lorebook.ts` - `addCharacter()` mengembalikan ID final/canonical.
+- [x] `src/services/state-tracker.ts` - character state canonical IDs only.
+- [x] `src/components/onboarding/ImportWizard.tsx` - imported states memakai returned character IDs.
+- [x] `src/store/parts/outlines.ts` - cliffhanger variety validation.
+- [x] `src/pages/Workspace.tsx` - compass effect dependencies.
+- [x] `supabase/schema.sql` - `chapter_versions.beats` migration/schema.
+- [x] `src/lib/database.types.ts` - type database untuk `chapter_versions.beats`.
+- [x] `src/types/project.ts` - `ChapterVersion.beats`.
+- [x] `src/components/modals/VersionHistoryModal.tsx` - restore callback menerima version object.
+- [x] `src/components/workspace/ProseWriterPanel.tsx` - whole-chapter version restore.
+- [x] `architecture.md` - catatan RAG prose injection dan version snapshot schema.
+- [x] `walkthrough.md` - ringkasan engine hardening.
+
+### Verification
+- [x] `npm.cmd run test`
+- [x] `npx.cmd tsc -b --noEmit`
+- [x] `npm.cmd run lint`
+- [x] `npm.cmd run build`
+
+### Catatan
+- Commit masih ditunda karena workspace tetap mixed/dirty dengan banyak perubahan existing yang tidak boleh disentuh atau direvert.
+- Manual smoke interaktif penuh masih perlu sesi app/user karena sebagian skenario membutuhkan auth, konfigurasi Supabase/API key, dan state cerita nyata.

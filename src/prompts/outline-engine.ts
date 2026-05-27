@@ -11,7 +11,7 @@
  * - Dopamine Cycle — micro-victory every 3-5 chapters
  */
 
-import type { Character, Item, WorldRule, MysteryLayer } from '../types/project'
+import type { Character, Item, WorldRule, MysteryLayer, StoryContract } from '../types/project'
 import { getArcPosition } from '../lib/kbm-pacing'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -21,6 +21,7 @@ export interface OutlinePromptParams {
   title: string
   genre: string
   narrativeConstitution: string | null
+  storyContract?: StoryContract | Record<string, unknown> | null
   targetEnding: string | null
   themeAndTone: string | null
   targetChapters: number
@@ -116,6 +117,7 @@ export function buildOutlineUserPrompt(params: OutlinePromptParams): string {
     title,
     genre,
     narrativeConstitution,
+    storyContract,
     targetEnding,
     themeAndTone,
     targetChapters,
@@ -192,6 +194,10 @@ export function buildOutlineUserPrompt(params: OutlinePromptParams): string {
     ? `\n⚠️ PACING WARNINGS (address these in your outline):\n${pacingWarnings.map(w => `- ${w}`).join('\n')}`
     : ''
 
+  const storyContractBlock = storyContract && Object.keys(storyContract).length > 0
+    ? `\nSTORY LOGIC CONTRACT (CANON - WAJIB DIPATUHI):\n${JSON.stringify(storyContract, null, 2)}\n\nKontrak ini lebih tinggi prioritasnya daripada improvisasi kreatif. Perhatikan khusus opening_contract, causality_rules, relationship_addressing, arc_order, required_reveals, dan forbidden_contradictions. Panggilan relasi seperti "Mas", "Sayang", "Kak", atau nama kecil harus mengikuti relationship_addressing jika tersedia.`
+    : '\nSTORY LOGIC CONTRACT: Belum tersedia. Jangan membuat asumsi timeline/urutan besar yang bertentangan dengan premis.'
+
   return `NOVEL INFORMATION:
 Title: "${title}"
 Genre: ${genre}
@@ -199,6 +205,7 @@ Target Total Chapters: ${targetChapters}
 Narrative Constitution: ${narrativeConstitution || 'Belum ditetapkan.'}
 Target Ending: ${targetEnding || 'Belum ditetapkan.'}
 Theme & Tone: ${themeAndTone || 'Belum ditetapkan.'}
+${storyContractBlock}
 
 PUSTAKA LORE — KARAKTER:
 ${charSummary}

@@ -1,4 +1,4 @@
-import type { Character, MysteryLayer } from '../types/project'
+import type { Character, MysteryLayer, StoryContract } from '../types/project'
 
 export type CompassSlot =
   | 'PREMISE'
@@ -11,6 +11,7 @@ export type CompassSlot =
 export interface CompassProgressInput {
   title: string
   genre: string
+  storyContract?: StoryContract | Record<string, unknown> | null
   targetEnding: string | null
   characters: Character[]
   mysteryLayers: MysteryLayer[]
@@ -32,20 +33,25 @@ export interface CompassProgress {
 }
 
 export const COMPASS_SLOT_LABELS: Record<CompassSlot, string> = {
-  PREMISE: 'Premis & Genre',
+  PREMISE: 'Premis & Kontrak Cerita',
   PROTAGONIST: 'Tokoh Utama',
-  ANTAGONIST: 'Antagonis',
-  ENDING: 'Target Ending',
-  MYSTERY: 'Lapisan Misteri',
-  COMPLETE: 'Story Compass'
+  ANTAGONIST: 'Lawan / Masalah Utama',
+  ENDING: 'Akhir Cerita',
+  MYSTERY: 'Rahasia / Twist',
+  COMPLETE: 'Kompas Cerita'
 }
 
 export function getCompassSteps(input: CompassProgressInput): CompassStep[] {
+  const contractKeys = input.storyContract && typeof input.storyContract === 'object'
+    ? Object.keys(input.storyContract)
+    : []
+  const hasStoryContract = contractKeys.length > 0
+
   return [
     {
       slot: 'PREMISE',
       name: COMPASS_SLOT_LABELS.PREMISE,
-      done: Boolean(input.title.trim()) && Boolean(input.genre.trim())
+      done: Boolean(input.title.trim()) && Boolean(input.genre.trim()) && hasStoryContract
     },
     {
       slot: 'PROTAGONIST',
@@ -98,6 +104,7 @@ export function describeDraftTypeForUser(
   }
   if (draftType === 'ending') return COMPASS_SLOT_LABELS.ENDING
   if (draftType === 'mystery') return COMPASS_SLOT_LABELS.MYSTERY
+  if (draftType === 'story_contract') return COMPASS_SLOT_LABELS.PREMISE
   if (draftType === 'world_rule') return 'Elemen Lore'
   if (draftType === 'item') return 'Item Penting'
   if (draftType === 'character_state') return 'Status Karakter'

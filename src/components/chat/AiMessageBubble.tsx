@@ -39,6 +39,14 @@ export const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
       const v = data[k]
       return Array.isArray(v) ? (v as string[]) : []
     }
+    const records = (k: string): Record<string, unknown>[] => {
+      const v = data[k]
+      return Array.isArray(v)
+        ? v.filter((item): item is Record<string, unknown> =>
+            typeof item === 'object' && item !== null
+          )
+        : []
+    }
 
     if (draftData.type === 'character_state') {
       const knowledge = arr('knowledge_state')
@@ -57,13 +65,66 @@ export const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
       ]
       return parts.filter(Boolean).join('\n')
     }
-    if (str('name')) {
-      return `"${str('name')}" — ${str('description')}`
+    if (draftData.type === 'story_contract') {
+      const parts = [
+        str('core_promise') ? `✨ Premis Utama:\n${str('core_promise')}` : null,
+        str('reader_promise') ? `\n💖 Janji Pembaca:\n${str('reader_promise')}` : null,
+      ]
+
+      if (data.opening_contract) {
+        const oc = data.opening_contract as Record<string, unknown>
+        parts.push(`\n🎬 Kondisi Pembuka:`)
+        if (oc.opening_timeline) parts.push(`- Timeline: ${oc.opening_timeline}`)
+        if (oc.opening_relationship_state) parts.push(`- Status Relasi: ${oc.opening_relationship_state}`)
+        if (oc.must_start_with) parts.push(`- Dimulai Dengan: ${oc.must_start_with}`)
+      }
+
+      const tone = data.tone_contract as Record<string, unknown>
+      if (tone && tone.description) {
+        parts.push(`\n🎭 Nada & Suasana:\n${tone.description}`)
+      }
+
+      const arcs = records('arc_order')
+      if (arcs && arcs.length > 0) {
+        parts.push(`\n📈 Babak Cerita (Arcs):`)
+        arcs.forEach((arc) => {
+          const label = typeof arc.label === 'string' ? arc.label : ''
+          const range = Array.isArray(arc.chapter_range) ? arc.chapter_range : []
+          if (label && range.length >= 2) {
+            parts.push(`- Bab ${String(range[0])}-${String(range[1])}: ${label}`)
+          }
+        })
+      }
+
+      return parts.filter(Boolean).join('\n')
+    }
+    if (draftData.type.toLowerCase() === 'mystery') {
+      const parts = [
+        str('central_question') ? `❓ Pertanyaan Utama:\n${str('central_question')}` : null,
+        str('answer') ? `\n💡 Jawaban/Rahasia:\n${str('answer')}` : null,
+        data.revealed_at_chapter ? `\n📖 Diungkap pada Bab: ${data.revealed_at_chapter}` : null,
+        str('opens_next_question') ? `\n🔗 Pertanyaan Selanjutnya:\n${str('opens_next_question')}` : null,
+      ]
+
+      const breadcrumbs = arr('breadcrumbs')
+      if (breadcrumbs && breadcrumbs.length > 0) {
+        parts.push(`\n🐾 Petunjuk (Breadcrumbs):\n${breadcrumbs.map((b, i) => `${i + 1}. ${b}`).join('\n')}`)
+      }
+
+      return parts.filter(Boolean).join('\n')
+    }
+
+    const nameStr = str('name') || str('item_name') || str('character_name') || str('rule_name')
+    if (nameStr) {
+      const parts = [`"${nameStr}" — ${str('description')}`]
+      if (str('significance')) parts.push(`\n📌 Signifikansi: ${str('significance')}`)
+      if (str('category') && draftData.type !== 'character') parts.push(`\n🏷️ Kategori: ${str('category')}`)
+      return parts.join('')
     }
     if (str('target_ending')) {
       return `Target Ending: "${str('target_ending')}"`
     }
-    return JSON.stringify(data)
+    return JSON.stringify(data, null, 2)
   }
 
   return (

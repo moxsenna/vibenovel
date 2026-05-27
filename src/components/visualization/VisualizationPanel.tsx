@@ -75,13 +75,13 @@ export const VisualizationPanel: React.FC = () => {
             Belum ada bab untuk divisualisasikan
           </h2>
           <p className="text-body-md text-on-surface-variant/80 mb-6 leading-relaxed">
-            Generate outline dulu agar Heatmap, Constellation, Timeline, dan Word Count Analytics punya data untuk ditampilkan.
+            Susun rencana bab dulu agar peta emosi, tokoh, timeline, dan jumlah kata punya data untuk ditampilkan.
           </p>
           <button
             onClick={() => setMode('outline')}
             className="px-6 py-3 rounded-full bg-primary text-on-primary font-bold cursor-pointer hover:opacity-90 transition-opacity"
           >
-            🎯 Buka Outline Engine
+            Buka Rencana Bab
           </button>
         </div>
       </div>
@@ -98,10 +98,10 @@ export const VisualizationPanel: React.FC = () => {
               <span className="material-symbols-outlined text-primary text-[28px]">
                 analytics
               </span>
-              Visualisasi Novel
+              Peta Cerita
             </h1>
             <p className="text-body-sm text-on-surface-variant/70 mt-1">
-              Bird&apos;s-eye view atas pola emosi, jaringan karakter, alur waktu, dan distribusi kata.
+              Lihat pola emosi, jaringan karakter, alur waktu, dan distribusi kata.
             </p>
           </div>
           <span className="text-label-md text-on-surface-variant/70 font-semibold">

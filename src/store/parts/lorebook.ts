@@ -41,7 +41,7 @@ export interface LorebookPart {
   plotThreads: PlotThread[]
 
   // Character CRUD
-  addCharacter: (char: Omit<Character, 'id'>) => Promise<void>
+  addCharacter: (char: Omit<Character, 'id'>) => Promise<string>
   updateCharacter: (id: string, data: Partial<Character>) => Promise<void>
   deleteCharacter: (id: string) => Promise<void>
 
@@ -123,11 +123,13 @@ export const lorebookPart: StateCreator<
           set((state) => ({
             characters: state.characters.map((c) => (c.id === tempId ? final : c))
           }))
+          return final.id
         }
       }
     } catch (e) {
       console.warn('Supabase addCharacter error, keeping locally:', e)
     }
+    return tempId
   },
 
   updateCharacter: async (id, data) => {

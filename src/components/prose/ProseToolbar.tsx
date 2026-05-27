@@ -18,13 +18,15 @@ interface ProseToolbarProps {
   saveStatus: 'idle' | 'saving' | 'saved'
   stateGenStatus?: 'idle' | 'generating' | 'done' | 'error'
   onOpenRecap?: () => void
+  onOpenHistory?: () => void
 }
 
 export const ProseToolbar: React.FC<ProseToolbarProps> = ({
   wordCount,
   saveStatus,
   stateGenStatus,
-  onOpenRecap
+  onOpenRecap,
+  onOpenHistory
 }) => {
   const {
     activeProseModel,
@@ -126,21 +128,32 @@ export const ProseToolbar: React.FC<ProseToolbarProps> = ({
         )}
       </div>
 
-      {/* Right: ⋯ Lainnya dropdown */}
-      <div className="relative" ref={menuRef}>
-        <button
-          type="button"
-          onClick={() => setMenuOpen((v) => !v)}
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface-variant border border-outline-variant/40 hover:border-primary/30 hover:text-on-surface cursor-pointer transition-colors"
-        >
-          <span className="material-symbols-outlined text-[14px]">more_horiz</span>
-          Lainnya
-          <span className="material-symbols-outlined text-[14px]">
-            {menuOpen ? 'expand_less' : 'expand_more'}
-          </span>
-        </button>
+      {/* Right: History & ⋯ Lainnya dropdown */}
+      <div className="flex items-center gap-2">
+        {onOpenHistory && (
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface-variant border border-outline-variant/40 hover:border-primary/30 hover:text-primary cursor-pointer transition-colors"
+          >
+            <span className="material-symbols-outlined text-[14px]">history</span>
+            Riwayat
+          </button>
+        )}
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface-variant border border-outline-variant/40 hover:border-primary/30 hover:text-on-surface cursor-pointer transition-colors"
+          >
+            <span className="material-symbols-outlined text-[14px]">more_horiz</span>
+            Lainnya
+            <span className="material-symbols-outlined text-[14px]">
+              {menuOpen ? 'expand_less' : 'expand_more'}
+            </span>
+          </button>
 
         <AnimatePresence>
           {menuOpen && (
@@ -317,6 +330,7 @@ export const ProseToolbar: React.FC<ProseToolbarProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </div>
     </div>
   )

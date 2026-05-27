@@ -9,13 +9,18 @@ import {
   detectCompassGap,
 } from '../prompts/brainstorm-agent'
 import { describeDraftTypeForUser, getCompassProgress } from '../lib/compassProgress'
+import {
+  normalizeCharacterRole,
+  normalizeMysteryBreadcrumbs
+} from '../services/story-contract-validator'
 import type { CompassState } from '../prompts/brainstorm-agent'
 import type {
   Character,
   Item,
   WorldRule,
   MysteryLayer,
-  CharacterState
+  CharacterState,
+  StoryContract
 } from '../types/project'
 
 export interface ChatMessage {
@@ -24,7 +29,7 @@ export interface ChatMessage {
   content: string
   timestamp: string
   draftData?: {
-    type: 'character' | 'item' | 'world_rule' | 'ending' | 'mystery' | 'character_state'
+    type: 'story_contract' | 'character' | 'item' | 'world_rule' | 'ending' | 'mystery' | 'character_state'
     status: 'pending' | 'approved' | 'rejected' | 'edited'
     data: Record<string, unknown>
   }
@@ -83,6 +88,7 @@ function getCompassState(projectId: string): CompassState {
     genre: activeProj?.genre || '',
     targetChapters: activeProj?.target_chapters || 200,
     narrativeConstitution: activeProj?.narrative_constitution || null,
+    storyContract: activeProj?.story_contract || null,
     targetEnding: activeProj?.target_ending || null,
     themeAndTone: activeProj?.theme_and_tone || null,
     characters: projectStore.characters.filter((c) => c.project_id === projectId),
@@ -337,6 +343,12 @@ export const useChatStore = create<ChatStore>()(
 
       updateMessageDraftStatus: async (projectId, messageId, status, editedData) => {
         const actionKey = `${projectId}:${messageId}`
+        const currentMessages = get().messages[projectId] || []
+        const currentMessage = currentMessages.find((message) => message.id === messageId)
+        const currentDraft = currentMessage?.draftData
+        if (!currentDraft) return
+        if (status !== 'rejected' && currentDraft.status !== 'pending') return
+
         if (status !== 'rejected' && (get().loading || get().activeDraftActions[actionKey])) {
           return
         }
@@ -348,6 +360,95 @@ export const useChatStore = create<ChatStore>()(
               [actionKey]: true
             }
           }))
+        }
+
+        const clearActiveDraftAction = () => {
+          set((state) => {
+            const activeDraftActions = { ...state.activeDraftActions }
+            delete activeDraftActions[actionKey]
+            return { activeDraftActions }
+          })
+        }
+
+        const dataForPreflight = (status === 'edited' && editedData
+          ? editedData
+          : currentDraft.data) as Record<string, unknown>
+
+        const readName = (...keys: string[]) => {
+          for (const key of keys) {
+            const value = dataForPreflight[key]
+            if (typeof value === 'string' && value.trim()) return value.trim()
+          }
+          return ''
+        }
+
+        const projectStoreForPreflight = useProjectStore.getState()
+        const uiStoreForPreflight = useUiStore.getState()
+
+        if (status === 'approved' || status === 'edited') {
+          if (currentDraft.type === 'character') {
+            const name = readName('name', 'character_name')
+            const exists = projectStoreForPreflight.characters.some(
+              (character) => character.name.toLowerCase() === name.toLowerCase()
+            )
+            if (name && exists) {
+              uiStoreForPreflight.addToast(
+                `Tokoh "${name}" sudah ada di Lorebook. Edit tokoh existing dari Story Compass agar tidak membuat duplikat.`,
+                'warning',
+                7000
+              )
+              clearActiveDraftAction()
+              return
+            }
+          }
+
+          if (currentDraft.type === 'item') {
+            const name = readName('name', 'item_name')
+            const exists = projectStoreForPreflight.items.some(
+              (item) => item.name.toLowerCase() === name.toLowerCase()
+            )
+            if (name && exists) {
+              uiStoreForPreflight.addToast(
+                `Item "${name}" sudah ada di Lorebook. Edit item existing dari Story Compass agar tidak membuat duplikat.`,
+                'warning',
+                7000
+              )
+              clearActiveDraftAction()
+              return
+            }
+          }
+
+          if (currentDraft.type === 'world_rule') {
+            const name = readName('name', 'rule_name')
+            const exists = projectStoreForPreflight.worldRules.some(
+              (rule) => rule.name.toLowerCase() === name.toLowerCase()
+            )
+            if (name && exists) {
+              uiStoreForPreflight.addToast(
+                `World rule "${name}" sudah ada. Edit rule existing dari Story Compass agar tidak membuat duplikat.`,
+                'warning',
+                7000
+              )
+              clearActiveDraftAction()
+              return
+            }
+          }
+
+          if (currentDraft.type === 'character_state') {
+            const name = readName('character_name', 'name')
+            const exists = projectStoreForPreflight.characters.some(
+              (character) => character.name.toLowerCase() === name.toLowerCase()
+            )
+            if (!name || !exists) {
+              uiStoreForPreflight.addToast(
+                `State karakter tidak disimpan karena "${name || 'karakter ini'}" belum ada di Lorebook.`,
+                'warning',
+                7000
+              )
+              clearActiveDraftAction()
+              return
+            }
+          }
         }
 
         let shouldContinue = false
@@ -385,7 +486,6 @@ export const useChatStore = create<ChatStore>()(
                 ? editedData
                 : msg.draftData.data) as Record<string, unknown>
               const projectStore = useProjectStore.getState()
-              const uiStore = useUiStore.getState()
               actionLabel = describeDraftTypeForUser(msg.draftData.type, dataToUse)
 
               const str = (k: string): string => {
@@ -404,40 +504,31 @@ export const useChatStore = create<ChatStore>()(
                 const v = dataToUse[k]
                 return typeof v === 'boolean' ? v : fallback
               }
+              const summarizeStoryContract = (contract: Record<string, unknown>): string | null => {
+                const corePromise = typeof contract.core_promise === 'string'
+                  ? contract.core_promise
+                  : ''
+                const readerPromise = typeof contract.reader_promise === 'string'
+                  ? contract.reader_promise
+                  : ''
+                return [corePromise, readerPromise].filter(Boolean).join('\n\n') || null
+              }
 
-              // Sprint 9.5 — Conflict detection helpers.
-              // Match by case-insensitive name. If user already manually
-              // edited an entry with the same name (after AI proposed the
-              // draft), warn instead of blindly creating a duplicate.
-              const findCharByName = (name: string) =>
-                projectStore.characters.find(
-                  (c) => c.name.toLowerCase() === name.toLowerCase()
-                )
-              const findItemByName = (name: string) =>
-                projectStore.items.find(
-                  (i) => i.name.toLowerCase() === name.toLowerCase()
-                )
-              const findRuleByName = (name: string) =>
-                projectStore.worldRules.find(
-                  (r) => r.name.toLowerCase() === name.toLowerCase()
-                )
-
-              if (msg.draftData.type === 'character') {
-                const name = str('name') || 'Tanpa Nama'
-                const existing = findCharByName(name)
-                if (existing) {
-                  // Warn about potential dirty write — let the user resolve.
-                  uiStore.addToast(
-                    `⚠️ Tokoh "${name}" sudah ada di Lorebook. Setujui draft ini akan menggandakan. Edit manual via Story Compass kalau mau update tokoh existing.`,
-                    'warning',
-                    7000
-                  )
-                  return { messages: { ...state.messages, [projectId]: updatedMsgs } }
-                }
+              if (msg.draftData.type === 'story_contract') {
+                projectStore.updateProject(projectId, {
+                  story_contract: dataToUse as unknown as StoryContract,
+                  narrative_constitution:
+                    summarizeStoryContract(dataToUse) ||
+                    projectStore.activeProject?.narrative_constitution ||
+                    null
+                })
+                shouldContinue = true
+              } else if (msg.draftData.type === 'character') {
+                const name = str('name') || str('character_name') || 'Tanpa Nama'
                 projectStore.addCharacter({
                   project_id: projectId,
                   name,
-                  role: (str('role') as Character['role']) || 'SUPPORTING',
+                  role: normalizeCharacterRole(str('role')),
                   description: str('description'),
                   voice_dna: (dataToUse.voice_dna as Record<string, unknown>) || {},
                   activation_keys: arr('activation_keys').length
@@ -449,16 +540,7 @@ export const useChatStore = create<ChatStore>()(
                 })
                 shouldContinue = true
               } else if (msg.draftData.type === 'item') {
-                const name = str('name') || 'Tanpa Nama'
-                const existing = findItemByName(name)
-                if (existing) {
-                  uiStore.addToast(
-                    `⚠️ Item "${name}" sudah ada di Lorebook. Edit manual kalau mau update yang existing.`,
-                    'warning',
-                    7000
-                  )
-                  return { messages: { ...state.messages, [projectId]: updatedMsgs } }
-                }
+                const name = str('name') || str('item_name') || 'Tanpa Nama'
                 projectStore.addItem({
                   project_id: projectId,
                   name,
@@ -474,16 +556,7 @@ export const useChatStore = create<ChatStore>()(
                 })
                 shouldContinue = true
               } else if (msg.draftData.type === 'world_rule') {
-                const name = str('name') || 'Tanpa Nama'
-                const existing = findRuleByName(name)
-                if (existing) {
-                  uiStore.addToast(
-                    `⚠️ World rule "${name}" sudah ada. Edit manual kalau mau update.`,
-                    'warning',
-                    7000
-                  )
-                  return { messages: { ...state.messages, [projectId]: updatedMsgs } }
-                }
+                const name = str('name') || str('rule_name') || 'Tanpa Nama'
                 projectStore.addWorldRule({
                   project_id: projectId,
                   category: (str('category') as WorldRule['category']) || 'OTHER',
@@ -515,9 +588,7 @@ export const useChatStore = create<ChatStore>()(
                     typeof dataToUse.opens_next_question === 'string'
                       ? (dataToUse.opens_next_question as string)
                       : null,
-                  breadcrumbs: Array.isArray(dataToUse.breadcrumbs)
-                    ? (dataToUse.breadcrumbs as { chapter: number; hint: string }[])
-                    : [],
+                  breadcrumbs: normalizeMysteryBreadcrumbs(dataToUse.breadcrumbs),
                   status: (str('status') as MysteryLayer['status']) || 'ACTIVE'
                 }
                 projectStore.addMysteryLayer(newLayer)
@@ -527,11 +598,19 @@ export const useChatStore = create<ChatStore>()(
                 const matchedChar = characters.find(
                   (c) => c.name.toLowerCase() === str('character_name').toLowerCase()
                 )
+                if (!matchedChar) {
+                  useUiStore.getState().addToast(
+                    `State karakter tidak disimpan karena "${str('character_name')}" belum ada di Lorebook.`,
+                    'warning',
+                    7000
+                  )
+                  return state
+                }
                 const chapterNum = num('chapter_number', 0)
 
                 const newState: CharacterState = {
                   id: crypto.randomUUID(),
-                  character_id: matchedChar?.id || str('character_name') || 'unknown',
+                  character_id: matchedChar.id,
                   chapter_number: chapterNum,
                   location: str('location'),
                   physical_condition: str('physical_condition'),
@@ -570,6 +649,7 @@ export const useChatStore = create<ChatStore>()(
             const progress = getCompassProgress({
               title: compassState.title,
               genre: compassState.genre,
+              storyContract: compassState.storyContract,
               targetEnding: compassState.targetEnding,
               characters: compassState.characters,
               mysteryLayers: compassState.mysteryLayers

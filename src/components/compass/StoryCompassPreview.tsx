@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../../store/useProjectStore'
 import { getCompassProgress } from '../../lib/compassProgress'
-import type { Character, MysteryLayer } from '../../types/project'
+import type { Character, MysteryLayer, StoryContract } from '../../types/project'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -12,7 +12,7 @@ interface CompassStep {
 }
 
 export interface CompassEditDraft {
-  draftType: 'character' | 'ending' | 'mystery'
+  draftType: 'story_contract' | 'character' | 'ending' | 'mystery'
   initialData: Record<string, unknown>
   entityId?: string
 }
@@ -20,6 +20,7 @@ export interface CompassEditDraft {
 interface StoryCompassPreviewProps {
   title: string
   genre: string
+  storyContract?: StoryContract | Record<string, unknown> | null
   targetEnding: string | null
   characters: Character[]
   mysteryLayers: MysteryLayer[]
@@ -32,6 +33,7 @@ interface StoryCompassPreviewProps {
 export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
   title,
   genre,
+  storyContract,
   targetEnding,
   characters,
   mysteryLayers,
@@ -42,6 +44,7 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
   const progress = getCompassProgress({
     title,
     genre,
+    storyContract,
     targetEnding,
     characters,
     mysteryLayers
@@ -99,15 +102,15 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
       {/* Header & Progress */}
       <motion.div variants={itemVariants} className="space-y-4">
         <h2 className="text-headline-md text-primary flex items-center gap-2">
-          🧭 Story Compass
+          🧭 Kompas Cerita
         </h2>
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-label-md text-on-surface-variant">
-              Progress Fundamental
+              Dasar cerita
             </span>
             <span className={`text-label-md font-bold ${isComplete ? 'text-[#4A6E4F]' : 'text-primary'}`}>
-              {compassCompleted}/5 {isComplete ? '✅ Lengkap!' : 'wajib terisi'}
+              {compassCompleted}/5 {isComplete ? '✅ Lengkap!' : 'penting terisi'}
             </span>
           </div>
           {/* 5-Segment Progress Bar */}
@@ -132,6 +135,12 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
       <motion.div variants={itemVariants} className="space-y-3">
         {compassSteps.map((step, i) => {
           const isTarget = i === activeCompassIdx
+          const activeHint =
+            i === 3
+              ? 'Tulis akhir besar yang kamu bayangkan. Tidak perlu sempurna, nanti bisa diedit.'
+              : i === 4
+                ? 'Tambahkan satu rahasia, twist, atau pertanyaan besar yang bikin pembaca penasaran.'
+                : 'Bisa diisi lewat chat Co-Author atau diedit dari kartu ini.'
 
           if (isTarget) {
             return (
@@ -140,7 +149,7 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
                 className="bg-surface-container-highest p-4 rounded-xl border border-secondary shadow-[0_0_15px_rgba(239,189,138,0.1)] relative"
               >
                 <div className="absolute -right-2 -top-3 bg-secondary text-on-secondary px-3 py-1 rounded-full text-label-md text-[10px] shadow-sm animate-pulse">
-                  ← Yuk isi ini dulu!
+                  Isi ini dulu
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="material-symbols-outlined text-secondary mt-1 animate-spin-slow">
@@ -149,8 +158,50 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
                   <div>
                     <p className="text-body-md text-secondary font-bold">{step.name}</p>
                     <p className="text-body-sm text-on-surface-variant italic mt-1">
-                      Sedang dibahas di chat...
+                      {activeHint}
                     </p>
+                    {i === 0 && onEditCompassDraft && (
+                      <button
+                        type="button"
+                        onClick={() => onEditCompassDraft({
+                          draftType: 'story_contract',
+                          initialData: storyContract && Object.keys(storyContract).length > 0
+                            ? storyContract as Record<string, unknown>
+                            : {
+                                core_promise: title,
+                                reader_promise: '',
+                                opening_contract: {
+                                  must_start_with: '',
+                                  must_not_start_with: [],
+                                  first_chapter_required_facts: []
+                                },
+                                narrative_mechanics: [],
+                                causality_rules: [],
+                                canon_entities: [],
+                                relationship_addressing: [],
+                                arc_order: [],
+                                forbidden_contradictions: [],
+                                required_reveals: [],
+                                tone_contract: { description: '' }
+                              }
+                        })}
+                        className="mt-3 px-3 py-1.5 rounded-lg bg-secondary text-on-secondary text-label-md font-bold cursor-pointer hover:opacity-90 transition-opacity"
+                      >
+                        Isi kontrak cerita
+                      </button>
+                    )}
+                    {i === 3 && onEditCompassDraft && (
+                      <button
+                        type="button"
+                        onClick={() => onEditCompassDraft({
+                          draftType: 'ending',
+                          initialData: { target_ending: targetEnding ?? '' }
+                        })}
+                        className="mt-3 px-3 py-1.5 rounded-lg bg-secondary text-on-secondary text-label-md font-bold cursor-pointer hover:opacity-90 transition-opacity"
+                      >
+                        Isi akhir cerita
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -179,9 +230,17 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
               <div>
                 <p className="text-body-md text-on-surface font-semibold">{step.name}</p>
                 {step.done && i === 0 && (
-                  <p className="text-body-sm text-on-surface-variant font-mono mt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => onEditCompassDraft?.({
+                      draftType: 'story_contract',
+                      initialData: storyContract as Record<string, unknown>
+                    })}
+                    className="text-left text-body-sm text-on-surface-variant font-mono mt-0.5 hover:text-on-surface cursor-pointer transition-colors"
+                    title="Edit Story Contract"
+                  >
                     {genre}
-                  </p>
+                  </button>
                 )}
                 {step.done && i === 1 && (
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -308,10 +367,10 @@ export const StoryCompassPreview: React.FC<StoryCompassPreviewProps> = ({
               auto_awesome
             </span>
             <p className="text-body-md text-on-surface font-bold mb-1">
-              Kompas Selesai! Mulai Rancang Outline Bab
+              Kompas selesai! Mulai rancang bab
             </p>
             <p className="text-body-sm text-on-surface-variant">
-              Buka mode Outline dan mulai susun bab-per-bab.
+              Buka Rencana Bab dan susun alur bab-per-bab.
             </p>
           </button>
         </motion.div>

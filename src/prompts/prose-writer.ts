@@ -107,6 +107,18 @@ export function buildProseUserPrompt(input: ProseGenerateInput): string {
     ? `\n[CHARACTER VOICE DNA — natural language brief]\n${voiceBriefs.join('\n')}\nMatch each character's voice exactly when they speak or think.`
     : ''
 
+  const characterStateBlock = input.characterStates
+    ? `\n[DYNAMIC CHARACTER STATES - LAYER 2 MEMORY]\n${input.characterStates}\nGunakan state ini untuk menjaga lokasi, emosi, pengetahuan, rahasia, relasi, panggilan, dan tujuan aktif karakter. Jangan membuat karakter lupa informasi yang sudah mereka tahu.`
+    : ''
+
+  const ragMemoryBlock = input.ragMemory
+    ? `\n[LONG-TERM MEMORY - LAYER 3 RAG]\n${input.ragMemory}\nGunakan memori ini hanya untuk menjaga kontinuitas canon. Jangan mengulang adegan lama kecuali diminta outline.`
+    : ''
+
+  const storyContractBlock = input.storyContract && Object.keys(input.storyContract).length > 0
+    ? `\n[STORY CONTRACT - CANON GUARDRAILS]\n${JSON.stringify(input.storyContract, null, 2)}\nIkuti relationship_addressing untuk panggilan dialog antar karakter. Jangan memakai panggilan relasi secara acak jika kontrak sudah menentukan istilah seperti "Mas", "Sayang", "Kak", atau nama kecil.`
+    : ''
+
   // Sprint 9 — Mimicry Engine: project-wide voice style block. Only included
   // when project.voice_dna_project is non-empty.
   let projectVoiceBlock = ''
@@ -136,6 +148,9 @@ Overall Chapter Tone: ${input.emotionalTone}
 [LORE & ACTIVE ENTITIES]
 ${input.loreContext || 'None specified.'}
 ${voiceInstructions}
+${characterStateBlock}
+${ragMemoryBlock}
+${storyContractBlock}
 ${projectVoiceBlock}
 
 [CHAPTER OUTLINE]

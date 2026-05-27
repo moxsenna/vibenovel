@@ -13,7 +13,7 @@
  *   return <div ref={ref}>...modal...</div>
  */
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -29,6 +29,12 @@ export function useFocusTrap(
   isOpen: boolean,
   onEscape?: () => void
 ): void {
+  const onEscapeRef = useRef<(() => void) | undefined>(onEscape)
+
+  useEffect(() => {
+    onEscapeRef.current = onEscape
+  }, [onEscape])
+
   useEffect(() => {
     if (!isOpen) return
     const container = containerRef.current
@@ -43,13 +49,18 @@ export function useFocusTrap(
 
     if (focusables.length > 0) {
       // Slight delay so DOM has settled.
-      requestAnimationFrame(() => focusables[0].focus())
+      requestAnimationFrame(() => {
+        // Only auto-focus if the focus is not already inside the container
+        if (containerRef.current && !containerRef.current.contains(document.activeElement)) {
+          focusables[0].focus()
+        }
+      })
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && onEscape) {
+      if (e.key === 'Escape' && onEscapeRef.current) {
         e.preventDefault()
-        onEscape()
+        onEscapeRef.current()
         return
       }
       if (e.key !== 'Tab') return
@@ -89,5 +100,5 @@ export function useFocusTrap(
         }
       }
     }
-  }, [containerRef, isOpen, onEscape])
+  }, [containerRef, isOpen])
 }

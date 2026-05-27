@@ -7,48 +7,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 type ProjectInsert = Database['public']['Tables']['projects']['Insert']
 type ProjectUpdate = Database['public']['Tables']['projects']['Update']
 
-const DUMMY_PROJECTS: Project[] = [
-  {
-    id: 'd1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-    user_id: 'dummy-user-123',
-    title: 'Istri Sah vs Selingkuhan',
-    genre: 'Drama Rumah Tangga',
-    genesis_mode: 'FRESH_BRAINSTORM',
-    target_chapters: 200,
-    word_count_target: 1500,
-    prose_provider: 'gemini',
-    prose_model: 'gemini-flash-latest',
-    status: 'WRITING',
-    narrative_constitution:
-      'Kisah melodrama KBM yang penuh keputusasaan, rahasia keluarga, time-travel, dan balas dendam manis.',
-    target_ending:
-      'Kania menemukan timeline yang tepat. Dirga selamat, tapi Kania kehilangan semua ingatan tentang perjalanan waktunya — termasuk ingatan bahwa dia pernah mencintai Dirga.',
-    theme_and_tone: 'Tegang, melankolis, penuh emosi terpendam, dramatis',
-    series_hook: null,
-    season_hooks: [],
-    voice_dna_project: {}
-  },
-  {
-    id: 'a9b8c7d6-e5f4-3a2b-1c0d-9e8f7a6b5c4d',
-    user_id: 'dummy-user-123',
-    title: 'CEO Arogan yang Jatuh Cinta',
-    genre: 'Romance Office',
-    genesis_mode: 'FRESH_BLUEPRINT',
-    target_chapters: 150,
-    word_count_target: 1500,
-    prose_provider: 'gemini',
-    prose_model: 'gemini-flash-latest',
-    status: 'OUTLINING',
-    narrative_constitution:
-      'Romansa perkantoran kelas tinggi dengan bumbu benci jadi cinta, perebutan kekuasaan warisan, dan kesalahpahaman manis.',
-    target_ending:
-      'CEO mengorbankan posisinya demi menyelamatkan bisnis kecil wanita impiannya, bersatu dalam kesederhanaan yang kaya cinta.',
-    theme_and_tone: 'Benci-jadi-cinta, glamor perkantoran, manis',
-    series_hook: null,
-    season_hooks: [],
-    voice_dna_project: {}
-  }
-]
+const DUMMY_PROJECTS: Project[] = []
 
 export interface ProjectsPart {
   projects: Project[]
@@ -75,7 +34,8 @@ const FRESH_PROJECT_RELATED_STATE: Partial<ProjectStore> = {
   worldRules: [],
   mysteryLayers: [],
   plotThreads: [],
-  characterStates: []
+  characterStates: [],
+  canonProposals: []
 }
 
 export const projectsPart: StateCreator<
@@ -85,7 +45,7 @@ export const projectsPart: StateCreator<
   ProjectsPart
 > = (set, get) => ({
   projects: DUMMY_PROJECTS,
-  activeProject: DUMMY_PROJECTS[0],
+  activeProject: DUMMY_PROJECTS[0] || null,
   loading: false,
 
   loadProjects: async () => {
@@ -119,8 +79,8 @@ export const projectsPart: StateCreator<
   },
 
   setActiveProject: (activeProject) => {
-    set({ activeProject })
-    if (activeProject) {
+    set({ activeProject, canonProposals: [] })
+    if (activeProject && isSupabaseConfigured()) {
       get().loadProjectData(activeProject.id)
     }
   },
@@ -148,6 +108,7 @@ export const projectsPart: StateCreator<
       narrative_constitution: null,
       target_ending: null,
       theme_and_tone: null,
+      story_contract: {},
       series_hook: null,
       season_hooks: [],
       voice_dna_project: {}
@@ -210,6 +171,7 @@ export const projectsPart: StateCreator<
     }))
 
     try {
+      if (!isSupabaseConfigured()) return
       const { error } = await supabase
         .from('projects')
         .update(data as ProjectUpdate)
@@ -227,6 +189,7 @@ export const projectsPart: StateCreator<
     }))
 
     try {
+      if (!isSupabaseConfigured()) return
       const { error } = await supabase
         .from('projects')
         .delete()

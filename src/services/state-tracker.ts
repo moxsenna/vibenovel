@@ -87,33 +87,35 @@ class StateTracker {
       throw new Error('AI response is not a JSON array')
     }
 
-    return parsed.map((stateRaw: Record<string, unknown>) => {
-      const str = (k: string): string => (typeof stateRaw[k] === 'string' ? (stateRaw[k] as string) : '')
-      const arr = (k: string): string[] => (Array.isArray(stateRaw[k]) ? (stateRaw[k] as string[]) : [])
+    return parsed
+      .map((stateRaw: Record<string, unknown>): CharacterState | null => {
+        const str = (k: string): string => (typeof stateRaw[k] === 'string' ? (stateRaw[k] as string) : '')
+        const arr = (k: string): string[] => (Array.isArray(stateRaw[k]) ? (stateRaw[k] as string[]) : [])
 
-      // Find matching character by name
-      const matchedChar = activeCharacters.find(
-        (c) => c.name.toLowerCase() === str('character_name').toLowerCase()
-      )
+        const matchedChar = activeCharacters.find(
+          (c) => c.name.toLowerCase() === str('character_name').toLowerCase()
+        )
+        if (!matchedChar) return null
 
-      return {
-        id: crypto.randomUUID(),
-        character_id: matchedChar?.id || str('character_name') || 'unknown',
-        chapter_number: chapter.chapter_number,
-        location: str('location'),
-        physical_condition: str('physical_condition'),
-        emotional_state: str('emotional_state'),
-        inventory: arr('inventory'),
-        relationships: (stateRaw.relationships as Record<string, unknown>) || {},
-        last_action: str('last_action'),
-        knowledge_state: arr('knowledge_state'),
-        active_goal: str('active_goal'),
-        secrets: arr('secrets'),
-        appearance_notes: str('appearance_notes'),
-        alliances: arr('alliances'),
-        source: 'AUTO_GENERATED' as const
-      } satisfies CharacterState
-    })
+        return {
+          id: crypto.randomUUID(),
+          character_id: matchedChar.id,
+          chapter_number: chapter.chapter_number,
+          location: str('location'),
+          physical_condition: str('physical_condition'),
+          emotional_state: str('emotional_state'),
+          inventory: arr('inventory'),
+          relationships: (stateRaw.relationships as Record<string, unknown>) || {},
+          last_action: str('last_action'),
+          knowledge_state: arr('knowledge_state'),
+          active_goal: str('active_goal'),
+          secrets: arr('secrets'),
+          appearance_notes: str('appearance_notes'),
+          alliances: arr('alliances'),
+          source: 'AUTO_GENERATED' as const
+        } satisfies CharacterState
+      })
+      .filter((state): state is CharacterState => Boolean(state))
   }
 
   /**

@@ -3,11 +3,14 @@ import { persist } from 'zustand/middleware'
 
 export type ProseModelChoice = 'gemini' | 'claude' | 'deepseek' | 'deepseek-pro'
 
+export interface GeminiKeyConfig {
+  key: string
+  label?: string
+}
+
 interface SettingsState {
-  geminiKeys: string[]
+  geminiKeys: (string | GeminiKeyConfig)[]
   openRouterKey: string | null
-  openRouterModel: string
-  defaultProseProvider: 'gemini' | 'openrouter'
   activeProseModel: ProseModelChoice
   wordCountDefault: number
   freeWriteMode: boolean
@@ -30,11 +33,9 @@ interface SettingsState {
 }
 
 interface SettingsActions {
-  addGeminiKey: (key: string) => void
+  addGeminiKey: (config: string | GeminiKeyConfig) => void
   removeGeminiKey: (index: number) => void
   setOpenRouterKey: (key: string | null) => void
-  setOpenRouterModel: (model: string) => void
-  setDefaultProseProvider: (provider: 'gemini' | 'openrouter') => void
   setActiveProseModel: (model: ProseModelChoice) => void
   setWordCountDefault: (count: number) => void
   setFreeWriteMode: (enabled: boolean) => void
@@ -54,8 +55,6 @@ export const useSettingsStore = create<SettingsStore>()(
       // Initial state
       geminiKeys: [],
       openRouterKey: null,
-      openRouterModel: 'anthropic/claude-sonnet-4.6',
-      defaultProseProvider: 'gemini',
       activeProseModel: 'gemini',
       wordCountDefault: 1500,
       freeWriteMode: false,
@@ -70,17 +69,19 @@ export const useSettingsStore = create<SettingsStore>()(
       deepOutlineInBatch: false,
 
       // Actions
-      addGeminiKey: (key) => set((state) => {
-        const trimmed = key.trim()
-        if (!trimmed || state.geminiKeys.includes(trimmed)) return state
-        return { geminiKeys: [...state.geminiKeys, trimmed] }
+      addGeminiKey: (config) => set((state) => {
+        const keyObj = typeof config === 'string' ? { key: config.trim() } : { key: config.key.trim(), label: config.label?.trim() }
+        if (!keyObj.key) return state
+
+        const exists = state.geminiKeys.some(k => (typeof k === 'string' ? k : k.key) === keyObj.key)
+        if (exists) return state
+
+        return { geminiKeys: [...state.geminiKeys, keyObj] }
       }),
       removeGeminiKey: (index) => set((state) => ({
         geminiKeys: state.geminiKeys.filter((_, i) => i !== index),
       })),
       setOpenRouterKey: (openRouterKey) => set({ openRouterKey }),
-      setOpenRouterModel: (openRouterModel) => set({ openRouterModel }),
-      setDefaultProseProvider: (defaultProseProvider) => set({ defaultProseProvider }),
       setActiveProseModel: (activeProseModel) => set({ activeProseModel }),
       setWordCountDefault: (wordCountDefault) => set({ wordCountDefault }),
       setFreeWriteMode: (freeWriteMode) => set({ freeWriteMode }),
@@ -92,7 +93,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setDeepOutlineInBatch: (deepOutlineInBatch) => set({ deepOutlineInBatch }),
     }),
     {
-      name: 'vibenovel-settings-state', // Encrypted and saved only locally
+      name: 'vibenovel-settings-state',
     }
   )
 )

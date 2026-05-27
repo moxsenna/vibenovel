@@ -1,4 +1,4 @@
-import { useSettingsStore } from '../../store/useSettingsStore'
+import { useSettingsStore, type GeminiKeyConfig } from '../../store/useSettingsStore'
 import type { ThinkingChunk } from './types'
 
 interface KeyStatus {
@@ -29,11 +29,12 @@ class GeminiPool {
     })
   }
 
-  private syncKeys(storeKeys?: string[]) {
+  private syncKeys(storeKeys?: Array<string | GeminiKeyConfig>) {
     const keys = storeKeys || useSettingsStore.getState().geminiKeys
 
     // Merge existing statuses
-    const newStatuses = keys.map((key) => {
+    const newStatuses = keys.map((rawKey) => {
+      const key = typeof rawKey === 'string' ? rawKey : rawKey.key
       const existing = this.keyStatuses.find((ks) => ks.key === key)
       return existing || { key, cooldownUntil: 0, consecutiveFailures: 0 }
     })

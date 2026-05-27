@@ -2,14 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { useUiStore } from '../../store/useUiStore'
 import type { WorkspaceMode } from '../../store/useUiStore'
-
-const MODES = [
-  { id: 'brainstorm', label: '💬 Brainstorm' },
-  { id: 'outline', label: '📋 Outline' },
-  { id: 'write', label: '✍ Menulis' },
-  { id: 'review', label: '📊 Review' },
-  { id: 'visualize', label: '🌌 Visualisasi' }
-] as const
+import { WORKSPACE_MODES } from '../../lib/workspace-modes'
 
 export const ModeSwitcher: React.FC = () => {
   const activeMode = useUiStore((s) => s.activeMode)
@@ -21,7 +14,7 @@ export const ModeSwitcher: React.FC = () => {
       data-tour-step="mode-switcher"
     >
       <div className="flex bg-surface-container-low p-1 rounded-full border border-surface-variant/10">
-        {MODES.map((mode) => {
+        {WORKSPACE_MODES.map((mode) => {
           const isActive = activeMode === mode.id
           return (
             <button
@@ -36,7 +29,13 @@ export const ModeSwitcher: React.FC = () => {
                   transition={{ type: 'spring', stiffness: 350, damping: 28 }}
                 />
               )}
-              <span className={`relative z-10 flex items-center gap-1.5 whitespace-nowrap ${isActive ? 'text-on-primary font-bold' : 'text-on-surface-variant hover:text-on-surface'}`}>
+              <span className={`relative z-10 flex items-center gap-1.5 whitespace-nowrap ${isActive ? 'text-on-primary-container font-bold' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                <span
+                  className="material-symbols-outlined text-[17px]"
+                  style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                >
+                  {mode.icon}
+                </span>
                 {mode.label}
               </span>
             </button>

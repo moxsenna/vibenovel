@@ -100,7 +100,21 @@ export const ContextPanel: React.FC = () => {
   const handleSaveCompassDraft = async (updatedData: Record<string, unknown>) => {
     if (!editingCompassDraft || !activeProject) return
 
-    if (editingCompassDraft.draftType === 'character' && editingCompassDraft.entityId) {
+    if (editingCompassDraft.draftType === 'story_contract') {
+      const corePromise = typeof updatedData.core_promise === 'string'
+        ? updatedData.core_promise
+        : ''
+      const readerPromise = typeof updatedData.reader_promise === 'string'
+        ? updatedData.reader_promise
+        : ''
+      await updateProject(activeProject.id, {
+        story_contract: updatedData,
+        narrative_constitution:
+          [corePromise, readerPromise].filter(Boolean).join('\n\n') ||
+          activeProject.narrative_constitution
+      })
+      addToast('Story Contract diperbarui.', 'success')
+    } else if (editingCompassDraft.draftType === 'character' && editingCompassDraft.entityId) {
       await updateCharacter(editingCompassDraft.entityId, {
         name: typeof updatedData.name === 'string' ? updatedData.name : undefined,
         role: typeof updatedData.role === 'string'
@@ -116,7 +130,7 @@ export const ContextPanel: React.FC = () => {
         priority: typeof updatedData.priority === 'number' ? updatedData.priority : undefined,
         is_locked: typeof updatedData.is_locked === 'boolean' ? updatedData.is_locked : undefined
       })
-      addToast('Tokoh di Story Compass diperbarui.', 'success')
+      addToast('Tokoh di Kompas Cerita diperbarui.', 'success')
     } else if (editingCompassDraft.draftType === 'ending') {
       await updateProject(activeProject.id, {
         target_ending: typeof updatedData.target_ending === 'string'
@@ -205,6 +219,7 @@ export const ContextPanel: React.FC = () => {
                 <StoryCompassPreview
                   title={activeProject.title}
                   genre={activeProject.genre}
+                  storyContract={activeProject.story_contract}
                   targetEnding={activeProject.target_ending}
                   characters={characters}
                   mysteryLayers={mysteryLayers}
@@ -384,7 +399,7 @@ export const ContextPanel: React.FC = () => {
                       className="bg-surface-container p-4 rounded-2xl border border-outline-variant/30"
                     >
                       <span className="font-bold text-on-surface block mb-1 text-body-sm">
-                        Outline Bab {activeChapter.chapter_number}
+                        Rencana Bab {activeChapter.chapter_number}
                       </span>
                       <p className="text-label-md text-on-surface-variant leading-relaxed">
                         {activeChapter.synopsis || 'Draf sinopsis kosong.'}
@@ -393,7 +408,7 @@ export const ContextPanel: React.FC = () => {
 
                     <motion.div variants={itemVariants}>
                       <span className="block font-semibold text-on-surface-variant uppercase tracking-wider text-label-md mb-2">
-                        Events
+                        Kejadian penting
                       </span>
                       <div className="space-y-1.5">
                         {activeChapter.key_events?.map((ev, idx) => (
@@ -499,7 +514,7 @@ export const ContextPanel: React.FC = () => {
                     variants={itemVariants}
                     className="text-on-surface-variant/60 italic block text-body-sm text-center py-6"
                   >
-                    Jalankan Plot Radar QA dari main canvas untuk melihat laporan validasi naskah.
+                    Jalankan Cek Cerita dari kanvas utama untuk melihat laporan naskah.
                   </motion.span>
                 )}
               </motion.div>

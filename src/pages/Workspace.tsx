@@ -20,6 +20,7 @@ import { BatchProgressPanel } from '../components/prose/BatchProgressPanel'
 import { FreeWriteIndexerWatcher } from '../components/onboarding/FreeWriteIndexerWatcher'
 import { HoverModeRevealer } from '../components/workspace/HoverModeRevealer'
 import { SkipLink } from '../components/ui/SkipLink'
+import { getCompassProgress } from '../lib/compassProgress'
 
 const MODES = [
   { id: 'brainstorm', label: '💬 Brainstorm' },
@@ -38,6 +39,7 @@ export const Workspace: React.FC = () => {
   const setMode = useUiStore((s) => s.setMode)
   const contextPanelOpen = useUiStore((s) => s.contextPanelOpen)
   const toggleContextPanel = useUiStore((s) => s.toggleContextPanel)
+  const setContextPanelOpen = useUiStore((s) => s.setContextPanelOpen)
   const focusMode = useUiStore((s) => s.focusMode)
   const toggleFocusMode = useUiStore((s) => s.toggleFocusMode)
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen)
@@ -52,7 +54,8 @@ export const Workspace: React.FC = () => {
     setActiveProject,
     loadProjectData,
     chapters,
-    characters
+    characters,
+    mysteryLayers
   } = useProjectStore()
 
   // Sync project/chapter contexts
@@ -89,8 +92,30 @@ export const Workspace: React.FC = () => {
     }
   }, [addToast])
 
-  // Sprint 9.7 — Deep Think onboarding toast. Independent flag so it shows
-  // sequentially with the v9.6 toast (each user sees both once total).
+  // Automatically open Story Compass sidebar if entering Brainstorm tab with an incomplete compass
+  useEffect(() => {
+    if (activeMode === 'brainstorm' && activeProject) {
+      const progress = getCompassProgress({
+        title: activeProject.title,
+        genre: activeProject.genre,
+        storyContract: activeProject.story_contract,
+        targetEnding: activeProject.target_ending,
+        characters,
+        mysteryLayers
+      })
+
+      if (!progress.isComplete) {
+        setContextPanelOpen(true)
+      }
+    }
+  }, [
+    activeMode,
+    activeProject,
+    characters,
+    mysteryLayers,
+    setContextPanelOpen
+  ])
+
   useEffect(() => {
     try {
       const flag = localStorage.getItem('vn_deepthink_v97_seen')
@@ -165,7 +190,7 @@ export const Workspace: React.FC = () => {
               <button
                 onClick={toggleContextPanel}
                 aria-label={contextPanelOpen ? 'Tutup panel' : 'Buka panel'}
-                className="text-on-surface-variant hover:text-primary transition-colors p-1 rounded cursor-pointer shrink-0"
+                className="text-on-surface-variant hover:text-primary transition-colors p-1 rounded cursor-pointer shrink-0 md:hidden"
               >
                 <span className="material-symbols-outlined text-[18px]">
                   {contextPanelOpen ? 'menu_open' : 'menu'}
@@ -223,15 +248,17 @@ export const Workspace: React.FC = () => {
           <div className="bg-surface-dim/80 backdrop-blur-md flex flex-col w-full px-5 md:px-16 py-4 space-y-4 border-b border-surface-variant/20 shadow-sm">
             {/* Row 1: Navigation & Actions */}
             <div className="flex items-center justify-between">
-              <button
-                onClick={() => navigate('/')}
-                className="flex items-center space-x-2 text-on-surface-variant hover:text-primary transition-colors group cursor-pointer"
-              >
-                <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">
-                  arrow_back
-                </span>
-                <span className="text-label-lg hidden sm:inline">Beranda</span>
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => navigate('/')}
+                  className="flex items-center space-x-2 text-on-surface-variant hover:text-primary transition-colors group cursor-pointer"
+                >
+                  <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">
+                    arrow_back
+                  </span>
+                  <span className="text-label-lg hidden sm:inline">Beranda</span>
+                </button>
+              </div>
               <h1 className="text-headline-md text-primary text-center truncate flex-1 px-4 font-bold">
                 {activeProject.title}
                 {activeProject.genesis_mode === 'IMPORTED' && (
@@ -294,11 +321,26 @@ export const Workspace: React.FC = () => {
       )}
 
       {/* ── Main Area ── */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Left Side: Animated Sidebar (Desktop only) */}
         <AnimatePresence mode="wait">
           {contextPanelOpen && <ContextPanel />}
         </AnimatePresence>
+
+        {/* Floating Sidebar Toggle Button (Desktop only) */}
+        <button
+          onClick={toggleContextPanel}
+          className="absolute top-1/2 -translate-y-1/2 hidden md:flex w-[20px] h-[48px] bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-all duration-200 rounded-r-xl shadow-[2px_0_8px_rgba(0,0,0,0.1)] z-40 items-center justify-center cursor-pointer group border-l-0"
+          style={{
+            left: contextPanelOpen ? '360px' : '0px',
+            transition: 'left 300ms cubic-bezier(0.4, 0, 0.2, 1), background-color 200ms, color 200ms'
+          }}
+          aria-label={contextPanelOpen ? 'Tutup Kompas Cerita' : 'Buka Kompas Cerita'}
+        >
+          <span className="material-symbols-outlined text-[16px] transition-transform group-hover:scale-110">
+            {contextPanelOpen ? 'chevron_left' : 'chevron_right'}
+          </span>
+        </button>
 
         {/* Right Side: Primary Canvas (Takes remaining viewport space) */}
         <main

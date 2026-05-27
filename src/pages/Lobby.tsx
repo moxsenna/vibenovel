@@ -10,18 +10,25 @@ import type { BlueprintSelection } from '../components/dashboard/ProjectCreation
 import { SettingsModal } from '../components/modals/SettingsModal'
 import { TargetChaptersAdjustmentModal } from '../components/modals/TargetChaptersAdjustmentModal'
 import { OnboardingTour } from '../components/onboarding/OnboardingTour'
+import { HOME_ONBOARDING_STEPS } from '../components/onboarding/onboarding-steps'
 import { BottomNavBar } from '../components/ui/BottomNavBar'
 import { SkipLink } from '../components/ui/SkipLink'
-import type { Project, GenesisMode } from '../types/project'
+import type { Project, GenesisMode, Chapter } from '../types/project'
 import { applyBlueprint } from '../services/blueprint-applier'
 import { cloneProjectAsSpinOff, getNextSpinOffName } from '../services/project-cloner'
 import { getAllGenreNames } from '../lib/genre-blueprints'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 export const Lobby: React.FC = () => {
   const navigate = useNavigate()
-  const { projects, createProject, setActiveProject, loadProjects, deleteProject } = useProjectStore()
+  const { projects, createProject, setActiveProject, loadProjects, deleteProject, activeProject, chapters: activeChapterList } = useProjectStore()
+  type DashboardChapter = Pick<Chapter, 'project_id' | 'status' | 'word_count' | 'chapter_number'>
+  const [allChapters, setAllChapters] = useState<DashboardChapter[]>([])
   const theme = useUiStore((s) => s.theme)
   const toggleTheme = useUiStore((s) => s.toggleTheme)
+  const setMode = useUiStore((s) => s.setMode)
+  const setActiveChapter = useUiStore((s) => s.setActiveChapter)
+  const setContextPanelOpen = useUiStore((s) => s.setContextPanelOpen)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [genreFilter, setGenreFilter] = useState('Semua')
@@ -31,11 +38,31 @@ export const Lobby: React.FC = () => {
   const [adjustTargetProject, setAdjustTargetProject] = useState<Project | null>(null)
   const [cloningProjectId, setCloningProjectId] = useState<string | null>(null)
 
-  useEffect(() => { loadProjects() }, [loadProjects])
+  useEffect(() => {
+    loadProjects()
+
+    // Fetch all chapters of this user for real-time stats compiled in Lobby
+    const fetchChaptersStats = async () => {
+      if (!isSupabaseConfigured()) return
+      try {
+        const { data } = await supabase
+          .from('chapters')
+          .select('project_id, status, word_count, chapter_number')
+        setAllChapters((data ?? []) as DashboardChapter[])
+      } catch (err) {
+        console.warn('Error fetching dynamic stats from Supabase:', err)
+      }
+    }
+    fetchChaptersStats()
+  }, [loadProjects])
 
   // Stats
   const totalProjects = projects.length
-  const totalChaptersWritten = projects.reduce((a, p) => a + (p.status === 'COMPLETED' ? p.target_chapters : 30), 0)
+
+  const totalChaptersWritten = isSupabaseConfigured() && allChapters.length > 0
+    ? allChapters.filter((ch) => ch.status === 'DRAFT' || ch.status === 'FINAL' || ch.status === 'IMPORTED').length
+    : activeChapterList.filter((ch) => ch.status === 'DRAFT' || ch.status === 'FINAL' || ch.status === 'IMPORTED').length
+
   const activeCount = projects.filter((p) => p.status !== 'COMPLETED' && p.status !== 'PAUSED').length
   const completedCount = projects.filter((p) => p.status === 'COMPLETED').length
 
@@ -54,6 +81,9 @@ export const Lobby: React.FC = () => {
 
   const handleOpen = (project: Project) => {
     setActiveProject(project)
+    setMode('write')
+    setActiveChapter(1)
+    setContextPanelOpen(false)
     navigate(`/project/${project.id}`)
   }
 
@@ -77,11 +107,22 @@ export const Lobby: React.FC = () => {
           )
         } catch (err) {
           console.error('Blueprint apply failed:', err)
-          alert('Proyek dibuat, tapi blueprint gagal di-apply. Bisa diisi manual via Brainstorm.')
+          addToast('Proyek dibuat, tapi blueprint gagal dipakai. Bisa diisi manual via Ide Cerita.', 'warning')
         }
       }
       setIsCreateModalOpen(false)
       setActiveProject(created)
+      setActiveChapter(1)
+      if (mode === 'FRESH_BRAINSTORM') {
+        setMode('brainstorm')
+        setContextPanelOpen(true)
+      } else if (mode === 'FRESH_BLUEPRINT') {
+        setMode('outline')
+        setContextPanelOpen(true)
+      } else {
+        setMode('write')
+        setContextPanelOpen(false)
+      }
       navigate(`/project/${created.id}`)
     } catch (e) {
       console.error(e)
@@ -132,17 +173,63 @@ export const Lobby: React.FC = () => {
     setAdjustTargetProject(project)
   }
 
-  // Mock project-specific data
+  // Dynamically compile stats per project
   const getProjectMeta = (p: Project) => {
-    const isIstri = p.title.includes('Istri Sah')
-    const isCeo = p.title.includes('CEO')
+    // Filter chapters for this specific project
+    const projChapters = isSupabaseConfigured() && allChapters.length > 0
+      ? allChapters.filter((ch) => ch.project_id === p.id)
+      : (p.id === activeProject?.id ? activeChapterList : [])
+
+    const chaptersWritten = projChapters.filter(
+      (ch) => ch.status === 'DRAFT' || ch.status === 'FINAL' || ch.status === 'IMPORTED'
+    ).length
+
+    const wordCount = projChapters.reduce((acc, ch) => acc + (ch.word_count || 0), 0)
+
+    const outlineProgress = p.target_chapters > 0
+      ? Math.round(Math.min(100, (projChapters.length / p.target_chapters) * 100))
+      : 0
+
+    const proseProgress = p.target_chapters > 0
+      ? Math.round(Math.min(100, (chaptersWritten / p.target_chapters) * 100))
+      : 0
+
+    // Get current activity
+    let currentActivity = 'Setup'
+    if (p.status === 'COMPLETED') {
+      currentActivity = 'Tamat'
+    } else if (projChapters.length > 0) {
+      // Find the first chapter that isn't FINAL or outline only, or fallback to last chapter
+      const activeCh = [...projChapters]
+        .sort((a, b) => a.chapter_number - b.chapter_number)
+        .find((ch) => ch.status !== 'FINAL') || projChapters[projChapters.length - 1]
+      if (activeCh) {
+        const modeLabel = activeCh.status === 'OUTLINE_ONLY' ? 'Rencana' : 'Naskah'
+        currentActivity = `${modeLabel} — Bab ${activeCh.chapter_number}`
+      }
+    }
+
+    // Last activity (relative)
+    let lastActivity = ''
+    if (p.updated_at) {
+      const diffMs = new Date().getTime() - new Date(p.updated_at).getTime()
+      const diffMin = Math.floor(diffMs / 60000)
+      const diffHrs = Math.floor(diffMin / 60)
+      const diffDays = Math.floor(diffHrs / 24)
+
+      if (diffMin < 1) lastActivity = 'Baru saja'
+      else if (diffMin < 60) lastActivity = `${diffMin} menit lalu`
+      else if (diffHrs < 24) lastActivity = `${diffHrs} jam lalu`
+      else lastActivity = `${diffDays} hari lalu`
+    }
+
     return {
-      outlineProgress: isIstri ? 80 : isCeo ? 35 : 0,
-      proseProgress: isIstri ? 47 : isCeo ? 21 : 0,
-      chaptersWritten: isIstri ? 94 : isCeo ? 32 : 0,
-      wordCount: isIstri ? 141000 : isCeo ? 48000 : 0,
-      currentActivity: isIstri ? 'Menulis — Bab 95' : isCeo ? 'Bikin Outline — Bab 33' : 'Setup',
-      lastActivity: isIstri ? '15 menit lalu' : isCeo ? '2 jam lalu' : ''
+      outlineProgress,
+      proseProgress,
+      chaptersWritten,
+      wordCount,
+      currentActivity,
+      lastActivity
     }
   }
 
@@ -160,20 +247,39 @@ export const Lobby: React.FC = () => {
     show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 25 } }
   }
 
+  const uncompletedProjects = projects.filter((p) => p.status !== 'COMPLETED')
+  const latestUncompleted = uncompletedProjects.length > 0
+    ? [...uncompletedProjects].sort((a, b) => {
+        const timeA = new Date(a.updated_at || a.created_at || 0).getTime()
+        const timeB = new Date(b.updated_at || b.created_at || 0).getTime()
+        return timeB - timeA
+      })[0]
+    : null
+
+  const welcomeSubtitle =
+    projects.length === 0
+      ? 'Setiap mahakarya dimulai dari kalimat pertama. Mari buat novel pertama Anda! ✦'
+      : !latestUncompleted
+        ? 'Semua karya Anda telah selesai ditulis dengan indah. Siap merajut kisah baru berikutnya? ✦'
+        : `Novel ${latestUncompleted.title} menunggu kelanjutannya! ✦`
+
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SkipLink />
       {/* === Top NavBar (Fixed) === */}
       <nav className="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/20 shadow-[0_0_15px_rgba(232,160,191,0.15)] flex justify-between items-center px-5 md:px-16 py-4 h-16">
-        <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-          <span className="material-symbols-outlined text-primary text-2xl fill" style={{ fontVariationSettings: "'FILL' 1" }}>history_edu</span>
-          <span className="text-display-md bg-gradient-to-r from-primary to-tertiary bg-clip-text text-transparent">VibeNovel</span>
+        <div className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+          <img
+            src={theme === 'dark' ? '/Logo11.webp' : '/Logo22.webp'}
+            alt="VibeNovel Logo"
+            className="h-12 w-auto object-contain transition-all duration-300"
+          />
         </div>
         <div className="flex items-center gap-4">
           <button
             onClick={() => setIsSettingsOpen(true)}
             className="text-on-surface-variant hover:opacity-80 transition-opacity p-2 rounded-full hover:bg-surface-container-high"
-            aria-label="Settings"
+            aria-label="Pengaturan"
             data-tour-step="settings"
           >
             <span className="material-symbols-outlined text-[24px]">settings</span>
@@ -210,7 +316,7 @@ export const Lobby: React.FC = () => {
         {/* Header */}
         <header className="mb-6">
           <h1 className="text-display-lg text-on-background mb-2">Selamat malam, Bima ✨</h1>
-          <p className="text-body-lg text-on-surface-variant">Novel Istri Sah menunggu kelanjutannya! ✦</p>
+          <p className="text-body-lg text-on-surface-variant">{welcomeSubtitle}</p>
         </header>
 
         {/* Stats */}
@@ -302,7 +408,7 @@ export const Lobby: React.FC = () => {
 
 
         {/* Section: Arsip */}
-        {archivedProjects.length > 0 && (
+        {archivedProjects.length > 0 ? (
           <section>
             <div className="flex items-center gap-4 mb-6">
               <h2 className="text-headline-lg text-secondary">📦 Arsip</h2>
@@ -318,29 +424,35 @@ export const Lobby: React.FC = () => {
               ))}
             </div>
           </section>
-        )}
-
-        {/* Placeholder Arsip for demo */}
-        {archivedProjects.length === 0 && (
+        ) : (
           <section>
             <div className="flex items-center gap-4 mb-6">
               <h2 className="text-headline-lg text-secondary">📦 Arsip</h2>
               <div className="flex-grow h-[1px] bg-gradient-to-r from-outline-variant/50 to-transparent" />
-              <button className="text-primary text-label-lg hover:underline flex items-center gap-1">
-                Lihat Semua
-                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-              </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 opacity-80">
-              <ArchiveCard title="Cinta di Bawah Hujan" totalChapters={120} />
-              <ArchiveCard title="Melodi Senja" totalChapters={85} />
+            <div className="p-8 text-center bg-surface-container/50 rounded-[20px] border border-dashed border-outline-variant/20 opacity-70 inner-glow">
+              <span className="material-symbols-outlined text-[40px] text-on-surface-variant/50 block mb-2">archive</span>
+              <p className="text-body-sm text-on-surface-variant">Belum ada novel yang tamat. Selesaikan petualangan menulis Anda untuk mengarsipkannya di sini! ✦</p>
             </div>
           </section>
         )}
       </main>
 
       {/* Bottom Nav (Mobile) */}
-      <BottomNavBar activePage="home" onNavigate={(page) => page === 'write' && navigate('/project/d1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d')} />
+      <BottomNavBar
+        activePage="home"
+        onNavigate={(page) => {
+          if (page === 'write') {
+            if (latestUncompleted) {
+              handleOpen(latestUncompleted)
+            } else if (projects.length > 0) {
+              handleOpen(projects[0])
+            } else {
+              addToast('Buat novel baru terlebih dahulu untuk mulai menulis.', 'info')
+            }
+          }
+        }}
+      />
 
       {/* Modals */}
       <ProjectCreationModal
@@ -354,7 +466,7 @@ export const Lobby: React.FC = () => {
         project={adjustTargetProject}
         onClose={() => setAdjustTargetProject(null)}
       />
-      <OnboardingTour />
+      <OnboardingTour tourId="home" steps={HOME_ONBOARDING_STEPS} />
     </div>
   )
 }
