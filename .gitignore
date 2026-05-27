@@ -25,3 +25,10 @@ dist-ssr
 
 # Graphify cache (large, regenerable)
 graphify-out/cache/
+
+# Local generated image working files
+/tmp/
+/Logo11.webp
+/Logo22.webp
+/favicon.webp
+/logo vibenovel.jpg

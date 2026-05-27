@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dokumentasi & Arsitektur VibeNovel v2</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #1A1118;
+            --surface-primary: #251D23;
+            --surface-hover: #2F262D;
+            --text-main: #FDF6F0;
+            --text-muted: #B8A0B0;
+            --border-subtle: #3A2F38;
+            --accent-primary: #E8A0BF;
+            --accent-glow: rgba(232, 160, 191, 0.15);
+            --sidebar-width: 280px;
+            --danger: #FF6B6B;
+            --warning: #FFD166;
+            --success: #06D6A0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 1rem;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--surface-primary);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            border-right: 1px solid var(--border-subtle);
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar h2 {
+            font-size: 1.5rem;
+            color: var(--accent-primary);
+            margin-bottom: 2rem;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links {
+            list-style: none;
+        }
+
+        .nav-links li {
+            margin-bottom: 0.75rem;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            background-color: var(--surface-hover);
+            color: var(--accent-primary);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 4rem;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        section {
+            margin-bottom: 5rem;
+            padding-top: 2rem;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 4rem;
+        }
+
+        section:last-child {
+            border-bottom: none;
+        }
+
+        .section-header {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #FDF6F0 0%, #E8A0BF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        ul, ol {
+            color: var(--text-muted);
+            margin-left: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Feature Cards */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .feature-card {
+            background-color: var(--surface-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px var(--accent-glow);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-card h3 {
+            font-size: 1.3rem;
+            color: var(--text-main);
+            margin-bottom: 1rem;
+        }
+
+        .feature-card p {
+            font-size: 0.95rem;
+            margin-bottom: 0;
+        }
+
+        /* Tech Badges */
+        .badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .badge {
+            background-color: var(--surface-hover);
+            color: var(--accent-primary);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* Highlights */
+        .highlight {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* Alerts */
+        .alert {
+            background-color: rgba(232, 160, 191, 0.05);
+            border-left: 4px solid var(--accent-primary);
+            padding: 1.5rem;
+            border-radius: 0 12px 12px 0;
+            margin-bottom: 2rem;
+        }
+
+        .alert strong {
+            display: block;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .alert p {
+            margin-bottom: 0;
+            font-size: 1rem;
+        }
+
+        /* Interactive Demo Section Widget */
+        .demo-container {
+            background-color: var(--surface-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .demo-title {
+            color: var(--accent-primary);
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .demo-title::before {
+            content: '⚡';
+        }
+
+        /* Director's Cut Widget */
+        .rewrite-editor {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .prose-textarea {
+            width: 100%;
+            height: 100px;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+        }
+
+        .variant-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .variant-btn {
+            background-color: var(--surface-hover);
+            color: var(--text-muted);
+            border: 1px solid var(--border-subtle);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .variant-btn.active {
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+            border-color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* QA Scanner Widget */
+        .qa-scanner-box {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .qa-btn {
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            align-self: flex-start;
+            transition: opacity 0.2s;
+        }
+
+        .qa-btn:hover {
+            opacity: 0.9;
+        }
+
+        .qa-card-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            min-height: 50px;
+        }
+
+        .qa-item {
+            background-color: var(--bg-primary);
+            border-left: 4px solid var(--border-subtle);
+            border-radius: 0 8px 8px 0;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: slideUp 0.4s forwards;
+        }
+
+        .qa-item.danger { border-left-color: var(--danger); }
+        .qa-item.warning { border-left-color: var(--warning); }
+        .qa-item.success { border-left-color: var(--success); }
+
+        .qa-item-title {
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .qa-item-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Co-Author Chat Widget */
+        .chat-widget {
+            display: flex;
+            flex-direction: column;
+            height: 350px;
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: var(--bg-primary);
+        }
+
+        .chat-header {
+            background-color: var(--surface-primary);
+            padding: 1rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .chat-bubble {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-size: 0.95rem;
+        }
+
+        .chat-bubble.user {
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .chat-bubble.ai {
+            background-color: var(--surface-primary);
+            color: var(--text-main);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .chat-draft-card {
+            background-color: var(--surface-primary);
+            border: 1px dashed var(--accent-primary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .chat-draft-btn {
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+
+        .chat-input-bar {
+            padding: 0.75rem;
+            background-color: var(--surface-primary);
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex-grow: 1;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 0.5rem;
+            color: inherit;
+            outline: none;
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                display: none;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <h2>VibeNovel v2</h2>
+        <ul class="nav-links">
+            <li><a href="#overview">Ikhtisar Sistem</a></li>
+            <li><a href="#frontend">Arsitektur Frontend</a></li>
+            <li><a href="#theme">Sistem Tema & Visual</a></li>
+            <li><a href="#brainstorm">Story Compass</a></li>
+            <li><a href="#outline">Season Architect</a></li>
+            <li><a href="#prose-editor">Prose Editor & Strict Mode</a></li>
+            <li><a href="#ai-architecture">Arsitektur AI & Pool</a></li>
+            <li><a href="#memory-system">Sistem Memori 4-Layer</a></li>
+            <li><a href="#review-panel">Panel Review & QA Radar</a></li>
+            <li><a href="#visualizations">Visualisasi Data & Arc Emosi</a></li>
+            <li><a href="#pwa">PWA & Ketahanan Offline</a></li>
+            <li><a href="#pro-features">Fitur Pro Writer</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <section id="overview">
+            <h1 class="section-header">VibeNovel v2: Master Arsitektur</h1>
+            <p>VibeNovel v2 adalah aplikasi web progresif (PWA) canggih bertenaga AI yang dirancang untuk mempermudah seluruh proses penulisan novel dari hulu ke hilir. Dibangun dengan <strong>Arsitektur 100% Client-Side</strong>, platform ini terintegrasi langsung dengan Supabase dan berbagai penyedia AI langsung dari peramban (browser) pengguna tanpa perantara server backend custom, menjadikannya sangat cepat, aman, dan siap dibungkus oleh Capacitor CLI untuk platform mobile.</p>
+
+            <div class="alert">
+                <strong>Filosofi Inti BYOK (Bring Your Own Key)</strong>
+                <p>Seluruh operasi data berjalan langsung di browser pengguna. Kunci API (Gemini dan OpenRouter) disimpan secara lokal menggunakan Zustand persist middleware dan tidak pernah dikirim ke database eksternal manapun.</p>
+            </div>
+        </section>
+
+        <section id="frontend">
+            <h2 class="section-header">Arsitektur Frontend</h2>
+            <div class="badge-container">
+                <span class="badge">Vite 6.x</span>
+                <span class="badge">React 19.x</span>
+                <span class="badge">TypeScript 5.x</span>
+                <span class="badge">Zustand 5.x</span>
+                <span class="badge">Tailwind CSS 4.x</span>
+                <span class="badge">Framer Motion</span>
+            </div>
+            <p>Aplikasi ini mengadopsi Single Page Application (SPA) berbasis React Router 7. Antarmuka pengguna berpusat pada sebuah <strong>Mode-Based SPA Canvas</strong> dinamis yang menukar mode kerja secara instan (Brainstorm, Outline, Write, Review, Visualize) dengan transisi animasi halus dari Framer Motion.</p>
+
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>Modular State (Zustand Parts)</h3>
+                    <p>Monolit store utama dipecah secara rapi menjadi modul independen: <code>projects</code>, <code>chapters</code>, <code>lorebook</code>, dan <code>outlines</code> guna mempercepat re-render dan mempermudah debugging.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Verbatim Module Syntax</h3>
+                    <p>Menerapkan aturan impor tipe-only (<code>import type</code>) TypeScript yang sangat ketat untuk memastikan tidak ada overhead tipe data dalam hasil kompilasi produksi.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Lazy-Loaded Heavyweight</h3>
+                    <p>Komponen analitis berat seperti D3.js (Constellation Map), Recharts, Mammoth (.docx), dan PDF.js dimuat secara asinkron hanya saat dibutuhkan agar aplikasi pertama kali dimuat di bawah 1 detik.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="theme">
+            <h2 class="section-header">Sistem Tema & Visual Premium</h2>
+            <p>VibeNovel v2 menghadirkan <strong>Dual-Theme System</strong> berkualitas premium yang didesain ramah mata untuk sesi penulisan maraton:</p>
+            <ul>
+                <li><span class="highlight">Malam Kreatif (Dark Mode)</span>: Estetika meja kerja malam hari yang hangat & magis menggunakan warna burgundy/plum gelap (#1A1118) dan pendar rose gold.</li>
+                <li><span class="highlight">Jurnal Cantik (Light Mode)</span>: Estetika jurnal kertas planner premium dengan latar cream lembut (#FDF8F5) dan warna teks cokelat tua hangat.</li>
+            </ul>
+
+            <div class="alert">
+                <strong>Anti-Flicker (Bebas Kedipan Layar Putih)</strong>
+                <p>Menggunakan blok skrip mini sinkron di <code>index.html</code> sebelum tag body yang membaca localStorage tema secara instan untuk mencegah flicker warna putih saat halaman dimuat ulang di Dark Mode.</p>
+            </div>
+        </section>
+
+        <section id="brainstorm">
+            <h2 class="section-header">Story Compass & Brainstorming</h2>
+            <p><strong>Story Compass</strong> bertindak sebagai kompas narasi cerita untuk menyusun struktur pondasi utama sebelum outline dibuat.</p>
+
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>5 Pilar Utama</h3>
+                    <p>Melacak kelengkapan Premis, Protagonis (dengan Voice DNA), Antagonis, Target Ending, dan Lapisan Misteri.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Pendeteksi Celah (Gap Detector)</h3>
+                    <p>Visual segmented progress bar yang secara aktif mendeteksi pilar mana yang belum lengkap dan memberi tahu penulis melalui petunjuk berdenyut.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Anti-Melantur Guard</h3>
+                    <p>Saat berdiskusi dengan Co-Author AI, sistem memantau percakapan melantur di luar cerita. Jika terdeteksi 3x berturut-turut, AI akan dipaksa menyajikan kartu proposal struktur agar diskusi kembali terarah.</p>
+                </div>
+            </div>
+
+            <!-- DEMO INTERAKTIF STORY COMPASS & CHAT -->
+            <div class="demo-container">
+                <div class="demo-title">Demo Interaktif: Co-Author Chat & Proposal Draf</div>
+                <p style="font-size: 0.95rem; margin-bottom: 1rem;">Coba simulasikan percakapan dengan Co-Author AI di bawah ini untuk melihat bagaimana sistem merumuskan proposal draf elemen baru:</p>
+                <div class="chat-widget">
+                    <div class="chat-header">
+                        <span>💬 Co-Author Brainstorm</span>
+                        <span id="gap-badge" class="badge" style="margin: 0; padding: 0.2rem 0.6rem;">Celah: Protagonis</span>
+                    </div>
+                    <div class="chat-messages" id="chat-box">
+                        <div class="chat-bubble ai">Halo! Mari kita rancang tokoh utama (Protagonis) untuk novel dramamu. Adakah ide nama atau sifat unik yang ingin kamu berikan?</div>
+                    </div>
+                    <div class="chat-input-bar">
+                        <input type="text" id="chat-input" class="chat-input" placeholder="Ketik idemu disini... (contoh: 'Sarah, wanita karier tangguh')" onkeydown="if(event.key === 'Enter') sendMockMessage()">
+                        <button class="qa-btn" style="margin: 0; padding: 0.5rem 1rem;" onclick="sendMockMessage()">Kirim</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="outline">
+            <h2 class="section-header">Season Architect & Outline Engine</h2>
+            <p><strong>Season Architect</strong> mengotomatisasi penyusunan rancangan outline per bab dengan berpedoman pada ritme melodrama penahan retensi pembaca.</p>
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>Sequential Await Loop</h3>
+                    <p>Outline bab digenerasi berurutan secara kronologis. Rangkuman detail bab N dijadikan input memori kontekstual bab N+1 untuk menghindari lompatan logika plot yang terburu-buru.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>KBM Pacing Validator</h3>
+                    <p>Sistem pengecekan ritme naskah otomatis. Memberikan peringatan apabila naskah terlalu monoton, kurang klimaks, atau memiliki penempatan misteri yang kurang merata.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Deep Outline reasoning</h3>
+                    <p>Mengaktifkan mode penalaran terarah (thinking budget) pada model AI saat merancang outline guna menyisipkan petunjuk misteri secara rapi di bab-bab tertentu.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="prose-editor">
+            <h2 class="section-header">Prose Editor & Strict Mode</h2>
+            <p>Kanvas menulis premium yang memberikan fleksibilitas tinggi bagi penulis naskah.</p>
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>Strict Beat-by-Beat</h3>
+                    <p>Menulis naskah dengan tuntunan ketat dari poin adegan outline. Menjaga tulisan agar terstruktur rapi dan tidak melenceng dari outline awal bab.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Free Write Canvas</h3>
+                    <p>Mode naskah bebas tanpa panduan beat naskah. Memberi kebebasan berekspresi penuh bagi penulis dengan backup sinkronisasi otomatis pasca-penulisan selesai.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Offline Autosaver</h3>
+                    <p>Mengamankan tulisan secara otomatis ke localStorage saat offline, dan mengunggahnya secara sunyi ke Supabase setelah koneksi terdeteksi terhubung kembali.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="ai-architecture">
+            <h2 class="section-header">Arsitektur AI & Pool Kunci API</h2>
+            <p>Sistem backend-less AI Router VibeNovel v2 dirancang untuk memaksimalkan ketersediaan API gratisan serta kemudahan kustomisasi model premium:</p>
+
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>Gemini Multi-Key Pool</h3>
+                    <p>Mendukung rotasi seimbang beberapa kunci API Gemini gratisan milik pengguna (round-robin) lengkap dengan masa cooldown pemulihan mandiri jika terkena batasan rate limit.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>OpenRouter Premium Adapter</h3>
+                    <p>Menghubungkan model terkemuka dunia seperti Claude 3.5 Sonnet atau Deepseek Chat via OpenRouter dengan konfigurasi satu pintu yang fleksibel.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Stream Delivery (SSE)</h3>
+                    <p>Pengiriman token teks bergaya mesin tik secara real-time yang memangkas waktu tunggu respon model AI hingga di bawah 300ms.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="memory-system">
+            <h2 class="section-header">Sistem Memori 4-Layer Context</h2>
+            <p>Untuk menghemat token input dan menjaga pemahaman alur cerita yang panjang, penyusunan instruksi AI disaring ketat melintasi empat lapisan berikut:</p>
+
+            <ol>
+                <li><strong>Layer 1: Static Lorebook</strong> - Aturan cerita, konstitusi naskah, dan target ending. Tokoh dan barang hanya disertakan jika terdeteksi kecocokan literal di outline bab berjalan (Pruning).</li>
+                <li><strong>Layer 2: Dynamic State</strong> - Memuat status 10-field tokoh-tokoh yang terlibat langsung dalam adegan (Lokasi, Kondisi Fisik, Relasi, Rahasia) guna menghindari inkonsistensi aksi karakter.</li>
+                <li><strong>Layer 3: RAG Long-Term Memory</strong> - Pencarian semantik menggunakan vektor `pgvector` Supabase untuk memanggil kembali ingatan bab-bab lampau yang paling relevan dengan naskah baru.</li>
+                <li><strong>Layer 4: Sliding Window</strong> - Menyertakan 500 kata literal terakhir dari bab sebelumnya untuk mempertahankan kelancaran gaya bahasa naskah.</li>
+            </ol>
+        </section>
+
+        <section id="review-panel">
+            <h2 class="section-header">Panel Review & QA Radar</h2>
+            <p>Panel komprehensif pasca-menulis untuk menjaga kepatuhan logika penulisan, melacak resolusi misteri, serta memindai naskah.</p>
+
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>Desktop 3-Column Layout</h3>
+                    <p>Antarmuka pembaca naskah, log radar plot hole, dan panel sub-plot sampingan bersanding serasi pada layar desktop. Berubah menjadi tab geser adaptif pada mobile.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Severity Filtering Chips</h3>
+                    <p>Memfilter temuan radar plot dari kategori kritis (*Critical*), peringatan emosional naskah datar (*Warning*), hingga saran penulisan (*Info*).</p>
+                </div>
+                <div class="feature-card">
+                    <h3>LoreDiff & Thread Tracker</h3>
+                    <p>Menampilkan tokoh atau benda baru yang menyelinap ke naskah naskah. Melacak masa hidup utas plot (*plot thread*) dengan indikator kedip merah penanda utas kritis.</p>
+                </div>
+            </div>
+
+            <!-- DEMO INTERAKTIF QA RADAR SCANNER -->
+            <div class="demo-container">
+                <div class="demo-title">Demo Interaktif: Plot Radar QA Scanner</div>
+                <p style="font-size: 0.95rem; margin-bottom: 1rem;">Uji kemampuan radar pemindaian plot hole kami pada contoh draf naskah di bawah ini:</p>
+                <div class="qa-scanner-box">
+                    <textarea id="qa-draft" class="prose-textarea">Budi mengambil pistol perak milik ayahnya dari laci meja kerja yang terkunci. Ia melangkah keluar rumah menemui komplotan itu di taman. Setelah pertikaian sengit berakhir, Budi pulang ke rumah dan tidur dengan tenang.</textarea>
+                    <button class="qa-btn" onclick="runMockQaScan()">Mulai Pindai Naskah</button>
+                    <div class="qa-card-container" id="qa-results">
+                        <!-- Items will generate here dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="visualizations">
+            <h2 class="section-header">Visualisasi Data & Arc Emosi</h2>
+            <p>Mengubah naskah teks mentah menjadi bagan visual analitik premium yang kaya informasi demi membantu penulis menganalisis pacu tulisan mereka.</p>
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>D3.js Constellation Map</h3>
+                    <p>Grafik force-directed interaktif yang menggambarkan hubungan relasi antar tokoh, item, dan aturan dunia berdasarkan tingkat keterlibatan mereka per bab.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Emotional Arc Heatmap</h3>
+                    <p>Matriks ubin gradien warna yang memvisualisasikan dinamika pergeseran emosi cerita (Breather, Conflict, Dopamine Beat) dari bab awal hingga akhir.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Lifespan Timeline Tracker</h3>
+                    <p>Bagan horisontal mirip Gantt-chart untuk melacak masa aktif utas misteri sejak diletakkan sebagai misteri hingga terselesaikan secara tuntas.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="pwa">
+            <h2 class="section-header">PWA & Ketahanan Offline</h2>
+            <p>VibeNovel v2 dikonfigurasi menggunakan plugin <code>vite-plugin-pwa</code> untuk pengalaman luring (offline) yang tangguh layaknya aplikasi native mobile.</p>
+            <ul>
+                <li><strong>Precached Static Assets:</strong> Menyimpan aset inti visual, berkas kode JS, serta font Google Fonts untuk pemuatan luring.</li>
+                <li><strong>Caching Supabase API:</strong> Menerapkan taktik `NetworkFirst` pada panggilan data profil guna mengantisipasi hilangnya koneksi secara tiba-tiba.</li>
+                <li><strong>PwaUpdatePrompt:</strong> Toast notifikasi dinamis saat naskah siap diakses offline atau saat ada pembaruan kode aplikasi terbaru.</li>
+            </ul>
+        </section>
+
+        <section id="pro-features">
+            <h2 class="section-header">Fitur Pro Writer</h2>
+            <p>Fitur premium tingkat lanjut yang dirancang khusus untuk mempermudah pekerjaan penulis profesional:</p>
+
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>Import Wizard (4 Langkah)</h3>
+                    <p>Membaca berkas manuskrip berformat <code>.docx</code>, <code>.pdf</code>, dan <code>.txt</code>. Melakukan ekstraksi tokoh secara otomatis serta merekonstruksi Story Compass naskah lama dengan cepat.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Director's Cut Modal</h3>
+                    <p>Menawarkan 3 variasi penulisan ulang naskah (Tighter, Emotional, Dramatic). Memiliki efisiensi API tinggi di mana memilih salah satu variasi akan otomatis membatalkan sisa stream variasi lainnya (AbortSignal).</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Selection Magic Edit</h3>
+                    <p>Toolbar mini melayang ala Notion/Medium yang muncul saat seleksi teks naskah. Terintegrasi dengan model super cepat Gemini Flash Lite untuk merevisi teks secara presisi di tempat.</p>
+                </div>
+            </div>
+
+            <!-- DEMO INTERAKTIF DIRECTOR'S CUT -->
+            <div class="demo-container">
+                <div class="demo-title">Demo Interaktif: Director's Cut Rewriter</div>
+                <p style="font-size: 0.95rem; margin-bottom: 1rem;">Coba pilih variasi di bawah untuk melihat bagaimana asisten AI menulis ulang prosa naskah Anda secara instan:</p>
+                <div class="rewrite-editor">
+                    <div class="variant-buttons">
+                        <button class="variant-btn active" onclick="swapVariant('original', this)">Draf Asli</button>
+                        <button class="variant-btn" onclick="swapVariant('tighter', this)">Tighter (Lebih Padat)</button>
+                        <button class="variant-btn" onclick="swapVariant('emotional', this)">Emotional (Sentimental)</button>
+                        <button class="variant-btn" onclick="swapVariant('dramatic', this)">Dramatic (Melodramatis)</button>
+                    </div>
+                    <div id="variant-display" class="prose-textarea" style="height: auto; min-height: 120px; border-color: var(--accent-primary);">Budi berjalan menuju jendela kamarnya yang berdebu. Di luar sana, gerimis tipis mulai turun membasahi dedaunan kering. Ia meraba sakunya, memastikan surat itu masih ada di sana dengan aman.</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Scroll spy
+        const sections = document.querySelectorAll("section");
+        const navLinks = document.querySelectorAll(".nav-links a");
+
+        window.addEventListener("scroll", () => {
+            let current = "";
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 150) {
+                    current = section.getAttribute("id");
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove("active");
+                if (link.getAttribute("href").includes(current)) {
+                    link.classList.add("active");
+                }
+            });
+        });
+
+        // Demo 1: Co-Author Chat & Proposal Draf
+        let chatStep = 0;
+        function sendMockMessage() {
+            const input = document.getElementById("chat-input");
+            const box = document.getElementById("chat-box");
+            if (!input.value.trim()) return;
+
+            // User bubble
+            const userBubble = document.createElement("div");
+            userBubble.className = "chat-bubble user";
+            userBubble.innerText = input.value;
+            box.appendChild(userBubble);
+            const userVal = input.value;
+            input.value = "";
+            box.scrollTop = box.scrollHeight;
+
+            // Mock AI response delay
+            setTimeout(() => {
+                const aiBubble = document.createElement("div");
+                aiBubble.className = "chat-bubble ai";
+
+                if (chatStep === 0) {
+                    aiBubble.innerHTML = `Ide yang menarik! Karakter utama bernama <strong>Sarah</strong> terdengar sangat tangguh. Berdasarkan deskripsimu, saya merumuskan proposal draf karakter protagonis:<br>
+                    <div class="chat-draft-card" id="draft-card-demo">
+                        <strong>🏷️ PROPOSAL DRAF: PROTAGONIS</strong><br>
+                        • Nama: Sarah Kartika<br>
+                        • Deskripsi: Wanita karier perkotaan berumur 28 tahun yang tangguh namun menyimpan trauma masa lalu keluarga.<br>
+                        • Rahasia: Menyimpan surat wasiat ayahnya secara rahasia.<br>
+                        <button class="chat-draft-btn" onclick="approveMockDraft()">✅ Setujui Draf & Simpan</button>
+                    </div>`;
+                    chatStep++;
+                } else {
+                    aiBubble.innerText = "Draf karakter telah berhasil kita kunci di Story Compass! Sekarang mari kita lanjut merancang karakter Antagonis atau konflik cerita ini.";
+                }
+                box.appendChild(aiBubble);
+                box.scrollTop = box.scrollHeight;
+            }, 1000);
+        }
+
+        function approveMockDraft() {
+            const card = document.getElementById("draft-card-demo");
+            card.innerHTML = `<span style="color: var(--success); font-weight: 600;">✓ Disetujui! Menyinkronkan ke Story Compass & database Supabase secara optimistik...</span>`;
+            document.getElementById("gap-badge").innerText = "Celah: Antagonis";
+            document.getElementById("gap-badge").style.borderColor = "var(--success)";
+            document.getElementById("gap-badge").style.color = "var(--success)";
+        }
+
+        // Demo 2: Plot Radar QA Scanner
+        function runMockQaScan() {
+            const results = document.getElementById("qa-results");
+            results.innerHTML = `<div class="qa-item success" style="animation-delay: 0s;">
+                <div class="qa-item-title">🔎 Memulai pemindaian plot radar...</div>
+                <div class="qa-item-desc">Menganalisis koherensi alur adegan dan mendeteksi plot hole...</div>
+            </div>`;
+
+            setTimeout(() => {
+                results.innerHTML = `
+                    <div class="qa-item danger" style="animation-delay: 0.1s;">
+                        <div class="qa-item-title">
+                            <span>🚨 Chekhov's Gun (Kritis)</span>
+                            <span style="color: var(--danger); font-size: 0.85rem;">CRITICAL</span>
+                        </div>
+                        <div class="qa-item-desc">Budi mengambil pistol perak milik ayahnya di awal cerita, namun hingga bab berakhir pistol tersebut sama sekali tidak digunakan atau diselesaikan nasibnya. Ini berpotensi membingungkan pembaca.</div>
+                    </div>
+                    <div class="qa-item warning" style="animation-delay: 0.4s;">
+                        <div class="qa-item-title">
+                            <span>🎭 Ritme Emosi Datar (Peringatan)</span>
+                            <span style="color: var(--warning); font-size: 0.85rem;">EMOTION_FLAT</span>
+                        </div>
+                        <div class="qa-item-desc">Transisi setelah adegan pertikaian sengit ke "Budi pulang tidur tenang" dirasa terlalu tiba-tiba tanpa jeda nafas narasi (*emotional breather*).</div>
+                    </div>
+                `;
+            }, 1500);
+        }
+
+        // Demo 3: Director's Cut
+        const variants = {
+            original: "Budi berjalan menuju jendela kamarnya yang berdebu. Di luar sana, gerimis tipis mulai turun membasahi dedaunan kering. Ia meraba sakunya, memastikan surat itu masih ada di sana dengan aman.",
+            tighter: "Budi mendekati jendela berdebu. Gerimis membasahi dedaunan di luar. Ia meraba saku luar jasnya—memastikan surat rahasia wasiat ayahnya masih ada.",
+            emotional: "Dengan langkah gontai penuh beban emosi, Budi mendekati jendela kaca berdebu yang dingin. Gerimis yang jatuh di luar seolah mewakili kesedihan hatinya saat ini. Jarinya gemetar saat meraba saku bajunya, menenangkan diri saat mendapati surat peninggalan ibunya masih tersimpan utuh di sana.",
+            dramatic: "Budi menyentak tirai jendela berdebu itu dengan kasar. Kilatan petir di luar menyinari wajahnya yang pucat. Ia tersenyum sinis, meraba sakunya dengan detak jantung yang berpacu kencang—surat yang sanggup meruntuhkan seluruh kekaisaran bisnis keluarga itu kini aman di genggamannya!"
+        };
+
+        function swapVariant(key, btn) {
+            document.querySelectorAll(".variant-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+
+            const display = document.getElementById("variant-display");
+            display.innerText = variants[key];
+        }
+    </script>
+</body>
+</html>

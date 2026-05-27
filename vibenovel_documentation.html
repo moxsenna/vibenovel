@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeNovel v2 — Architectural & Feature Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #1A1118;
+            --surface-primary: #251D23;
+            --surface-hover: #2F262D;
+            --text-main: #FDF6F0;
+            --text-muted: #B8A0B0;
+            --border-subtle: #3A2F38;
+            --accent-primary: #E8A0BF;
+            --accent-glow: rgba(232, 160, 191, 0.15);
+            --sidebar-width: 280px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 1rem;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--surface-primary);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            border-right: 1px solid var(--border-subtle);
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar h2 {
+            font-size: 1.5rem;
+            color: var(--accent-primary);
+            margin-bottom: 2rem;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links {
+            list-style: none;
+        }
+
+        .nav-links li {
+            margin-bottom: 0.75rem;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            background-color: var(--surface-hover);
+            color: var(--accent-primary);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 4rem;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        section {
+            margin-bottom: 5rem;
+            padding-top: 2rem;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 4rem;
+        }
+
+        section:last-child {
+            border-bottom: none;
+        }
+
+        .section-header {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #FDF6F0 0%, #E8A0BF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        ul, ol {
+            color: var(--text-muted);
+            margin-left: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Feature Cards */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .feature-card {
+            background-color: var(--surface-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px var(--accent-glow);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-card h3 {
+            font-size: 1.3rem;
+            color: var(--text-main);
+            margin-bottom: 1rem;
+        }
+
+        .feature-card p {
+            font-size: 0.95rem;
+            margin-bottom: 0;
+        }
+
+        /* Tech Badges */
+        .badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .badge {
+            background-color: var(--surface-hover);
+            color: var(--accent-primary);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* Code & Pre */
+        pre {
+            background-color: var(--surface-hover);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+        }
+
+        code {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        /* Highlights */
+        .highlight {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* Alerts */
+        .alert {
+            background-color: rgba(232, 160, 191, 0.05);
+            border-left: 4px solid var(--accent-primary);
+            padding: 1.5rem;
+            border-radius: 0 12px 12px 0;
+            margin-bottom: 2rem;
+        }
+
+        .alert strong {
+            display: block;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .alert p {
+            margin-bottom: 0;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                display: none;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <h2>VibeNovel v2</h2>
+        <ul class="nav-links">
+            <li><a href="#overview">System Overview</a></li>
+            <li><a href="#frontend">Frontend Architecture</a></li>
+            <li><a href="#theme">Theme & Design</a></li>
+            <li><a href="#brainstorm">Story Compass</a></li>
+            <li><a href="#outline">Season Architect</a></li>
+            <li><a href="#prose-editor">Prose Editor & Strict Mode</a></li>
+            <li><a href="#ai-architecture">AI Architecture</a></li>
+            <li><a href="#memory-system">4-Layer Memory System</a></li>
+            <li><a href="#review-panel">Review Panel & QA Radar</a></li>
+            <li><a href="#visualizations">Emotional Arc & Data Visuals</a></li>
+            <li><a href="#pwa">PWA & Offline Resilience</a></li>
+            <li><a href="#pro-features">Pro Writer Features</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <section id="overview">
+            <h1 class="section-header">VibeNovel v2: Master Architecture</h1>
+            <p>VibeNovel v2 is a state-of-the-art, AI-powered progressive web application designed to orchestrate the entire novel-writing process. Built with a <strong>100% Client-Side Architecture</strong>, the platform integrates deeply with Supabase and multiple AI providers directly from the browser, ensuring zero intermediary server latency and seamless native-wrapper export capabilities (Capacitor ready).</p>
+
+            <div class="alert">
+                <strong>Core Philosophy</strong>
+                <p>Everything runs in the browser. Database syncing is handled via Supabase Auth & PostgreSQL. AI requests stream directly to Gemini and OpenRouter using a Bring Your Own Key (BYOK) system guarded strictly within local storage. No custom backend server.</p>
+            </div>
+        </section>
+
+        <section id="frontend">
+            <h2 class="section-header">Frontend Architecture</h2>
+            <div class="badge-container">
+                <span class="badge">Vite 6.x</span>
+                <span class="badge">React 19.x</span>
+                <span class="badge">TypeScript 5.x</span>
+                <span class="badge">Zustand 5.x</span>
+                <span class="badge">Tailwind CSS 4.x</span>
+                <span class="badge">Framer Motion</span>
+            </div>
+            <p>The application is a Single Page Application (SPA) driven by React Router. The interface centers around a dynamic <strong>Mode-Based Workspace</strong> that conditionally swaps views (Brainstorm, Outline, Write, Review, Visualize) while preserving state and scroll position.</p>
+
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>Modular State (Zustand)</h3>
+                    <p>The monolithic store was refactored into distinct parts: <code>projects</code>, <code>chapters</code>, <code>lorebook</code>, and <code>outlines</code>. This ensures isolated re-renders, clean TypeScript boundaries, and safe persistence to `localStorage`.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Verbatim Module Syntax</h3>
+                    <p>Strict TypeScript compilation rules enforce <code>import type</code> for all interfaces and aliases, stripping type definitions from the final JS bundle for maximum performance.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Lazy-Loaded Modules</h3>
+                    <p>Heavy libraries like Recharts, D3.js (Constellation Map), Mammoth (.docx), and PDF.js are chunked and lazy-loaded only when requested, keeping the initial load under 200KB gzipped.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="theme">
+            <h2 class="section-header">Theme & Styling System</h2>
+            <p>VibeNovel v2 utilizes a meticulously crafted <strong>Dual-Theme System</strong> designed for both casual authors and professional writers.</p>
+            <ul>
+                <li><span class="highlight">Malam Kreatif (Dark Mode)</span>: A warm, magical night desk vibe with deep plum/burgundy surfaces (#1A1118) and rose gold accents.</li>
+                <li><span class="highlight">Jurnal Cantik (Light Mode)</span>: A premium, physical paper journal aesthetic utilizing soft ivory cream (#FDF8F5) and delicate taupe text.</li>
+            </ul>
+
+            <div class="alert">
+                <strong>Zero-Flicker Engineering</strong>
+                <p>Themes are synced directly to <code>document.documentElement</code> using CSS variables (`--color-bg-primary`, `--color-surface-hover`, etc.). An inline script block in <code>index.html</code> synchronously parses `localStorage` before React mounts, ensuring absolutely no "flash of white light" when opening the app in Dark Mode.</p>
+            </div>
+        </section>
+
+        <section id="brainstorm">
+            <h2 class="section-header">Story Compass & Brainstorming</h2>
+            <p>The <strong>Story Compass</strong> acts as the narrative foundation, ensuring all primary structural components are locked in prior to writing.</p>
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>5 Core Story Pillars</h3>
+                    <p>Tracks and structures the Premise, Protagonist, Antagonist, Target Ending, and active Mystery Layers (with localized mystery breadcrumbs).</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Segmented Progress & Gap Detector</h3>
+                    <p>A dynamic visual progress indicator checks for missing pillars and prompts the user with pulsating indicators to ensure cohesive brainstorming.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Co-Author Chat & Anti-Melantur</h3>
+                    <p>An interactive, AI-driven brainstorming environment. The <strong>Anti-Melantur Guard</strong> prevents off-topic digressions: after 3 consecutive off-topic loops, the AI forcefully drafts a structural proposal to refocus the author.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="outline">
+            <h2 class="section-header">Season Architect & Outline Engine</h2>
+            <p>The <strong>Season Architect</strong> generates structured chapter blueprints that strictly follow melodrama retention rhythms.</p>
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>Story Compass Safeguard</h3>
+                    <p>Prevents arbitrary outline generation unless the core Story Compass pillars are complete. Outlines are woven with consistent cliffhangers and dopamine cycles.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Sequential Await Generation</h3>
+                    <p>To avoid AI amnesia, chapter outlines are generated chronologically. The contextual output of Chapter N is dynamically fed as preceding memory for Chapter N+1.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Deep Outline & Pacing Validator</h3>
+                    <p>Leverages Gemini's non-streaming reasoning mode to place mystery clues logically across sub-arcs. A warning-only pacing validator warns the user of flat emotional zones or monotone cliffhangers.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="prose-editor">
+            <h2 class="section-header">Prose Editor & Strict Mode</h2>
+            <p>A premium distraction-free environment that balances structured guidance with creative freedom.</p>
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>Beat-by-Beat Strict Mode</h3>
+                    <p>Narrows naskah generation down to scene-level events. Writing progresses in manageable chunks mapped directly to localized scene beats and outlines.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Free Write Mode</h3>
+                    <p>Toggles off all structured beat boundaries, providing a wide-open plain text canvas. When toggled off, a <strong>Sync Watcher</strong> identifies unindexed chapters and initiates sequential background backfilling.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Debounced Auto-Save</h3>
+                    <p>Keeps drafts perfectly preserved. Slices the prose buffers and executes local + Supabase syncing after 2 seconds of inactivity to guarantee zero data loss.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="ai-architecture">
+            <h2 class="section-header">AI Architecture & Provider Pool</h2>
+            <p>The application employs a sophisticated abstraction layer capable of routing specific tasks to the most cost-effective or high-performance LLM available.</p>
+
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>Gemini Multi-Key Pool</h3>
+                    <p>A round-robin balancing system for free Gemini API keys. Includes strict 60-second cooldown rate-limiting guardrails and <strong>BYOK Guard</strong>, which completely masks API keys from console logs to prevent accidental leakage.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>OpenRouter Adapter</h3>
+                    <p>When the highest prose quality is demanded, the AI Router dynamically swaps to Claude 3.5 Sonnet or Deepseek v4 via OpenRouter for prose generation, preserving Gemini for background administrative tasks.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Server-Sent Events (SSE)</h3>
+                    <p>All generative text features leverage streaming. Responses are parsed chunk-by-chunk in real-time, feeding React state progressively without blocking the main thread.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="memory-system">
+            <h2 class="section-header">The 4-Layer Memory System</h2>
+            <p>To combat AI amnesia and manage token budgets effectively (targeting ~8000 tokens per beat), context injection is aggressively pruned across four distinct layers:</p>
+
+            <ol>
+                <li><strong>Layer 1: Static Lorebook</strong> - Always injects the Narrative Constitution, Melodrama Protocol, Target Ending, and active Mystery Layers. Characters/Items are only injected if their names literally match the scene's outline (Keyword Pruning).</li>
+                <li><strong>Layer 2: Dynamic State</strong> - Extracts 10 crucial fields for characters involved in the scene (Location, Emotional State, Inventory, Secrets, Goals) calculated dynamically from the <em>previous</em> chapter's end-state.</li>
+                <li><strong>Layer 3: RAG Long-Term Memory</strong> - Utilizes Supabase `pgvector` and Gemini `text-embedding-004`. Semantically fetches the 3 most relevant previous chapter summaries to maintain distant context.</li>
+                <li><strong>Layer 4: Sliding Window</strong> - Grabs the literal last 500 words of the previous chapter to seamlessly carry over prose style, tone, and mid-dialogue cuts. Also includes a "read-only fence" of the next 2 chapter outlines to prevent plot rushing.</li>
+            </ol>
+        </section>
+
+        <section id="review-panel">
+            <h2 class="section-header">Review Panel & QA Radar</h2>
+            <p>A comprehensive naskah scanning workspace to maintain high visual consistency and plot logical integrity.</p>
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>3-Column Desktop Workspace</h3>
+                    <p>Presents prose, structural QA violations, and context subplots side-by-side. Intelligently collapses into an animated Framer Motion tab switcher on mobile viewports.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>QA Radar Severity Filters</h3>
+                    <p>Categorizes writing checks into CRITICAL, WARNING, and INFO tiers across four axes: Plot Holes, Emotional Breather intervals, Chekhov's Gun tracking, and Filler detection.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>LoreDiff & Thread Tracker</h3>
+                    <p>Plots new characters or world rules detected in naskah into the interactive LoreDiff modal for approval. Tracks thread milestones (Planted, Active, Resolved) with pulsing urgency indicators.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="visualizations">
+            <h2 class="section-header">Emotional Arc & Advanced Visualizations</h2>
+            <p>Transforming text metrics into visual intelligence to analyze pacing and character relationships.</p>
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>D3.js Constellation Map</h3>
+                    <p>A lazy-loaded, force-directed graph (using d3-force) visually linking characters, items, and active settings based on context-overlap filters.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Emotional Arc Heatmap</h3>
+                    <p>A beautifully tiled matrix charting emotional shifts, cliffhanger variants, word counts, and filler levels across every single chapter.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Lifespan Timeline Tracker</h3>
+                    <p>Presents a Gantt-style timeline visualization mapping the emergence, development, and eventual resolution of multiple plot threads.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="pwa">
+            <h2 class="section-header">PWA & Offline Resilience</h2>
+            <p>VibeNovel v2 is a fully installable Progressive Web App powered by <code>vite-plugin-pwa</code> with Workbox caching strategies.</p>
+
+            <ul>
+                <li><strong>Offline Draft Fallback:</strong> If the user loses connection while typing in the <em>BeatEditor</em>, the <code>useOfflineDraft</code> hook automatically intercepts the debounced save and commits the payload to `localStorage`.</li>
+                <li><strong>Auto-Sync Recovery:</strong> Upon detecting network reconnection, background queues silently replay all cached drafts to the Supabase PostgreSQL database.</li>
+                <li><strong>Smart Strategy:</strong> Local assets and fonts use `CacheFirst`, Supabase queries use `NetworkFirst`, and AI calls are strictly `NetworkOnly`.</li>
+            </ul>
+        </section>
+
+        <section id="pro-features">
+            <h2 class="section-header">Pro Writer Features</h2>
+
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h3>4-Step Import Wizard</h3>
+                    <p>Reads <code>.docx</code>, <code>.pdf</code>, and <code>.txt</code>. Utilizes a dual-tier AI analysis: a fast Quick Scan (compressed sample) followed by Deep Analysis on critical chapters to establish Voice DNA and prepopulate the Story Compass.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Director's Cut Modal</h3>
+                    <p>Offers 3 sequential streaming rewrites (Tighter, Emotional, Dramatic). When the user accepts one, the system sends an <code>AbortSignal</code> to immediately kill the remaining pending streams, saving API costs.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Selection Magic Edit</h3>
+                    <p>A Medium/Notion-style floating toolbar that appears upon text selection. Integrates directly with <strong>Gemini 2.0 Flash Lite</strong> for ultra-fast, surgically precise inline text replacement.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Simple scroll spy for sidebar
+        const sections = document.querySelectorAll("section");
+        const navLinks = document.querySelectorAll(".nav-links a");
+
+        window.addEventListener("scroll", () => {
+            let current = "";
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 150) {
+                    current = section.getAttribute("id");
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove("active");
+                if (link.getAttribute("href").includes(current)) {
+                    link.classList.add("active");
+                }
+            });
+        });
+    </script>
+</body>
+</html>
