@@ -10,6 +10,7 @@ import { MysteryLayerPanel } from '../compass/MysteryLayerPanel'
 import { VoiceDNAEditor } from '../compass/VoiceDNAEditor'
 import { MimicryEngineCard } from '../compass/MimicryEngineCard'
 import { stateTracker } from '../../services/state-tracker'
+import type { ItemCategory, LoreCategory } from '../../types/project'
 
 export const ContextPanel: React.FC = () => {
   // Store hooks
@@ -30,6 +31,8 @@ export const ContextPanel: React.FC = () => {
     mysteryLayers,
     addCharacter,
     updateCharacter,
+    updateItem,
+    updateWorldRule,
     updateProject,
     updateMysteryLayer,
     getLatestStatesForChapter,
@@ -157,6 +160,26 @@ export const ContextPanel: React.FC = () => {
           : undefined
       })
       addToast('Lapisan misteri diperbarui.', 'success')
+    } else if (editingCompassDraft.draftType === 'item' && editingCompassDraft.entityId) {
+      await updateItem(editingCompassDraft.entityId, {
+        name: typeof updatedData.name === 'string' ? updatedData.name : undefined,
+        category: typeof updatedData.category === 'string' ? updatedData.category as ItemCategory : undefined,
+        description: typeof updatedData.description === 'string' ? updatedData.description : undefined,
+        significance: typeof updatedData.significance === 'string' ? updatedData.significance : undefined,
+        activation_keys: Array.isArray(updatedData.activation_keys) ? updatedData.activation_keys as string[] : undefined,
+        current_owner: typeof updatedData.current_owner === 'string' ? updatedData.current_owner : undefined,
+        priority: typeof updatedData.priority === 'number' ? updatedData.priority : undefined
+      })
+      addToast('Item diperbarui.', 'success')
+    } else if (editingCompassDraft.draftType === 'world_rule' && editingCompassDraft.entityId) {
+      await updateWorldRule(editingCompassDraft.entityId, {
+        name: typeof updatedData.name === 'string' ? updatedData.name : undefined,
+        category: typeof updatedData.category === 'string' ? updatedData.category as LoreCategory : undefined,
+        description: typeof updatedData.description === 'string' ? updatedData.description : undefined,
+        priority: typeof updatedData.priority === 'number' ? updatedData.priority : undefined,
+        activation_keys: Array.isArray(updatedData.activation_keys) ? updatedData.activation_keys as string[] : undefined
+      })
+      addToast('Aturan dunia diperbarui.', 'success')
     }
   }
 
@@ -241,6 +264,14 @@ export const ContextPanel: React.FC = () => {
                 exit="hidden"
                 className="space-y-5"
               >
+                <motion.div variants={itemVariants} className="space-y-1 mb-5 pb-3 border-b border-surface-variant/30">
+                  <h2 className="text-headline-md text-primary flex items-center gap-2">
+                    📚 Pustaka Lore
+                  </h2>
+                  <p className="text-label-md text-on-surface-variant">
+                    Konteks canon yang akan dibaca AI saat menulis bab.
+                  </p>
+                </motion.div>
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <span className="font-semibold text-on-surface-variant uppercase tracking-wider text-label-md">
@@ -312,9 +343,13 @@ export const ContextPanel: React.FC = () => {
                       <motion.div
                         key={c.id}
                         variants={itemVariants}
-                        className="p-3 rounded-xl bg-surface-container border border-outline-variant/30 hover:border-outline-variant transition-colors"
+                        onClick={() => setEditingCompassDraft({ draftType: 'character', entityId: c.id, initialData: c as unknown as Record<string, unknown> })}
+                        className="p-3 rounded-xl bg-surface-container border border-outline-variant/30 hover:border-outline-variant cursor-pointer transition-colors relative group"
                       >
-                        <div className="flex justify-between items-center mb-1">
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="material-symbols-outlined text-[14px] text-on-surface-variant">edit</span>
+                        </div>
+                        <div className="flex justify-between items-center mb-1 pr-6">
                           <span className="font-bold text-on-surface text-body-sm">{c.name}</span>
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-container-low text-on-surface-variant">
                             {c.role}
@@ -337,9 +372,13 @@ export const ContextPanel: React.FC = () => {
                       <motion.div
                         key={item.id}
                         variants={itemVariants}
-                        className="p-3 rounded-xl bg-surface-container border border-outline-variant/30"
+                        onClick={() => setEditingCompassDraft({ draftType: 'item', entityId: item.id, initialData: item as unknown as Record<string, unknown> })}
+                        className="p-3 rounded-xl bg-surface-container border border-outline-variant/30 hover:border-outline-variant cursor-pointer transition-colors relative group"
                       >
-                        <span className="font-bold text-on-surface text-body-sm block">
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="material-symbols-outlined text-[14px] text-on-surface-variant">edit</span>
+                        </div>
+                        <span className="font-bold text-on-surface text-body-sm block pr-6">
                           {item.name}
                         </span>
                         <span className="text-[10px] font-semibold text-secondary uppercase tracking-wider block mt-0.5">
@@ -363,9 +402,13 @@ export const ContextPanel: React.FC = () => {
                         <motion.div
                           key={rule.id}
                           variants={itemVariants}
-                          className="p-3 rounded-xl bg-surface-container border border-outline-variant/30"
+                          onClick={() => setEditingCompassDraft({ draftType: 'world_rule', entityId: rule.id, initialData: rule as unknown as Record<string, unknown> })}
+                          className="p-3 rounded-xl bg-surface-container border border-outline-variant/30 hover:border-outline-variant cursor-pointer transition-colors relative group"
                         >
-                          <span className="font-bold text-on-surface text-body-sm block">
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="material-symbols-outlined text-[14px] text-on-surface-variant">edit</span>
+                          </div>
+                          <span className="font-bold text-on-surface text-body-sm block pr-6">
                             📜 {rule.name}
                           </span>
                           <p className="text-label-md text-on-surface-variant leading-relaxed mt-1">

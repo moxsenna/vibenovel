@@ -1,16 +1,16 @@
-# Graph Report - vibenovel  (2026-05-25)
+# Graph Report - vibenovel  (2026-05-29)
 
 ## Corpus Check
-- 141 files · ~342,031 words
+- 148 files · ~353,198 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2448 nodes · 3890 edges · 186 communities (172 shown, 14 thin omitted)
+- 3032 nodes · 4936 edges · 202 communities (188 shown, 14 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `374f57ec`
+- Built from commit: `ab3fbbe8`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -199,18 +199,33 @@
 - [[_COMMUNITY_Community 183|Community 183]]
 - [[_COMMUNITY_Community 184|Community 184]]
 - [[_COMMUNITY_Community 185|Community 185]]
+- [[_COMMUNITY_Community 186|Community 186]]
+- [[_COMMUNITY_Community 188|Community 188]]
+- [[_COMMUNITY_Community 189|Community 189]]
+- [[_COMMUNITY_Community 190|Community 190]]
+- [[_COMMUNITY_Community 191|Community 191]]
+- [[_COMMUNITY_Community 192|Community 192]]
+- [[_COMMUNITY_Community 193|Community 193]]
+- [[_COMMUNITY_Community 194|Community 194]]
+- [[_COMMUNITY_Community 195|Community 195]]
+- [[_COMMUNITY_Community 196|Community 196]]
+- [[_COMMUNITY_Community 197|Community 197]]
+- [[_COMMUNITY_Community 198|Community 198]]
+- [[_COMMUNITY_Community 199|Community 199]]
+- [[_COMMUNITY_Community 200|Community 200]]
+- [[_COMMUNITY_Community 201|Community 201]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `useProjectStore` - 73 edges
 2. `useUiStore` - 61 edges
-3. `VibeNovel v2 — Session Reports` - 35 edges
-4. `VibeNovel v2 â€” Session Reports` - 32 edges
-5. `AiRouter` - 31 edges
-6. `Chapter` - 30 edges
-7. `Sprint 9.8 — Deep Outline (Outline Generator Reasoning Engine)` - 30 edges
-8. `Refactor Audit Follow-up - Maintainability Hardening` - 28 edges
-9. `VibeNovel v2 — Integration & Orchestration Walkthrough` - 26 edges
-10. `useSettingsStore` - 25 edges
+3. `Session: Sprint 9.6 — UX Polish (Notion-Grade Calm)` - 41 edges
+4. `VibeNovel v2 — Session Reports` - 39 edges
+5. `Session: Sprint 9.5 — QA Hardening` - 35 edges
+6. `Session: Sprint 9.8 — Deep Outline (Outline Generator Reasoning Engine)` - 35 edges
+7. `AiRouter` - 33 edges
+8. `Chapter` - 33 edges
+9. `VibeNovel v2 â€” Session Reports` - 32 edges
+10. `Session: UX Polish - Co-Author Auto-Advance & Story Compass` - 31 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `4-Layer Context Assembly (context-injector.ts)` --implements--> `4-Layer Memory & Context Pruning System`  [INFERRED]
@@ -224,27 +239,27 @@
 - `CoAuthor Chat UI Interface` --references--> `SVG Icon Sprite`  [EXTRACTED]
   src/components/chat/CoAuthorChat.tsx → public/icons.svg
 
-## Communities (186 total, 14 thin omitted)
+## Communities (202 total, 14 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.06
 Nodes (37): CacheEnvelope, getCachedAnalysis(), setCachedAnalysis(), buildQuickScanSample(), CostEstimate, estimateCost(), extractCharacterSeeds(), hashText() (+29 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.08
-Nodes (30): EmotionalArcPreview(), TONE_DOT, KEY_LABELS, MimicryEngineCard(), MimicryEngineCardProps, CardProps, FormProps, MysteryLayerCard() (+22 more)
+Cohesion: 0.13
+Nodes (14): AiRouter, EmotionalArcPreview(), TONE_DOT, ThreadTrackerPanel(), StateGenStatus, useBeatWriter(), useLoreExtractor(), usePlotRadar() (+6 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.05
-Nodes (42): dependencies, framer-motion, react, react-dom, react-router-dom, @supabase/supabase-js, zustand, devDependencies (+34 more)
+Cohesion: 0.04
+Nodes (45): dependencies, framer-motion, react, react-dom, react-router-dom, @supabase/supabase-js, zustand, devDependencies (+37 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.11
 Nodes (21): AI Router Coordinator (ai-router.ts), BYOK & Local Encrypted Keyring Security, 100% Client-Side SPA Constraint, CoAuthor Chat UI Interface, 4-Layer Context Assembly (context-injector.ts), Supabase Generated TypeScript Interfaces, Anti-Flicker Dual-Theme Architecture, 4-Layer Memory & Context Pruning System (+13 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.10
-Nodes (27): CompassEditDraft, CompassStep, SeriesHookField(), StoryCompassPreview(), StoryCompassPreviewProps, COMPASS_SLOT_LABELS, CompassProgress, CompassProgressInput (+19 more)
+Cohesion: 0.13
+Nodes (23): COMPASS_SLOT_LABELS, CompassProgress, CompassProgressInput, CompassSlot, CompassStep, describeDraftTypeForUser(), getCompassProgress(), getCompassSteps() (+15 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.11
@@ -255,16 +270,16 @@ Cohesion: 0.11
 Nodes (17): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, lib, module, moduleDetection, moduleResolution, noEmit (+9 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.10
-Nodes (28): Challenges Encountered, Files Created, Files Created, Files Created, Files Modified, Files Modified, Files Modified, Next Steps (Sprint 1D — Outline Engine) (+20 more)
+Cohesion: 0.26
+Nodes (13): STEP 1: Fix Syntax Corruption, Step 1: Novice-friendly workspace flow, STEP 2: Context Panel Editable Lore, Step 2: Humanized labels and commands, STEP 3: Generation Loading UI, Step 3: Shared workspace mode metadata, STEP 4: Beautify Pacing Warnings, STEP 4: Beautify Pacing Warnings & Auto-Fix UI (+5 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.11
 Nodes (19): 3 Mode Operasi, Alur Approval (Semua Mode), code:block18 (┌─────────────────────────────────────────────────────────┐), code:block19 (User ngobrol 1-2 pesan off-topic:), code:block20 (Agent mengajukan draft data), code:block21 (Story Compass: 3/5 wajib terisi ██████░░░░ 60%), code:block22 (Agent: "Story Compass sudah lengkap! ✅), code:block23 (Agent tahu:) (+11 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.21
-Nodes (8): CanonicalDna, CardProps, CharacterDnaCard(), readCanonical(), str(), canRecalibrate(), gatherVoiceSamples(), VoiceSampleSelection
+Cohesion: 0.20
+Nodes (14): ExpandMode, TargetChaptersAdjustmentModal(), TargetChaptersAdjustmentModalProps, getLockedChaptersAbove(), isLocked(), ReductionValidation, validateTargetReduction(), expandTargetNewSeason() (+6 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.25
@@ -283,8 +298,8 @@ Cohesion: 0.11
 Nodes (17): 4-Layer Memory Architecture, code:mermaid (graph TD), code:sql (-- Projects), code:block29 (Input: Beat outline = "Kania menolak lamaran Dirga di kafe"), code:block38 (vibenovel-v2/), code:block4 (Frontend:     Vite + React 19 + TypeScript + React Router v7), Dynamic Context Injection, End-to-End (Fase 10) (+9 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.13
-Nodes (20): 1. Optimistic UUID Syncing (Bible Items CRUD), 1. Optimistic UUID Syncing (Lorebook Items CRUD), 2. State & Loading Syncing (Project Creation), 3. Otentikasi & Guard Validations, Catatan Developer Baru, 🛠️ File Baru, 🔧 File yang Dimodifikasi, 🧪 Hasil Verifikasi (+12 more)
+Cohesion: 0.10
+Nodes (25): 1. Optimistic UUID Syncing (Bible Items CRUD), 1. Optimistic UUID Syncing (Lorebook Items CRUD), 2026-05-27 - Engine Hardening Before Continuity Gate, 2. State & Loading Syncing (Project Creation), 3. Otentikasi & Guard Validations, Catatan Developer Baru, 🛠️ File Baru, 🔧 File yang Dimodifikasi (+17 more)
 
 ### Community 24 - "Community 24"
 Cohesion: 0.15
@@ -307,12 +322,12 @@ Cohesion: 0.18
 Nodes (11): Apa yang Tampil di Setiap Mode, code:block10 (┌──────────────────────────────────────────────────────────┐), code:block11 (┌─────────────────────────────────────────────────────┐), code:block12 (┌──────────┬───────────┬────────────────────────────┐), code:block13 (┌─────────────────────┐), Design Rules Mobile, Distraction-Free Mode (Context Panel collapsed), Mobile (<768px) (+3 more)
 
 ### Community 29 - "Community 29"
-Cohesion: 0.32
-Nodes (13): Session: Refactoring — Zustand Parts Modularization (useProjectStore Refactor), STEP 1: Creating Modular Parts Directory, STEP 2: Extraction of Modul Proyek (`projects.ts`), STEP 3: Extraction of Modul Bab (`chapters.ts`), STEP 4: Extraction of Modul Pustaka Lore (`lorebook.ts`), STEP 5: Extraction of Modul Outline (`outlines.ts`), STEP 6: Reconstructing Main Store (`useProjectStore.ts`), STEP 7: Fixing PostgreSQL / Supabase Client Type Mismatches (+5 more)
+Cohesion: 0.17
+Nodes (9): isRecord(), mergeStoryContractPatch(), OutlinesPart, proposalDedupeKey(), proposalName(), readPayloadRecord(), readPayloadString(), VALID_ITEM_CATEGORIES (+1 more)
 
 ### Community 30 - "Community 30"
 Cohesion: 0.17
-Nodes (17): Design Decisions Honored, Design Decisions Honored, Design Decisions Honored, Next Steps (Sprint 2B — State Tracker & Context Injection Upgrade), Next Steps (Sprint 2B â€” State Tracker & Context Injection Upgrade), Session: Sprint 2A — Beat-by-Beat Prose Writer, Session: Sprint 2A â€” Beat-by-Beat Prose Writer, STEP 1: Setting up Types & Prompt Builder (+9 more)
+Nodes (22): Design Decisions Honored, Design Decisions Honored, Design Decisions Honored, Design Decisions Honored, Design Decisions Honored, Next Steps (Sprint 2B — State Tracker & Context Injection Upgrade), Session: Sprint 2A — Beat-by-Beat Prose Writer, STEP 1: Setting up Types & Prompt Builder (+14 more)
 
 ### Community 31 - "Community 31"
 Cohesion: 0.39
@@ -324,15 +339,15 @@ Nodes (22): Bundle Size Budget, code:block24 (Supabase Storage Buckets:), code:m
 
 ### Community 33 - "Community 33"
 Cohesion: 0.22
-Nodes (9): Adapter Interface, AI Architecture, AI Router, code:typescript (// src/services/ai/ai-router.ts), code:mermaid (graph LR), code:typescript (// src/services/ai/types.ts), code:typescript (// src/services/ai/gemini-pool.ts), Gemini Multi-Key Pool (+1 more)
+Nodes (10): Adapter Interface, AI Architecture, AI Router, AI Router & Auto-Pilot, code:typescript (// src/services/ai/ai-router.ts), code:mermaid (graph TD), code:typescript (// src/services/ai/types.ts), code:typescript (// src/services/ai/gemini-pool.ts) (+2 more)
 
 ### Community 34 - "Community 34"
 Cohesion: 0.25
 Nodes (8): code:block5 (┌───────────────────────────────────────────────────────────), code:block6 (┌─────────────────────────┐), Dashboard (Lobby), Dual Progress Bar per Card, Layout Desktop, Menu Card (⋯), Mobile Dashboard, Status Badge
 
 ### Community 35 - "Community 35"
-Cohesion: 0.21
-Nodes (11): BatchCallbacks, clearPersistedBatchProgress(), isHardError(), isUserAbort(), loadPersistedBatchProgress(), progressKey(), ProjectStoreApi, StoreSnapshot (+3 more)
+Cohesion: 0.15
+Nodes (25): Files Created (3), Files Created (3), Files Created (3), Files Created (3), Files Created (3), Files Created (3), Files Modified (9), Session: Visual Polish — Premium Themed Dialogs & Toasts Engine (+17 more)
 
 ### Community 36 - "Community 36"
 Cohesion: 0.29
@@ -347,8 +362,8 @@ Cohesion: 0.22
 Nodes (9): 📜 Architecture & Contribution Guidelines, code:bash (# Install dependencies), code:js (// eslint.config.js), 🛠️ Development Setup, Expanding the ESLint configuration, 🌟 Key Features, React Compiler, React + TypeScript + Vite (+1 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.50
-Nodes (5): 4-Layer Memory System, code:mermaid (graph TD), code:block12 (Target: ~8000 tokens input per beat generation), Context Assembly Flow, Token Budget
+Cohesion: 0.40
+Nodes (6): 4-Layer Memory System, code:mermaid (graph TD), code:block12 (Target: ~8000 tokens input per beat generation), Context Assembly Flow, Token Budget, Version History Beat Snapshots
 
 ### Community 40 - "Community 40"
 Cohesion: 0.33
@@ -367,8 +382,8 @@ Cohesion: 0.40
 Nodes (5): API Keys — Client-Side Only, code:block28, code:block29, Data Privacy, Security Architecture
 
 ### Community 44 - "Community 44"
-Cohesion: 0.23
-Nodes (16): Design Decisions Honored, Design Decisions Honored, Next Steps (Sprint 3A — Plot Radar & Lore Extraction), Session: Sprint 2B — State Tracker & Context Injection Upgrade, STEP 1: Type Expansion & State Structures, STEP 2: State Extraction & Prompt Modul, STEP 3: Store & Sync Actions, STEP 4: Chat Brainstorming & Draf State Approval (+8 more)
+Cohesion: 0.19
+Nodes (25): Design Decisions Honored, Design Decisions Honored, Design Decisions Honored, Design Decisions Honored, Design Decisions Honored, Next Steps (Sprint 3A — Plot Radar & Lore Extraction), Session: Sprint 2B — State Tracker & Context Injection Upgrade, STEP 1: Type Expansion & State Structures (+17 more)
 
 ### Community 45 - "Community 45"
 Cohesion: 0.40
@@ -423,8 +438,8 @@ Cohesion: 0.11
 Nodes (18): 📋 Checklist (5 Phases), Phase 1 — Embedding Service + Chapter Summaries, Phase 1 — Import Wizard, Phase 1 — Mystery Layer Foundation, Phase 1 — Service Foundation, Phase 2 — Free Write Mode, Phase 2 — Hook + Store Integration, Phase 2 — RAG Service & Context Injector Enhancement (+10 more)
 
 ### Community 58 - "Community 58"
-Cohesion: 0.07
-Nodes (36): Behavior Matrix, Combined Impact Sprint 9.7 + 9.8, Deferred Items (Out of Sprint Scope), Files Created (0), Files Created (0), Files Created (0), Files Modified (6), Files Modified (6) (+28 more)
+Cohesion: 0.06
+Nodes (54): Behavior Matrix, Combined Impact Sprint 9.7 + 9.8, Deferred Items (Out of Sprint Scope), Files Created (0), Files Created (0), Files Created (0), Files Created (0), Files Created (0) (+46 more)
 
 ### Community 59 - "Community 59"
 Cohesion: 0.50
@@ -439,12 +454,12 @@ Cohesion: 0.50
 Nodes (4): Dependensi, File yang Dibuat/Diubah, Sprint 10 — Capacitor & Production (Fase 10), Verifikasi (End-to-End — semua 6 path dari implementation plan)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.20
-Nodes (5): BatchGenerator, countWords(), joinProse(), persistProgress(), buildProseInput()
+Cohesion: 0.11
+Nodes (20): BatchCallbacks, BatchGenerator, clearPersistedBatchProgress(), countWords(), isHardError(), isUserAbort(), joinProse(), loadPersistedBatchProgress() (+12 more)
 
 ### Community 63 - "Community 63"
-Cohesion: 0.11
-Nodes (23): Challenges Encountered, Challenges Encountered, Challenges Encountered, Files Created, Files Created, Files Created, Files Modified, Files Modified (+15 more)
+Cohesion: 0.07
+Nodes (56): Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered, Files Created, Files Created (+48 more)
 
 ### Community 64 - "Community 64"
 Cohesion: 0.67
@@ -455,60 +470,60 @@ Cohesion: 0.18
 Nodes (10): buildDeepChapterAnalysisSystemInstruction(), buildDeepChapterAnalysisUserPrompt(), buildQuickScanSystemInstruction(), buildQuickScanUserPrompt(), buildVoiceDnaCalibrationSystemInstruction(), buildVoiceDnaCalibrationUserPrompt(), DeepChapterInput, KBM_VOICE (+2 more)
 
 ### Community 68 - "Community 68"
-Cohesion: 0.07
-Nodes (29): 7.1 Validasi Draft Co-Author, 7.2 Validasi Outline, 7.3 Retry Logic, 7.4.10 Contoh Kasus, 7.4.1 Klasifikasi Entitas Baru, 7.4.2 Canon Proposal Schema, 7.4.3 Trigger Proposal, 7.4.4 Alur Outline (+21 more)
+Cohesion: 0.09
+Nodes (22): 7.4.10 Contoh Kasus, 7.4.1 Klasifikasi Entitas Baru, 7.4.2 Canon Proposal Schema, 7.4.3 Trigger Proposal, 7.4.4 Alur Outline, 7.4.5 Alur Prose, 7.4.6 UI/UX, 7.4.7 Persistence (+14 more)
 
 ### Community 69 - "Community 69"
-Cohesion: 0.22
-Nodes (9): 1. Desain Karakter Tema, 2. Implementasi CSS Variables (src/index.css), 3. State & Sinkronisasi DOM, 4. Pencegahan Layout Shift (Anti-Flicker), 5. Themed Custom Dialog & Notification Engine, code:css (@theme {), code:typescript (// src/store/useUiStore.ts), code:html (<!-- index.html -->) (+1 more)
+Cohesion: 0.20
+Nodes (10): 1. Desain Karakter Tema, 2. Implementasi CSS Variables (src/index.css), 3. State & Sinkronisasi DOM, 4. Pencegahan Layout Shift (Anti-Flicker), 5. Themed Custom Dialog & Notification Engine, code:css (@theme {), code:typescript (// src/store/useUiStore.ts), code:html (<!-- index.html -->) (+2 more)
 
 ### Community 70 - "Community 70"
 Cohesion: 0.36
 Nodes (10): ✅ Checklist Eksekusi, ✅ Checklist Eksekusi, ✅ Checklist Eksekusi, code:typescript (deepOutlineEnabled: boolean       // default: true), Phase 1 — Backend: Non-Streaming Thinking Method, Phase 2 — AI Router Integration, Phase 3 — Settings Store, Phase 4 — Store Integration (+2 more)
 
 ### Community 71 - "Community 71"
-Cohesion: 0.09
-Nodes (26): AiRouter, StateGenStatus, useBeatWriter(), useLoreExtractor(), DraftPayload, isDraftKey(), listPendingDrafts(), parseKey() (+18 more)
+Cohesion: 0.08
+Nodes (25): DraftPayload, isDraftKey(), listPendingDrafts(), parseKey(), PendingDraft, useOfflineDraft(), DirectorsCutModal(), DirectorsCutModalProps (+17 more)
 
 ### Community 72 - "Community 72"
-Cohesion: 0.10
-Nodes (25): Files Created (5), Files Modified (5), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Next Steps (Sprint 7 — Thread Tracker & RAG), Next Steps (Sprint 7 â€” Thread Tracker & RAG), Phase 1 — Service Foundation (+17 more)
+Cohesion: 0.06
+Nodes (51): Files Created (1), Files Created (5), Files Modified (1), Files Modified (5), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side) (+43 more)
 
 ### Community 73 - "Community 73"
-Cohesion: 0.15
-Nodes (19): CoAuthorDraft, ExtractedLore, AISettings, BrainstormInput, BrainstormResponse, ChatMessageParam, ImportedChapterData, OutlineGenerateInput (+11 more)
+Cohesion: 0.14
+Nodes (20): CoAuthorDraft, ExtractedLore, AISettings, BrainstormInput, BrainstormResponse, ChatMessageParam, ImportedChapterData, OutlineGenerateInput (+12 more)
 
 ### Community 75 - "Community 75"
 Cohesion: 0.14
 Nodes (13): ARC_BAND_PROFILE, ArcBand, CliffhangerType, DanglingThreadInput, EmotionalTone, HookChainCoverageInput, PacingValidationResult, validateCliffhangerVariety() (+5 more)
 
 ### Community 76 - "Community 76"
-Cohesion: 0.22
-Nodes (15): Next Steps (Sprint 3B — Review Mode & PWA), Next Steps (Sprint 3B â€” Review Mode & PWA), Session: Sprint 3A — Plot Radar & Lore Extraction, Session: Sprint 3A â€” Plot Radar & Lore Extraction, STEP 1: AI Prompt Templates (`src/prompts/plot-radar.ts`, `src/prompts/lore-extractor.ts`), STEP 2: Service Layer & AI Router (`src/services/ai/ai-router.ts`), STEP 3: State Management & Hooks (`src/hooks/usePlotRadar.ts`, `src/hooks/useLoreExtractor.ts`, `src/store/parts/lorebook.ts`), STEP 4: UI Components (`src/components/workspace/ReviewPanel.tsx`, `src/components/modals/LoreDiffModal.tsx`) (+7 more)
+Cohesion: 0.21
+Nodes (21): Next Steps (Sprint 3B — Review Mode & PWA), Next Steps (Sprint 3B â€” Review Mode & PWA), Session: Sprint 3A — Plot Radar & Lore Extraction, Session: Sprint 3A â€” Plot Radar & Lore Extraction, STEP 1: AI Prompt Templates (`src/prompts/plot-radar.ts`, `src/prompts/lore-extractor.ts`), STEP 2: Service Layer & AI Router (`src/services/ai/ai-router.ts`), STEP 3: State Management & Hooks (`src/hooks/usePlotRadar.ts`, `src/hooks/useLoreExtractor.ts`, `src/store/parts/lorebook.ts`), STEP 4: UI Components (`src/components/workspace/ReviewPanel.tsx`, `src/components/modals/LoreDiffModal.tsx`) (+13 more)
 
 ### Community 77 - "Community 77"
-Cohesion: 0.09
-Nodes (28): Challenges Encountered, Challenges Encountered, Challenges Encountered, Dependencies Installed (2, both lazy-loaded), Files Created (10), Files Modified (12), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side) (+20 more)
+Cohesion: 0.08
+Nodes (39): Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered, Dependencies Installed (2, both lazy-loaded), Files Created (10) (+31 more)
 
 ### Community 78 - "Community 78"
-Cohesion: 0.09
-Nodes (25): 2026-05-24 — Sprint 9.7: Deep Think Mode (Prose Writer Reasoning) + Sprint 9.8: Deep Outline (Outline Generator Reasoning), Backend, Backend, Backend, Backend, Behavior Matrix, code:block1 (npx tsc -b --noEmit  → 0 errors ✅), Files Changed (Combined Sprint 9.7 + 9.8) (+17 more)
+Cohesion: 0.08
+Nodes (29): 2026-05-24 — Sprint 9.7: Deep Think Mode (Prose Writer Reasoning) + Sprint 9.8: Deep Outline (Outline Generator Reasoning), Backend, Backend, Backend, Backend, Backend, Behavior Matrix, code:block1 (npx tsc -b --noEmit  → 0 errors ✅) (+21 more)
 
 ### Community 79 - "Community 79"
-Cohesion: 0.17
-Nodes (13): CoAuthorChat(), CoAuthorChatProps, PROSE_MODELS, SettingsModal(), SettingsModalProps, Tab, TABS, ChatMessage (+5 more)
+Cohesion: 0.15
+Nodes (13): Files Created, Files Created, Files Created, Files Created, Files Modified, Files Modified, Files Modified, Files Modified (+5 more)
 
 ### Community 80 - "Community 80"
-Cohesion: 0.13
-Nodes (13): DirectorsCutModalProps, initialVariantState, VARIANTS, VariantState, buildDirectorsCutSystemInstruction(), buildDirectorsCutUserPrompt(), buildInlineEditSystemInstruction(), buildInlineEditUserPrompt() (+5 more)
+Cohesion: 0.20
+Nodes (9): buildDirectorsCutSystemInstruction(), buildDirectorsCutUserPrompt(), buildInlineEditSystemInstruction(), buildInlineEditUserPrompt(), DirectorsCutInput, DirectorsCutVariant, InlineEditInput, KBM_BASE (+1 more)
 
 ### Community 81 - "Community 81"
 Cohesion: 0.11
 Nodes (17): 1. Prompt untuk Logo Utama, 1. Prompt untuk Logo Utama, 1. Prompt untuk Logo Utama, 2. Prompt untuk Favicon (Ikon Kecil/Sederhana), 2. Prompt untuk Favicon (Ikon Kecil/Sederhana), 2. Prompt untuk Favicon (Ikon Kecil/Sederhana), code:text (Create a premium aesthetic app logo icon for a digital novel), code:text (Design a matching minimalist favicon icon for the celestial ) (+9 more)
 
 ### Community 82 - "Community 82"
-Cohesion: 0.11
-Nodes (23): Files Created (3), Files Modified (16), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Next Steps (Sprint 6 — Auto-Pilot Batch Generation), Next Steps (Sprint 6 â€” Auto-Pilot Batch Generation), Phase 1 — Mystery Layer Foundation (+15 more)
+Cohesion: 0.10
+Nodes (32): Files Created (3), Files Modified (16), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side) (+24 more)
 
 ### Community 83 - "Community 83"
 Cohesion: 0.06
@@ -516,39 +531,39 @@ Nodes (32): 1.1 Post-Prose Background AI Cascade Overlap, 1.2 Offline Draft Sync
 
 ### Community 84 - "Community 84"
 Cohesion: 0.22
-Nodes (9): UseBatchGenerator, BatchProgressPanel(), formatElapsed(), STATUS_BADGE, isNonEmptyStoryContract(), BatchProgress, ChapterOutlineCard(), ChapterOutlineCardProps (+1 more)
+Nodes (9): getArcPosition(), buildLoreExtractorSystemInstruction(), buildLoreExtractorUserPrompt(), buildOutlineSystemInstruction(), buildOutlineUserPrompt(), getArcPosition(), OutlinePromptParams, Item (+1 more)
 
 ### Community 85 - "Community 85"
-Cohesion: 0.36
-Nodes (6): getArcPosition(), buildOutlineSystemInstruction(), buildOutlineUserPrompt(), getArcPosition(), OutlinePromptParams, StoryContract
+Cohesion: 0.12
+Nodes (15): code:typescript (ragMemory?: string), code:typescript (const ragMemoryBlock = input.ragMemory), code:typescript (${characterStateBlock}), code:typescript (import { searchSimilarChapters } from './rag-service'), code:typescript (import { buildProseInputWithRag, ensureBeatsForChapter } fro), code:typescript (const input = buildProseInput({), code:typescript (const input = await buildProseInputWithRag({), code:typescript (}, { signal: abortControllerRef.current.signal })) (+7 more)
 
 ### Community 86 - "Community 86"
-Cohesion: 0.21
-Nodes (15): Files Modified (Cleanup-only — no behaviour changes intended), Files Modified (Cleanup-only â€” no behaviour changes intended), Phase 1: React Hooks Correctness (5 critical violations fixed), Phase 2: BYOK Security, Phase 3: Type Safety, Phase 4: Style & Polish, Recommendation for Future Sprints, Session: QA Cleanup — Sprint 1A → 3B Hardening (+7 more)
+Cohesion: 0.19
+Nodes (21): Files Modified (Cleanup-only — no behaviour changes intended), Files Modified (Cleanup-only â€” no behaviour changes intended), Phase 1: React Hooks Correctness (5 critical violations fixed), Phase 2: BYOK Security, Phase 3: Type Safety, Phase 4: Style & Polish, Recommendation for Future Sprints, Session: QA Cleanup — Sprint 1A → 3B Hardening (+13 more)
 
 ### Community 87 - "Community 87"
 Cohesion: 0.11
 Nodes (18): ✅ Checklist Eksekusi, code:block10 (┌─ 🧠 Deep Think ─────────────┐), code:block11 (Bab 5/10  ·  🧠 Deep Think aktif), code:typescript (async generateContentV2(), code:typescript (deepOutlineEnabled: boolean       // default: true), code:typescript (deepThinkEnabled: boolean       // default: true), code:typescript (const effectiveBudget = deepThinkEnabled ? deepThinkBudget :), code:typescript (const [isThinking, setIsThinking] = useState(false)) (+10 more)
 
 ### Community 88 - "Community 88"
-Cohesion: 0.17
-Nodes (19): addIssue(), compactText(), DraftChapter, getArcOrder(), getOpeningContract(), getRelationshipAddressing(), isPlainObject(), listFromUnknown() (+11 more)
+Cohesion: 0.18
+Nodes (19): addIssue(), compactText(), DraftChapter, getArcOrder(), getOpeningContract(), getRelationshipAddressing(), isNonEmptyStoryContract(), isPlainObject() (+11 more)
 
 ### Community 89 - "Community 89"
 Cohesion: 0.18
 Nodes (11): Files Created (7), Files Modified (14), Manual Verification Pending (User-Side), Next Steps (Sprint 8 — Visualization), Phase 1 — Embedding Service + Chapter Summaries, Phase 2 — RAG Service & Context Injector Enhancement, Phase 3 — Thread Tracker, Phase 4 — Recap Generator (+3 more)
 
 ### Community 90 - "Community 90"
-Cohesion: 0.07
-Nodes (34): Files Created (0), Files Modified (12), Files Modified (12), Files Modified (12), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Next Steps (Sprint 9.8 — Deep Outline) (+26 more)
+Cohesion: 0.08
+Nodes (46): Files Created (0), Files Modified (12), Files Modified (12), Files Modified (12), Files Modified (12), Files Modified (12), Files Modified (12), Manual Verification Pending (User-Side) (+38 more)
 
 ### Community 91 - "Community 91"
-Cohesion: 0.11
-Nodes (20): Database, Json, _client, supabaseAnonKey, supabaseUrl, ChapterInsert, ChaptersPart, ChapterUpdate (+12 more)
+Cohesion: 0.15
+Nodes (12): author, dependencies, puppeteer, description, keywords, license, main, name (+4 more)
 
 ### Community 92 - "Community 92"
-Cohesion: 0.18
-Nodes (11): 📊 Bundle Impact, 🛠 File Baru (10), 🔧 File yang Dimodifikasi (12), ✍ Sprint 4 — Pro Writer Features, 🎯 Status Fase, 🎯 Status Fase, 🎯 Status Fase, 💰 Token Optimization (10 Pillars) (+3 more)
+Cohesion: 0.15
+Nodes (13): 📊 Bundle Impact, 🛠 File Baru (10), 🔧 File yang Dimodifikasi (12), ✍ Sprint 4 — Pro Writer Features, 🎯 Status Fase, 🎯 Status Fase, 🎯 Status Fase, 🎯 Status Fase (+5 more)
 
 ### Community 93 - "Community 93"
 Cohesion: 0.11
@@ -563,200 +578,200 @@ Cohesion: 0.15
 Nodes (11): getOnboardingFlag(), resetAllOnboardingFlags(), HOME_ONBOARDING_STEPS, TourStep, HOME_ONBOARDING_STEPS, OnboardingTour(), OnboardingTourProps, resetAllOnboardingFlags() (+3 more)
 
 ### Community 96 - "Community 96"
-Cohesion: 0.17
-Nodes (12): 🎯 5 Mesin Retensi → Status, 🛠 File Baru (3), 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🧅 Sprint 5 — KBM Retention Engine, 🎯 Status Fase, 🎯 Status Fase (+4 more)
+Cohesion: 0.13
+Nodes (15): 🎯 5 Mesin Retensi → Status, 🛠 File Baru (3), 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🧅 Sprint 5 — KBM Retention Engine, 🎯 Status Fase (+7 more)
 
 ### Community 97 - "Community 97"
-Cohesion: 0.11
-Nodes (22): Files Created (7) and Modified (14), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Next Steps (Sprint 8 — Visualization), Next Steps (Sprint 8 â€” Visualization), Phase 1 — Embedding Service + Chapter Summaries, Phase 1 â€” Embedding Service + Chapter Summaries (+14 more)
+Cohesion: 0.10
+Nodes (31): Files Created (7) and Modified (14), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Next Steps (Sprint 8 — Visualization) (+23 more)
 
 ### Community 98 - "Community 98"
-Cohesion: 0.12
-Nodes (15): ChapterSummaryInsert, CharacterInsert, CharacterStateInsert, CharacterUpdate, ExtractedLorePayload, ItemInsert, ItemUpdate, LorebookPart (+7 more)
+Cohesion: 0.08
+Nodes (26): CardProps, FormProps, GroupProps, STATUS_STYLE, ThreadCard(), URGENCY_DOT, computeArcBands(), buildThreadTrackerSystemInstruction() (+18 more)
 
 ### Community 99 - "Community 99"
-Cohesion: 0.18
-Nodes (11): 🎨 Design Decisions yang Dipenuhi, 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 📱 Sprint 3B — Review Mode & PWA (+3 more)
+Cohesion: 0.14
+Nodes (14): 🎨 Design Decisions yang Dipenuhi, 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi (+6 more)
 
 ### Community 100 - "Community 100"
 Cohesion: 0.09
 Nodes (22): 1. Fon Utama Aplikasi (UI Font), 🌟 1. Visi & Filosofi Brand, 2. Fon Canvas Menulis (Creative Canvas Font), 🎭 2. Kepribadian Brand (Brand Persona), 🎨 3. Desain Visual & Sistem Warna (Visual Design & Color Systems), ✍️ 4. Tipografi & Hirarki Huruf (Typography), 🕹️ 5. Prinsip Interaksi & Animasi (UI/UX Motion Principles), 🗣️ 6. Nada Bicara & Kamus Istilah (Voice & Tone) (+14 more)
 
 ### Community 101 - "Community 101"
-Cohesion: 0.17
-Nodes (12): ✅ Design Decisions (User Approved — defaults), 📐 File Summary, MODIFIED (12 files), MODIFY (10 files), MODIFY (5 files), NEW (0 files — semua extend existing), NEW (3 files), NEW (7 files) (+4 more)
+Cohesion: 0.15
+Nodes (13): 📐 File Summary, 📐 File Summary (Hasil Akhir), INSTALL, MODIFIED (12 files), MODIFY (10 files), MODIFY (5 files), MODIFY (7 files), NEW (0 files — semua extend existing) (+5 more)
 
 ### Community 102 - "Community 102"
-Cohesion: 0.19
-Nodes (10): StateTimeline(), StateTimelineProps, buildStateSnapshotSystemInstruction(), buildStateSnapshotUserPrompt(), BuildProseInputArgs, ensureBeatsForChapter(), StateTracker, Character (+2 more)
+Cohesion: 0.23
+Nodes (9): ContextInjector, PrunedContextResult, keywordSearchLocal(), RagMatch, RpcRow, searchSimilarChapters(), STOPWORDS, tokenize() (+1 more)
 
 ### Community 103 - "Community 103"
-Cohesion: 0.14
-Nodes (15): 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, Ringkasan Perubahan, Ringkasan Perubahan (+7 more)
+Cohesion: 0.17
+Nodes (12): 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi (+4 more)
 
 ### Community 104 - "Community 104"
-Cohesion: 0.20
-Nodes (10): 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, ✍ Sprint 2A — Beat-by-Beat Prose Writer, 🧪 Verifikasi (+2 more)
+Cohesion: 0.15
+Nodes (13): 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi (+5 more)
 
 ### Community 105 - "Community 105"
 Cohesion: 0.17
-Nodes (13): buildThreadTrackerSystemInstruction(), buildThreadTrackerUserPrompt(), ThreadTrackerPromptInput, analyzeChapterThreads(), findThreadByTitle(), NewThreadDraft, parseAnalysisJson(), RawAnalysis (+5 more)
+Nodes (12): Files Modified, Files Modified, Files Modified, Rangkuman Pekerjaan, Rangkuman Pekerjaan, Rangkuman Pekerjaan, Session: Refactor Audit Follow-up - Maintainability Hardening, Temuan Masalah (+4 more)
 
 ### Community 106 - "Community 106"
-Cohesion: 0.32
-Nodes (9): ReindexModal(), ReindexModalProps, FreeWriteIndexerWatcher(), detectMissingArtifacts(), findChaptersNeedingReindex(), reindexChapter(), reindexChapters(), ReindexProgress (+1 more)
+Cohesion: 0.13
+Nodes (19): KEY_LABELS, MimicryEngineCard(), MimicryEngineCardProps, FOCUSABLE_SELECTOR, useFocusTrap(), ReindexModal(), ReindexModalProps, PROSE_MODELS (+11 more)
 
 ### Community 107 - "Community 107"
-Cohesion: 0.16
-Nodes (16): CommandContext, CommandGroup, COMMANDS, escapeRegex(), filterCommands(), navigationCommands, otherCommands, PaletteCommand (+8 more)
+Cohesion: 0.13
+Nodes (17): CommandContext, CommandGroup, COMMANDS, escapeRegex(), filterCommands(), navigationCommands, otherCommands, PaletteCommand (+9 more)
 
 ### Community 108 - "Community 108"
-Cohesion: 0.07
-Nodes (37): Background, Background, Background, Bundle Sizes (vs Sprint 9.5), Challenges Encountered, Challenges Encountered, Challenges Encountered, code:block1 ([← back] [≡ panel] [{title} · {mode emoji} {mode label}] fle) (+29 more)
+Cohesion: 0.06
+Nodes (31): Background, Background, Background, Background, Background, Challenges Encountered, Challenges Encountered, Challenges Encountered (+23 more)
 
 ### Community 109 - "Community 109"
-Cohesion: 0.17
-Nodes (12): 🛠 File Baru (5), 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🚧 React 19 Pitfall — Resolved, 🚀 Sprint 6 — Auto-Pilot Batch Generation, 🎯 Status Fase, 🎯 Status Fase (+4 more)
+Cohesion: 0.13
+Nodes (15): 🛠 File Baru (5), 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🚧 React 19 Pitfall — Resolved, 🚀 Sprint 6 — Auto-Pilot Batch Generation, 🎯 Status Fase (+7 more)
 
 ### Community 110 - "Community 110"
-Cohesion: 0.24
-Nodes (9): GeminiPool, keyLabel(), KeyStatus, keywordSearchLocal(), RagMatch, RpcRow, STOPWORDS, tokenize() (+1 more)
+Cohesion: 0.12
+Nodes (14): code:sql (-- VERSION HISTORY BEAT SNAPSHOTS), code:typescript (export interface ChapterVersion {), code:typescript (createChapterVersion: (chapterId: string, prose: string, wor), code:typescript (beats: beats ?? []), code:typescript (createChapterVersion(chapter.id, fullProse, wordCount, 'Auto), code:typescript (onRestore: (prose: string) => void), code:typescript (onRestore: (version: ChapterVersion) => void), code:typescript (onRestore(selected.prose)) (+6 more)
 
 ### Community 111 - "Community 111"
-Cohesion: 0.50
-Nodes (4): 📐 File Summary (Final), INSTALLED (2 deps, lazy-loaded), MODIFY (12 files), NEW (10 files)
+Cohesion: 0.29
+Nodes (7): 📐 File Summary (Final), INSTALLED (2 deps, lazy-loaded), MODIFY (12 files), NEW (10 files), 🎉 Sprint 4 Complete, Sprint 4 — Pro Writer Features (VibeNovel v2), 💰 Token Optimization Implemented
 
 ### Community 112 - "Community 112"
-Cohesion: 0.21
-Nodes (13): ExpandMode, TargetChaptersAdjustmentModalProps, getLockedChaptersAbove(), isLocked(), ReductionValidation, validateTargetReduction(), expandTargetNewSeason(), expandTargetStretch() (+5 more)
+Cohesion: 0.16
+Nodes (13): FALLBACK_GENRES, GENRES, ProjectCreationModalProps, BlueprintCharacterArchetype, BlueprintItemArchetype, BlueprintMysterySkeleton, GENRE_BLUEPRINTS, GenreBlueprint (+5 more)
 
 ### Community 113 - "Community 113"
 Cohesion: 0.13
 Nodes (14): buildGraph(), BuildGraphInput, ConstellationMap(), EDGE_COLOR, EdgeType, findCharacterIdByActivation(), ForceGraphProps, ITEM_COLOR (+6 more)
 
 ### Community 114 - "Community 114"
-Cohesion: 0.10
-Nodes (22): Background, Bundle Sizes (vs Sprint 9), Challenges Encountered, Challenges Encountered, Challenges Encountered, Files Created (3), Files Created (3), Files Created (3) (+14 more)
+Cohesion: 0.06
+Nodes (53): Background, Bundle Sizes (vs Sprint 9), Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered (+45 more)
 
 ### Community 115 - "Community 115"
-Cohesion: 0.12
-Nodes (22): AuthState, configured, useAuth(), isSupabaseConfigured(), supabase, RecapModal(), RecapModalProps, Lobby() (+14 more)
+Cohesion: 0.14
+Nodes (13): CompassEditDraft, CompassStep, SeriesHookField(), StoryCompassPreview(), StoryCompassPreviewProps, EditDraftModal(), EditDraftModalProps, ExtractedRecord (+5 more)
 
 ### Community 116 - "Community 116"
-Cohesion: 0.13
-Nodes (25): Files Created (5), Files Created (5), Files Created (5), Files Modified (7), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Next Steps (Sprint 9 — Genre Blueprints & Polish) (+17 more)
+Cohesion: 0.11
+Nodes (37): Files Created (5), Files Created (5), Files Created (5), Files Created (5), Files Created (5), Files Created (5), Files Modified (7), Manual Verification Pending (User-Side) (+29 more)
 
 ### Community 117 - "Community 117"
-Cohesion: 0.08
-Nodes (31): Bundle Sizes (vs Sprint 8 baseline), Challenges Encountered, Challenges Encountered, Challenges Encountered, Files Created (13), Files Modified (16), Files Modified (16), Files Modified (16) (+23 more)
+Cohesion: 0.06
+Nodes (46): Bundle Sizes (vs Sprint 8 baseline), Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered, Challenges Encountered, Files Created (13) (+38 more)
 
 ### Community 118 - "Community 118"
-Cohesion: 0.11
-Nodes (24): Background, Background, Background, Files Created (3), Files Created (3), Files Created (3), Files Modified (5), Manual Verification Pending (User-Side) (+16 more)
+Cohesion: 0.10
+Nodes (29): Background, Background, Background, Background, Files Created (3), Files Created (3), Files Created (3), Files Created (3) (+21 more)
 
 ### Community 119 - "Community 119"
-Cohesion: 0.28
-Nodes (9): Files Modified, Files Modified, Session: Hotfix - Remove All Dummy Data, Step 1: Cleared Projects Dummy Data, Step 2: Cleared Chapters and Context Mock Data, Verification Results, Verification Results, What Was Done (+1 more)
+Cohesion: 0.16
+Nodes (18): Files Modified, Files Modified, Files Modified, Files Modified, Files Modified, Session: Hotfix - Remove All Dummy Data, Step 1: Cleared Projects Dummy Data, Step 2: Cleared Chapters and Context Mock Data (+10 more)
 
 ### Community 120 - "Community 120"
-Cohesion: 0.09
-Nodes (22): WORKSPACE_MODES, WorkspaceModeConfig, BatchSuccessModal(), formatElapsed(), STATUS_HEADLINE, LoreDiffModal(), MODES, ConfirmOptions (+14 more)
+Cohesion: 0.10
+Nodes (34): UseBatchGenerator, BatchSuccessModal(), formatElapsed(), STATUS_HEADLINE, FreeWriteIndexerWatcher(), MODES, Workspace(), BatchProgressPanel() (+26 more)
 
 ### Community 121 - "Community 121"
 Cohesion: 0.16
-Nodes (19): Bundle Size Wins (vs Sprint 8), Files Created (13), Files Modified (16), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Next Steps (Sprint 10 — Capacitor & Production), Phase 1 — Genre Blueprints + Lobby Integration (+11 more)
+Nodes (22): Bundle Size Wins (vs Sprint 8), Files Created (13), Files Modified (16), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Next Steps (Sprint 10 — Capacitor & Production) (+14 more)
 
 ### Community 122 - "Community 122"
-Cohesion: 0.18
-Nodes (19): Files Created (5), Files Modified (6), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Next Steps (Sprint 9 — Genre Blueprints & Polish), Phase 1 — Dependencies + Lazy Infrastructure, Phase 2 — Emotional Arc Heatmap (multi-lens) (+11 more)
+Cohesion: 0.17
+Nodes (22): Files Created (5), Files Modified (6), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Manual Verification Pending (User-Side), Next Steps (Sprint 9 — Genre Blueprints & Polish), Phase 1 — Dependencies + Lazy Infrastructure (+14 more)
 
 ### Community 123 - "Community 123"
 Cohesion: 0.07
-Nodes (28): EditDraftModal(), EditDraftModalProps, ExtractedRecord, BeatIndicator(), BeatIndicatorProps, BatchCompletedEntry, BatchErrorEntry, BeatOutline (+20 more)
+Nodes (27): BeatIndicator(), BeatIndicatorProps, BatchCompletedEntry, BatchErrorEntry, BeatOutline, CanonEntity, CanonProposalSource, CanonProposalStatus (+19 more)
 
 ### Community 124 - "Community 124"
 Cohesion: 0.17
 Nodes (9): CellData, CLIFFHANGER_COLORS, EmotionalArcHeatmap(), FILLER_COLORS, Lens, LENSES, STATUS_COLORS, STATUS_LABEL (+1 more)
 
 ### Community 125 - "Community 125"
-Cohesion: 0.13
-Nodes (20): Background, Files Created (3), Files Modified (4), Fix #1 — Free Write Memory Blackhole Resolution, Fix #2 — Offline Reconnect AI Backfill, Fix #3 — Chat Approval Conflict Detection, Manual Verification Pending (User-Side), Manual Verification Pending (User-Side) (+12 more)
+Cohesion: 0.12
+Nodes (24): Background, Files Created (3), Files Modified (4), Fix #1 — Free Write Memory Blackhole Resolution, Fix #2 — Offline Reconnect AI Backfill, Fix #3 — Chat Approval Conflict Detection, Manual Verification Pending (User-Side), Manual Verification Pending (User-Side) (+16 more)
 
 ### Community 126 - "Community 126"
 Cohesion: 0.14
 Nodes (14): 🧪 Acceptance Criteria, 📊 Analisis Dampak Token, 🏗 Arsitektur Perubahan, code:block1 (useSettingsStore.ts ──► ai-router.ts ──► gemini-pool.ts (thi), Dependency Graph (file yang terdampak), 📅 Estimasi, 🔑 Keputusan Arsitektur, 🤖 Migrasi Model OpenRouter (Codebase Update) (+6 more)
 
 ### Community 127 - "Community 127"
-Cohesion: 0.08
-Nodes (39): Design Decisions Honored, Files Created, Files Created, Files Created, Files Created (3), Files Created (3), Files Created (3), Files Modified (+31 more)
+Cohesion: 0.11
+Nodes (35): Design Decisions Honored, Files Created, Files Created, Files Created, Files Created, Files Created, Files Created, Files Modified (+27 more)
 
 ### Community 128 - "Community 128"
-Cohesion: 0.15
-Nodes (14): BlueprintSelection, StatItem, StatsBar(), StatsBarProps, TargetChaptersAdjustmentModal(), cloneProjectAsSpinOff(), getNextSpinOffName(), GenesisMode (+6 more)
+Cohesion: 0.05
+Nodes (54): AuthState, configured, Database, Json, _client, isSupabaseConfigured(), supabase, supabaseAnonKey (+46 more)
 
 ### Community 129 - "Community 129"
 Cohesion: 0.20
 Nodes (10): 🏗 Arsitektur Perubahan, 🏗 Arsitektur Perubahan, 🏗 Arsitektur Perubahan, code:block12 (useSettingsStore.ts (deepOutlineEnabled, deepOutlineBudget)), code:block2 (useSettingsStore.ts (deepOutlineEnabled, deepOutlineBudget)), Dependency Graph, Phase 1 — Backend: Gemini Pool, Prinsip Desain (+2 more)
 
 ### Community 130 - "Community 130"
-Cohesion: 0.25
-Nodes (5): ChartRow, ChartTooltipPayload, ChartTooltipProps, STATUS_COLORS, WordCountAnalytics()
+Cohesion: 0.14
+Nodes (14): code:powershell (npm.cmd run test -- --runInBand), code:powershell (npm.cmd run test -- --pool=forks --poolOptions.forks.singleF), code:typescript (const currentMessages = get().messages[projectId] || []), code:powershell (npx.cmd tsc -b --noEmit), code:powershell (git add src/store/useChatStore.ts), code:markdown (# Engine Hardening - Pre Continuity Gate), code:markdown (### Prose Layer 3 RAG Injection), code:markdown (## 2026-05-25 - Engine Hardening Before Continuity Gate) (+6 more)
 
 ### Community 131 - "Community 131"
-Cohesion: 0.24
-Nodes (12): Files Created (1), Files Modified (1), Session: Visual Polish — Premium Themed Edit Draft Modal, Session: Visual Polish â€” Premium Themed Edit Draft Modal, STEP 1: Created Dynamic Custom Modal (`src/components/modals/EditDraftModal.tsx`), STEP 2: Integrated Modal into Co-Author Chat (`src/components/chat/CoAuthorChat.tsx`), Verification Results, Verification Results (+4 more)
+Cohesion: 0.14
+Nodes (14): ProjectCreationModal(), useAuth(), getAllGenreNames(), Lobby(), App(), GlobalKeybinds(), ProtectedRoute(), Workspace (+6 more)
 
 ### Community 132 - "Community 132"
-Cohesion: 0.26
-Nodes (12): Files Modified (3), Session: Bug Fix — Story Compass Validation & Safeguards, Session: Bug Fix â€” Story Compass Validation & Safeguards, STEP 1: Implemented Store-Level Safeguards (`src/store/parts/outlines.ts`), STEP 2: Designed Premium UI Warnings & Guards in SeasonArchitectPanel (`src/components/workspace/SeasonArchitectPanel.tsx`), STEP 3: Integrated Safeguards in Chapter Card (`src/components/workspace/ChapterOutlineCard.tsx`), Verification Results, Verification Results (+4 more)
+Cohesion: 0.21
+Nodes (18): Files Modified (3), Session: Bug Fix — Story Compass Validation & Safeguards, Session: Bug Fix â€” Story Compass Validation & Safeguards, STEP 1: Implemented Store-Level Safeguards (`src/store/parts/outlines.ts`), STEP 2: Designed Premium UI Warnings & Guards in SeasonArchitectPanel (`src/components/workspace/SeasonArchitectPanel.tsx`), STEP 3: Integrated Safeguards in Chapter Card (`src/components/workspace/ChapterOutlineCard.tsx`), Verification Results, Verification Results (+10 more)
 
 ### Community 133 - "Community 133"
-Cohesion: 0.25
-Nodes (7): BlueprintCharacterArchetype, BlueprintItemArchetype, BlueprintMysterySkeleton, substituteNames(), applyBlueprint(), BlueprintApplyResult, buildSubstitutionMap()
+Cohesion: 0.15
+Nodes (13): code:typescript (const emotionalHistory: string[] = []), code:typescript (const cliffhangerHistory: string[] = []), code:typescript (if (ch.cliffhanger_type) cliffhangerHistory.push(ch.cliffhan), code:typescript (if (existingChapter.cliffhanger_type) cliffhangerHistory.pus), code:typescript (const pacingResult = validatePacing(emotionalHistory, [])), code:typescript (const pacingResult = validatePacing(emotionalHistory, cliffh), code:typescript (if (outline.cliffhangerType) cliffhangerHistory.push(outline), code:typescript (const cliffhangerHistory = priorChapters) (+5 more)
 
 ### Community 134 - "Community 134"
-Cohesion: 0.17
-Nodes (12): Design Decisions Honored, Files Modified, Files Modified, Next Steps (Sprint 3A â€” Plot Radar & Lore Extraction), Session: Hotfix - Dynamic Lobby Welcome Subtitle, Session: Refactoring â€” Zustand Parts Modularization (useProjectStore Refactor), Session: Sprint 2B â€” State Tracker & Context Injection Upgrade, Verification Results (+4 more)
+Cohesion: 0.11
+Nodes (17): Challenges Encountered, Design Decisions Honored, Design Decisions Honored, Files Created, Files Modified, Next Steps (Sprint 1D â€” Outline Engine), Next Steps (Sprint 2B â€” State Tracker & Context Injection Upgrade), Next Steps (Sprint 3A â€” Plot Radar & Lore Extraction) (+9 more)
 
 ### Community 135 - "Community 135"
-Cohesion: 0.27
-Nodes (10): Files Modified, Files Modified, Session: UX Revamp P0.1 - Section Onboarding, Step 1: Reusable onboarding engine, Step 2: Home and Workspace tours, Step 3: Reset all onboarding, Verification Results, Verification Results (+2 more)
+Cohesion: 0.09
+Nodes (37): Files Modified, Files Modified, Files Modified, Files Modified, Files Modified, Files Modified, Files Modified, Files Modified (+29 more)
 
 ### Community 136 - "Community 136"
-Cohesion: 0.13
-Nodes (24): Auto-Advance Engine, Background, Background, Background, Chat UX, Co-Author Prompt Bridge, Drawer Edit UX, Files Created (1) (+16 more)
+Cohesion: 0.10
+Nodes (36): Auto-Advance Engine, Background, Background, Background, Background, Background, Background, Chat UX (+28 more)
 
 ### Community 137 - "Community 137"
-Cohesion: 0.27
-Nodes (10): Files Modified, Files Modified, Session: Hotfix - AI Draft UI Rendering, Step 1: Fix Mystery Draft Rendering, Step 2: Fix Item, Character, and World Rule Name Fallbacks, Step 3: Syntax Error Fix, Verification Results, Verification Results (+2 more)
+Cohesion: 0.18
+Nodes (19): Files Modified, Files Modified, Files Modified, Files Modified, Files Modified, Session: Hotfix - AI Draft UI Rendering, Step 1: Fix Mystery Draft Rendering, Step 2: Fix Item, Character, and World Rule Name Fallbacks (+11 more)
 
 ### Community 138 - "Community 138"
 Cohesion: 0.36
 Nodes (9): ArchiveCard(), ArchiveCardProps, GENRE_EMOJIS, GENRE_GRADIENTS, NewProjectCard(), ProjectCard(), ProjectCardProps, STATUS_CONFIG (+1 more)
 
 ### Community 139 - "Community 139"
-Cohesion: 0.25
-Nodes (8): 🛠 File Baru di `src/store/parts/`, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🧩 Refactoring — Zustand Parts Modularization, 🧪 Verifikasi, 🧪 Verifikasi, 🧪 Verifikasi
+Cohesion: 0.20
+Nodes (10): 🛠 File Baru di `src/store/parts/`, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🧩 Refactoring — Zustand Parts Modularization, 🧪 Verifikasi, 🧪 Verifikasi (+2 more)
 
 ### Community 140 - "Community 140"
-Cohesion: 0.21
-Nodes (11): FALLBACK_GENRES, GENRES, ProjectCreationModal(), ProjectCreationModalProps, FOCUSABLE_SELECTOR, useFocusTrap(), GENRE_BLUEPRINTS, GenreBlueprint (+3 more)
+Cohesion: 0.17
+Nodes (12): code:typescript (addCharacter: (char: Omit<Character, 'id'>) => Promise<void>), code:typescript (addCharacter: (char: Omit<Character, 'id'>) => Promise<strin), code:typescript (addCharacter: async (char) => {), code:typescript (await addCharacter(payload)), code:typescript (const characterId = await addCharacter(payload)), code:typescript (return parsed), code:typescript (character_id: matchedChar?.id || str('character_name') || 'u), code:typescript (if (!matchedChar) {) (+4 more)
 
 ### Community 141 - "Community 141"
-Cohesion: 0.20
-Nodes (10): 📋 Checklist, 📐 File Summary (Hasil Akhir), INSTALL, MODIFY (7 files), NEW (5 files), Phase 1 — Review Mode Upgrade, Phase 2 — PWA Setup, Phase 3 — Offline Draft Fallback (+2 more)
+Cohesion: 0.40
+Nodes (5): 📋 Checklist, Phase 1 — Review Mode Upgrade, Phase 2 — PWA Setup, Phase 3 — Offline Draft Fallback, Phase 4 — Verification
 
 ### Community 142 - "Community 142"
-Cohesion: 0.25
-Nodes (8): 2026-05-25 - Co-Author Auto-Advance & Story Compass UX Polish, 2026-05-25 Follow-up Browser Verification, Files Changed, Manual Verification Notes, Summary, Verification Results, Verification Results, Verification Results
+Cohesion: 0.22
+Nodes (9): 2026-05-25 - Co-Author Auto-Advance & Story Compass UX Polish, 2026-05-25 Follow-up Browser Verification, Files Changed, Manual Verification Notes, Summary, Verification Results, Verification Results, Verification Results (+1 more)
 
 ### Community 143 - "Community 143"
-Cohesion: 0.20
-Nodes (10): 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 📡 Sprint 3A — Plot Radar & Lore Extraction, 🧪 Verifikasi (+2 more)
+Cohesion: 0.17
+Nodes (12): 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 📡 Sprint 3A — Plot Radar & Lore Extraction (+4 more)
 
 ### Community 144 - "Community 144"
-Cohesion: 0.20
-Nodes (13): Checklist Eksekusi, Checklist Eksekusi, ✅ Design Decisions (User Approved), 🎯 Goal, Sprint 1D — Outline Engine (Real AI) (VibeNovel v2), 🎉 Sprint 4 Complete, Sprint 4 — Pro Writer Features (VibeNovel v2), 🎉 Sprint 5 Complete (+5 more)
+Cohesion: 0.15
+Nodes (17): Checklist Per File, ✅ Design Decisions (User Approved), ✅ Design Decisions (User Approved — defaults), Follow-up - Version History Modal, 🎯 Goal, Sprint 1D — Outline Engine (Real AI) (VibeNovel v2), Sprint 3B — Review Mode & PWA (VibeNovel v2), 🎉 Sprint 5 Complete (+9 more)
 
 ### Community 145 - "Community 145"
 Cohesion: 0.22
@@ -767,64 +782,72 @@ Cohesion: 0.60
 Nodes (6): 📐 File Summary, 📐 File Summary, 📐 File Summary, MODIFIED (8 files), NEW (0 files), NO NEW DEPENDENCIES
 
 ### Community 147 - "Community 147"
-Cohesion: 0.25
-Nodes (6): ContextInjector, PrunedContextResult, buildLoreExtractorSystemInstruction(), buildLoreExtractorUserPrompt(), searchSimilarChapters(), WorldRule
+Cohesion: 0.23
+Nodes (8): buildOfflineDraftChapterPatch(), countWords(), draftStatus(), OfflineDraftPatchResult, PendingProseDraft, makeChapter(), chapter, result
 
 ### Community 148 - "Community 148"
-Cohesion: 0.27
-Nodes (10): Files Modified, Files Modified, Session: Hotfix - Live Productivity & Achievement Stats, Step 1: Real-Time Productivity Calculations, Step 2: Purged Faked Achievement Placeholders, Step 3: Cleared Final Hardcoded Dummy Nav ID, Verification Results, Verification Results (+2 more)
+Cohesion: 0.16
+Nodes (13): BlueprintSelection, StatItem, StatsBar(), StatsBarProps, cloneProjectAsSpinOff(), getNextSpinOffName(), GenesisMode, Project (+5 more)
 
 ### Community 149 - "Community 149"
 Cohesion: 0.50
 Nodes (4): 🤔 Analisis Pre-Implementasi, Apa yang Diperbaiki Thinking di Outline?, Mengapa Outline Engine Berbeda dari Prose Writer?, Pertimbangan UX
 
 ### Community 150 - "Community 150"
-Cohesion: 0.12
-Nodes (16): 3.1 Core Promise, 3.2 Opening Contract, 3.3 Narrative Mechanics, 3.6 Relationship Addressing, 3.7 Arc Order, 3. Story Logic Contract Universal, code:ts (interface RelationshipAddressRule {), code:json ({) (+8 more)
+Cohesion: 0.11
+Nodes (19): 3.1 Core Promise, 3.2 Opening Contract, 3.3 Narrative Mechanics, 3.4 Causality Rules, 3.6 Relationship Addressing, 3.7 Arc Order, 3. Story Logic Contract Universal, code:ts (interface RelationshipAddressRule {) (+11 more)
 
 ### Community 151 - "Community 151"
 Cohesion: 0.25
 Nodes (8): Behavior Matrix, Checklist Per File, Status: Completed, ✅ Status: COMPLETED, UX Revamp P0 — Novice Writer Entry, Verification, What's Done, What's Done
 
 ### Community 152 - "Community 152"
-Cohesion: 0.27
-Nodes (12): Fix #1 — Free Write Memory Reindexer (chapter-reindexer.ts ~250 lines), Fix #1 â€” Free Write Memory Reindexer (chapter-reindexer.ts ~250 lines), Fix #2 — Offline Reconnect AI Backfill (useBeatWriter.ts), Fix #2 â€” Offline Reconnect AI Backfill (useBeatWriter.ts), Fix #3 — Chat Approval Conflict Detection (useChatStore.ts), Fix #3 â€” Chat Approval Conflict Detection (useChatStore.ts), FreeWriteIndexerWatcher (~50 lines), ReindexModal (~270 lines) (+4 more)
+Cohesion: 0.12
+Nodes (17): Files Modified, Files Modified, Files Modified, Files Modified, Follow-up, Rangkuman Pekerjaan, Rangkuman Pekerjaan, Rangkuman Pekerjaan (+9 more)
 
 ### Community 153 - "Community 153"
-Cohesion: 0.17
-Nodes (9): isRecord(), mergeStoryContractPatch(), OutlinesPart, proposalDedupeKey(), proposalName(), readPayloadRecord(), readPayloadString(), VALID_ITEM_CATEGORIES (+1 more)
+Cohesion: 0.29
+Nodes (7): 7.1 Validasi Draft Co-Author, 7.2 Validasi Outline, 7.3 Retry Logic, 7. Validator Runtime, code:text (src/services/story-contract-validator.ts), code:ts (interface StoryValidationResult {), code:text (Output sebelumnya melanggar Story Contract:)
 
 ### Community 154 - "Community 154"
-Cohesion: 0.20
-Nodes (10): 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🧠 Sprint 2B — State Tracker & Context Injection Upgrade, 🧪 Verifikasi (+2 more)
+Cohesion: 0.15
+Nodes (13): 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🛠 File Baru, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi, 🔧 File yang Dimodifikasi (+5 more)
 
 ### Community 155 - "Community 155"
 Cohesion: 0.14
 Nodes (13): 12. Acceptance Criteria, 14. Prioritas Implementasi, 15. Catatan Penting, 1. Ringkasan Masalah, 2. Prinsip Desain, 5. Penyimpanan Data, 9.1 Masalah, 9.2 Perbaikan (+5 more)
 
 ### Community 156 - "Community 156"
-Cohesion: 0.22
-Nodes (11): Files Modified, Files Modified, Session: Hotfix - Prose Writer Empty State UX Polish, Step 1: Integrated Dynamic Welcome Subtitle, Step 1: Redesigned Prose Writer Empty State, Step 2: Added Custom Prompts for Edge Cases, Step 2: Dynamic Project State Actions, Verification Results (+3 more)
+Cohesion: 0.06
+Nodes (53): Files Modified, Files Modified, Files Modified, Files Modified, Files Modified, Files Modified, Files Modified, Files Modified (+45 more)
 
 ### Community 157 - "Community 157"
 Cohesion: 0.15
-Nodes (12): Catatan, File Yang Diedit Dulu (Urutan Kerja), Files Modified, Follow-up, Rangkuman Pekerjaan, Rangkuman Yang Dilakukan di Sesi Ini, Session: Canon Proposal Flow - Unknown Entity Approval, Session: Story Contract & Canon Guardrails Implementation (+4 more)
+Nodes (16): Files Modified, Files Modified, Files Modified, Files Modified, Files Modified, Rangkuman Pekerjaan, Rangkuman Pekerjaan, Rangkuman Pekerjaan (+8 more)
 
 ### Community 158 - "Community 158"
-Cohesion: 0.25
-Nodes (6): computeArcBands(), BreadcrumbAtChapter, RevealAtChapter, STATUS_BADGE, TONE_DOT, URGENCY_COLOR
+Cohesion: 0.19
+Nodes (9): CanonicalDna, CardProps, CharacterDnaCard(), readCanonical(), VoiceDNAEditor(), str(), canRecalibrate(), gatherVoiceSamples() (+1 more)
 
 ### Community 159 - "Community 159"
-Cohesion: 0.33
-Nodes (8): buildChapterSummarySystemInstruction(), buildChapterSummaryUserPrompt(), ChapterSummaryPromptInput, ChapterSummaryRaw, generateChapterSummary(), parseSummaryJson(), SummaryResult, Chapter
+Cohesion: 0.25
+Nodes (8): code:powershell (npm.cmd run test -- src/services/__tests__/offline-draft-syn), code:typescript (import type { Chapter } from '../types/project'), code:typescript (import { buildOfflineDraftChapterPatch } from '../services/o), code:typescript (const targetChapter = chapters.find((c) => c.id === d.chapte), code:powershell (npm.cmd run test -- src/services/__tests__/offline-draft-syn), code:powershell (git add src/services/offline-draft-sync.ts src/services/__te), code:typescript (import { describe, expect, it } from 'vitest'), Task 2: Fix Offline Free Write Draft Replay
 
 ### Community 160 - "Community 160"
-Cohesion: 0.36
-Nodes (9): buildOutlineCanonProposals(), BuildOutlineCanonProposalsInput, getPendingCanonProposalGroups(), makeGroupId(), normalize(), relevantIssuesForName(), unique(), unknownActiveCharacters() (+1 more)
+Cohesion: 0.31
+Nodes (10): buildOutlineCanonProposals(), BuildOutlineCanonProposalsInput, getPendingCanonProposalGroups(), makeGroupId(), normalize(), relevantIssuesForName(), unique(), unknownActiveCharacters() (+2 more)
+
+### Community 161 - "Community 161"
+Cohesion: 0.26
+Nodes (6): KeyStatus, OpenRouterAdapter, OR_FREE_MODELS, OrFreeModelKey, ThinkingChunk, GeminiKeyConfig
+
+### Community 162 - "Community 162"
+Cohesion: 0.25
+Nodes (8): Files Modified (6), Session: Hotfix — Model Locking & Co-Author Chat Stop/Regenerate, Session: Hotfix â€” Model Locking & Co-Author Chat Stop/Regenerate, What Was Done, What Was Done, What Was Done, What Was Done, What Was Done
 
 ### Community 163 - "Community 163"
-Cohesion: 0.22
-Nodes (6): CardProps, FormProps, GroupProps, STATUS_STYLE, ThreadCard(), URGENCY_DOT
+Cohesion: 0.29
+Nodes (8): Ringkasan Perubahan, Ringkasan Perubahan, Ringkasan Perubahan, Story Contract & Canon Guardrails, UX Revamp P0 — Novice Writer Entry, Verifikasi, Verifikasi, Verifikasi
 
 ### Community 164 - "Community 164"
 Cohesion: 0.22
@@ -835,8 +858,8 @@ Cohesion: 0.67
 Nodes (3): File yang Dibuat/Diubah, Sprint 7 — Thread Tracker & RAG (Fase 7), Verifikasi
 
 ### Community 167 - "Community 167"
-Cohesion: 0.22
-Nodes (8): Canon Proposal Flow - Unknown Entity Approval, Ringkasan Perubahan, Ringkasan Perubahan, Ringkasan Perubahan, UX Revamp P0.1 - Section Onboarding, Verifikasi, Verifikasi, Verifikasi
+Cohesion: 0.15
+Nodes (12): Canon Proposal Flow - Unknown Entity Approval, Ringkasan Perubahan, Ringkasan Perubahan, Ringkasan Perubahan, Ringkasan Perubahan, Ringkasan Perubahan, UX Revamp P0.1 - Section Onboarding, Verifikasi (+4 more)
 
 ### Community 168 - "Community 168"
 Cohesion: 0.25
@@ -851,24 +874,24 @@ Cohesion: 0.29
 Nodes (7): 6.1 Dua Tahap Generation, 6.2 ArcRoadmap Schema, 6.3 Chapter Outline Prompt, 6. Outline Engine Baru, code:text (StoryContract + StoryCompass), code:text (StoryContract + ArcRoadmap + previous outlines), code:ts (interface ArcRoadmap {)
 
 ### Community 171 - "Community 171"
-Cohesion: 0.53
-Nodes (4): AiMessageBubble(), AiMessageBubbleProps, ApprovalCard(), ApprovalCardProps
+Cohesion: 0.31
+Nodes (8): AiMessageBubble(), AiMessageBubbleProps, ApprovalCard(), ApprovalCardProps, CoAuthorChat(), CoAuthorChatProps, ChatMessage, useChatStore
 
 ### Community 172 - "Community 172"
-Cohesion: 0.33
-Nodes (5): QaLog, QaFilterValue, QaSeverityFilter(), QaSeverityFilterProps, TABS
+Cohesion: 0.29
+Nodes (7): code:powershell (npm.cmd install -D vitest), code:json ({), code:typescript (import { defineConfig } from 'vitest/config'), code:typescript (import type { Chapter, Project } from '../types/project'), code:powershell (npm.cmd run test), code:powershell (git add package.json package-lock.json vitest.config.ts src/), Task 1: Add Focused Test Harness
 
 ### Community 173 - "Community 173"
 Cohesion: 0.33
 Nodes (6): 8.1 Masalah Saat Ini, 8.2 Perbaikan, 8.3 Validator Berlapis, 8. Thinking Mode: Posisi yang Benar, code:text (AI Output), code:json ({)
 
 ### Community 174 - "Community 174"
-Cohesion: 0.50
-Nodes (3): buildRecapSystemInstruction(), buildRecapUserPrompt(), RecapPromptInput
+Cohesion: 0.29
+Nodes (7): code:typescript (import { getCompassProgress } from '../lib/compassProgress'), code:typescript (const progress = getCompassProgress({), code:typescript (}, [), code:powershell (npm.cmd run lint), code:powershell (npx.cmd tsc -b --noEmit), code:powershell (git add src/pages/Workspace.tsx), Task 9: Fix Workspace Compass Effect Dependencies
 
 ### Community 175 - "Community 175"
-Cohesion: 0.50
-Nodes (4): CanonProposal, CanonProposalCard(), CanonProposalCardProps, payloadString()
+Cohesion: 0.33
+Nodes (6): code:typescript (if (!isSupabaseConfigured()) return), code:typescript (updateChapter: async (id, data) => {), code:powershell (npm.cmd run dev), code:powershell (npx.cmd tsc -b --noEmit), code:powershell (git add src/store/parts/chapters.ts), Task 3: Guard Chapter Supabase Writes In Demo Mode
 
 ### Community 176 - "Community 176"
 Cohesion: 0.40
@@ -891,40 +914,92 @@ Cohesion: 0.50
 Nodes (4): 3.5 Canon Entities, code:text (PROTAGONIST | ANTAGONIST | SUPPORTING | MINOR), code:ts (interface CanonEntity {), code:json ({)
 
 ### Community 181 - "Community 181"
-Cohesion: 0.50
-Nodes (4): Checklist Per File, Status: Completed, UX Revamp P0.1 - Section Onboarding, Verification
-
-### Community 183 - "Community 183"
-Cohesion: 0.67
-Nodes (3): 3.4 Causality Rules, code:ts (interface CausalityRule {), code:json ({)
+Cohesion: 0.33
+Nodes (6): code:typescript (void this.runBackgroundTasks(chapter, fullProse, snapshot)), code:typescript (await this.runBackgroundTasks(chapter, fullProse, snapshot)), code:typescript (// Await memory tasks before the next chapter. Auto-Pilot de), code:powershell (npx.cmd tsc -b --noEmit), code:powershell (git add src/services/batch-generator.ts), Task 4: Make Auto-Pilot Await Memory Artifacts Before Next Chapter
 
 ### Community 184 - "Community 184"
-Cohesion: 0.27
-Nodes (10): Files Modified, Files Modified, Session: Hotfix - Debug Mode Story Data Export, Step 1: Integrated Settings Debug Tab, Step 2: Dynamic Project Asset Metrics Summary, Step 3: Single-Click Full Story JSON Downloader, Verification Results, Verification Results (+2 more)
+Cohesion: 0.40
+Nodes (4): File Map, Scope And Order, Self-Review, VibeNovel Engine Hardening Implementation Plan
 
 ### Community 185 - "Community 185"
+Cohesion: 0.40
+Nodes (5): Catatan, Checklist Per File, Engine Hardening - Pre Continuity Gate, Status: Completed, Verification
+
+### Community 186 - "Community 186"
+Cohesion: 0.24
+Nodes (7): StateTimeline(), StateTimelineProps, buildStateSnapshotSystemInstruction(), buildStateSnapshotUserPrompt(), StateTracker, Character, CharacterState
+
+### Community 188 - "Community 188"
+Cohesion: 0.50
+Nodes (4): CanonProposal, CanonProposalCard(), CanonProposalCardProps, payloadString()
+
+### Community 190 - "Community 190"
+Cohesion: 0.17
+Nodes (12): Background, Bundle Sizes (vs Sprint 9.5), Challenges Encountered, Decision Inputs, Files Created (3), Files Modified (5), Manual Verification Pending (User-Side), Next Steps (+4 more)
+
+### Community 191 - "Community 191"
+Cohesion: 0.22
+Nodes (6): CardProps, FormProps, MysteryLayerCard(), MysteryLayerPanel(), STATUS_STYLE, TimelineProps
+
+### Community 192 - "Community 192"
+Cohesion: 0.36
+Nodes (7): buildChapterSummarySystemInstruction(), buildChapterSummaryUserPrompt(), ChapterSummaryPromptInput, ChapterSummaryRaw, generateChapterSummary(), parseSummaryJson(), SummaryResult
+
+### Community 193 - "Community 193"
+Cohesion: 0.22
+Nodes (9): Files Created, Files Modified, Files Modified, Files Modified, Notes, Session: UX Revamp P0 - Novice Writer Entry, Verification Results, Verification Results (+1 more)
+
+### Community 194 - "Community 194"
+Cohesion: 0.56
+Nodes (9): Phase 1 — Cmd+K Aksi Cepat Palette + Focus Mode Foundation, Phase 2 — Slim Header + Hover Mode Revealer, Phase 3 — DEFERRED, Phase 4 — Toolbar Slim-Down + Jargon Rename + Onboarding, What Was Done, What Was Done, What Was Done, What Was Done (+1 more)
+
+### Community 195 - "Community 195"
+Cohesion: 0.56
+Nodes (9): STEP 1: Prompt Builder (`src/prompts/brainstorm-agent.ts`), STEP 2: Compass UI Extraction (`src/components/compass/StoryCompassPreview.tsx`), STEP 3: AI Router Integration (`src/services/ai/ai-router.ts`), STEP 4: Chat Store Refactor (`src/store/useChatStore.ts`), What Was Done, What Was Done, What Was Done, What Was Done (+1 more)
+
+### Community 196 - "Community 196"
+Cohesion: 0.22
+Nodes (9): 1. Created the Premium `LogoLoader` Component, 2. Replaced Route Suspense Fallbacks, 3. Added Inline Indicators, Background, Files Created, Files Modified, Session: Premium LogoLoader SVG Component, Verification Results (+1 more)
+
+### Community 197 - "Community 197"
+Cohesion: 0.25
+Nodes (5): ChartRow, ChartTooltipPayload, ChartTooltipProps, STATUS_COLORS, WordCountAnalytics()
+
+### Community 198 - "Community 198"
+Cohesion: 0.25
+Nodes (8): Catatan, File Yang Diedit Dulu (Urutan Kerja), Rangkuman Yang Dilakukan di Sesi Ini, Session: Story Contract & Canon Guardrails Implementation, Temuan Masalah, Temuan Masalah, Temuan Masalah, Temuan Masalah
+
+### Community 199 - "Community 199"
+Cohesion: 0.29
+Nodes (4): ConstellationMap, EmotionalArcHeatmap, TimelineView, WordCountAnalytics
+
+### Community 200 - "Community 200"
 Cohesion: 0.33
-Nodes (6): Files Modified (6), Session: Hotfix — Model Locking & Co-Author Chat Stop/Regenerate, Session: Hotfix â€” Model Locking & Co-Author Chat Stop/Regenerate, What Was Done, What Was Done, What Was Done
+Nodes (6): code:block1 ([← back] [≡ panel] [{title} · {mode emoji} {mode label}] fle), Phase 1 â€” Cmd+K Aksi Cepat Palette + Focus Mode Foundation, Phase 2 â€” Slim Header + Hover Mode Revealer, Phase 3 â€” DEFERRED, Phase 4 â€” Toolbar Slim-Down + Jargon Rename + Onboarding, What Was Done
+
+### Community 201 - "Community 201"
+Cohesion: 0.67
+Nodes (3): Checklist Eksekusi, Checklist Eksekusi, UX Polish - Co-Author Auto-Advance & Story Compass
 
 ## Knowledge Gaps
-- **1188 isolated node(s):** `name`, `private`, `version`, `type`, `dev` (+1183 more)
+- **1616 isolated node(s):** `name`, `private`, `version`, `type`, `dev` (+1611 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `VibeNovel v2 — Session Reports` connect `Community 157` to `Community 131`, `Community 132`, `Community 134`, `Community 7`, `Community 136`, `Community 135`, `Community 137`, `Community 148`, `Community 156`, `Community 29`, `Community 30`, `Community 44`, `Community 184`, `Community 185`, `Community 58`, `Community 63`, `Community 72`, `Community 76`, `Community 77`, `Community 82`, `Community 86`, `Community 90`, `Community 97`, `Community 108`, `Community 114`, `Community 116`, `Community 117`, `Community 119`, `Community 127`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
-- **Why does `VibeNovel v2 â€” Session Reports` connect `Community 134` to `Community 131`, `Community 132`, `Community 135`, `Community 136`, `Community 137`, `Community 7`, `Community 148`, `Community 156`, `Community 157`, `Community 30`, `Community 184`, `Community 185`, `Community 58`, `Community 63`, `Community 72`, `Community 76`, `Community 77`, `Community 82`, `Community 86`, `Community 90`, `Community 97`, `Community 108`, `Community 114`, `Community 116`, `Community 117`, `Community 119`, `Community 127`?**
+- **Why does `VibeNovel v2 — Session Reports` connect `Community 157` to `Community 132`, `Community 134`, `Community 135`, `Community 136`, `Community 137`, `Community 152`, `Community 156`, `Community 30`, `Community 162`, `Community 35`, `Community 44`, `Community 58`, `Community 63`, `Community 193`, `Community 198`, `Community 72`, `Community 76`, `Community 77`, `Community 79`, `Community 82`, `Community 86`, `Community 90`, `Community 97`, `Community 105`, `Community 108`, `Community 114`, `Community 116`, `Community 117`, `Community 119`, `Community 127`?**
+  _High betweenness centrality (0.081) - this node is a cross-community bridge._
+- **Why does `VibeNovel v2 â€” Session Reports` connect `Community 134` to `Community 132`, `Community 135`, `Community 136`, `Community 137`, `Community 156`, `Community 162`, `Community 35`, `Community 58`, `Community 190`, `Community 63`, `Community 193`, `Community 72`, `Community 76`, `Community 77`, `Community 82`, `Community 86`, `Community 90`, `Community 97`, `Community 114`, `Community 116`, `Community 117`, `Community 119`, `Community 127`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+- **Why does `Session: Sprint 9.6 — UX Polish (Notion-Grade Calm)` connect `Community 108` to `Community 194`, `Community 157`, `Community 190`?**
   _High betweenness centrality (0.017) - this node is a cross-community bridge._
-- **Why does `useProjectStore` connect `Community 1` to `Community 0`, `Community 128`, `Community 130`, `Community 4`, `Community 133`, `Community 9`, `Community 158`, `Community 163`, `Community 35`, `Community 71`, `Community 79`, `Community 80`, `Community 84`, `Community 106`, `Community 107`, `Community 110`, `Community 112`, `Community 113`, `Community 115`, `Community 120`, `Community 123`, `Community 124`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **What connects `name`, `private`, `version` to the rest of the system?**
-  _1191 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1619 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.059932659932659935 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.07781649245063879 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1339031339031339 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.046511627906976744 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

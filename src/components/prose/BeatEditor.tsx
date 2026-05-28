@@ -2,6 +2,7 @@ import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from 're
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOfflineDraft } from '../../hooks/useOfflineDraft'
 import type { SelectionInfo } from './SelectionToolbar'
+import { LogoLoader } from '../ui/LogoLoader'
 
 interface BeatEditorProps {
   chapterId: string
@@ -189,19 +190,9 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
           >
             <div className="px-4 py-2.5 bg-purple-500/8 flex items-center gap-2">
               <motion.span
-                animate={
-                  isThinking
-                    ? { scale: [1, 1.15, 1], opacity: [1, 0.6, 1] }
-                    : { scale: 1, opacity: 1 }
-                }
-                transition={
-                  isThinking
-                    ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' }
-                    : { duration: 0.2 }
-                }
-                className="text-base"
+                className="text-base flex items-center justify-center"
               >
-                {isThinking ? '🧠' : '💭'}
+                {isThinking ? <LogoLoader size={18} glow={false} /> : '💭'}
               </motion.span>
               <span className="text-xs font-semibold text-purple-300">
                 {isThinking ? 'Merancang adegan...' : 'Rencana Adegan'}

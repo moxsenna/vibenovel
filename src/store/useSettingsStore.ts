@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type ProseModelChoice = 'gemini' | 'claude' | 'deepseek' | 'deepseek-pro'
+export type ProseModelChoice = 'gemini' | 'claude' | 'deepseek' | 'deepseek-pro' | 'auto'
 
 export interface GeminiKeyConfig {
   key: string
@@ -10,7 +10,9 @@ export interface GeminiKeyConfig {
 
 interface SettingsState {
   geminiKeys: (string | GeminiKeyConfig)[]
-  openRouterKey: string | null
+  openRouterFreeKey: string | null
+  openRouterPaidKey: string | null
+  autoPilotEnabled: boolean
   activeProseModel: ProseModelChoice
   wordCountDefault: number
   freeWriteMode: boolean
@@ -35,7 +37,9 @@ interface SettingsState {
 interface SettingsActions {
   addGeminiKey: (config: string | GeminiKeyConfig) => void
   removeGeminiKey: (index: number) => void
-  setOpenRouterKey: (key: string | null) => void
+  setOpenRouterFreeKey: (key: string | null) => void
+  setOpenRouterPaidKey: (key: string | null) => void
+  setAutoPilotEnabled: (enabled: boolean) => void
   setActiveProseModel: (model: ProseModelChoice) => void
   setWordCountDefault: (count: number) => void
   setFreeWriteMode: (enabled: boolean) => void
@@ -54,7 +58,9 @@ export const useSettingsStore = create<SettingsStore>()(
     (set) => ({
       // Initial state
       geminiKeys: [],
-      openRouterKey: null,
+      openRouterFreeKey: null,
+      openRouterPaidKey: null,
+      autoPilotEnabled: false,
       activeProseModel: 'gemini',
       wordCountDefault: 1500,
       freeWriteMode: false,
@@ -81,7 +87,9 @@ export const useSettingsStore = create<SettingsStore>()(
       removeGeminiKey: (index) => set((state) => ({
         geminiKeys: state.geminiKeys.filter((_, i) => i !== index),
       })),
-      setOpenRouterKey: (openRouterKey) => set({ openRouterKey }),
+      setOpenRouterFreeKey: (openRouterFreeKey) => set({ openRouterFreeKey }),
+      setOpenRouterPaidKey: (openRouterPaidKey) => set({ openRouterPaidKey }),
+      setAutoPilotEnabled: (autoPilotEnabled) => set({ autoPilotEnabled }),
       setActiveProseModel: (activeProseModel) => set({ activeProseModel }),
       setWordCountDefault: (wordCountDefault) => set({ wordCountDefault }),
       setFreeWriteMode: (freeWriteMode) => set({ freeWriteMode }),

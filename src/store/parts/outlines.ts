@@ -25,9 +25,10 @@ export interface OutlinesPart {
   outlineProgress: OutlineProgress | null
   canonProposals: CanonProposal[]
   _outlineAbortFlag: boolean
+  _outlineAbortController: AbortController | null
   generateOutlineBatch: (startChapter: number, endChapter: number) => Promise<{ generated: number; skipped: number; warnings: string[] }>
   abortOutlineGeneration: () => void
-  regenerateOutline: (chapterId: string) => Promise<void>
+  regenerateOutline: (chapterId: string, autoFixInstruction?: string) => Promise<void>
   approveCanonProposal: (proposalId: string) => Promise<void>
   rejectCanonProposal: (proposalId: string) => void
   clearCanonProposals: () => void
@@ -150,6 +151,7 @@ export const outlinesPart: StateCreator<
   outlineProgress: null,
   canonProposals: [],
   _outlineAbortFlag: false,
+  _outlineAbortController: null,
 
   generateOutlineBatch: async (startChapter, endChapter) => {
     const { activeProject, characters, items, worldRules, mysteryLayers, chapters } = get()
@@ -168,9 +170,11 @@ export const outlinesPart: StateCreator<
     }
 
     const totalToGenerate = endChapter - startChapter + 1
+    const abortController = new AbortController()
     set({
       outlineGenerating: true,
       _outlineAbortFlag: false,
+      _outlineAbortController: abortController,
       outlineProgress: {
         current: 0,
         total: totalToGenerate,
@@ -328,7 +332,7 @@ export const outlinesPart: StateCreator<
             pacingWarnings,
             seriesHook: activeProject.series_hook,
             seasonHooks: activeProject.season_hooks
-          }, { thinkingBudget: effectiveOutlineBudget })
+          }, { thinkingBudget: effectiveOutlineBudget, signal: get()._outlineAbortController?.signal })
 
           const chapterData: Omit<Chapter, 'id'> = {
             project_id: activeProject.id,
@@ -391,6 +395,19 @@ export const outlinesPart: StateCreator<
               )
             )
           }
+          // Simpan chapter ke memori/database meskipun melanggar blocker, agar bisa di-Auto-Fix
+          if (existingChapter) {
+            await get().updateChapter(existingChapter.id, chapterData)
+          } else {
+            await get().addChapter(chapterData)
+          }
+
+          generatedSynopses.push(outline.synopsis || '')
+          emotionalHistory.push(outline.emotionalTone || '')
+          if (outline.cliffhangerType) cliffhangerHistory.push(outline.cliffhangerType)
+          falseResolutionFlags.push(outline.falseResolution || false)
+          generated++
+
           if (validationHasBlocker(storyValidation)) {
             const proposals = buildOutlineCanonProposals({
               projectId: activeProject.id,
@@ -413,25 +430,9 @@ export const outlinesPart: StateCreator<
               break
             }
 
-            throw new Error(
-              `Outline melanggar Story Contract: ${storyValidation.issues
-                .filter((issue) => issue.severity === 'BLOCKER')
-                .map((issue) => issue.message)
-                .join('; ')}`
-            )
+            // Hentikan batch agar tidak melanjutkan ke bab berikutnya yang didasari fondasi bab yang salah (blocker).
+            break
           }
-
-          if (existingChapter) {
-            await get().updateChapter(existingChapter.id, chapterData)
-          } else {
-            await get().addChapter(chapterData)
-          }
-
-          generatedSynopses.push(outline.synopsis || '')
-          emotionalHistory.push(outline.emotionalTone || '')
-          if (outline.cliffhangerType) cliffhangerHistory.push(outline.cliffhangerType)
-          falseResolutionFlags.push(outline.falseResolution || false)
-          generated++
 
           if (pacingWarnings.length > 0) {
             allWarnings.push(...pacingWarnings.map((w) => `Bab ${chapNum}: ${w}`))
@@ -456,6 +457,7 @@ export const outlinesPart: StateCreator<
     } finally {
       set((state) => ({
         outlineGenerating: false,
+        _outlineAbortController: null,
         outlineProgress: state.outlineProgress
           ? {
               ...state.outlineProgress,
@@ -473,10 +475,14 @@ export const outlinesPart: StateCreator<
   },
 
   abortOutlineGeneration: () => {
+    const { _outlineAbortController } = get()
+    if (_outlineAbortController) {
+      _outlineAbortController.abort()
+    }
     set({ _outlineAbortFlag: true })
   },
 
-  regenerateOutline: async (chapterId) => {
+  regenerateOutline: async (chapterId, autoFixInstruction) => {
     const { activeProject, chapters, characters, items, worldRules, mysteryLayers } = get()
     if (!activeProject) return
 
@@ -540,7 +546,8 @@ export const outlinesPart: StateCreator<
         emotionalHistory,
         pacingWarnings: pacingResult.warnings,
         seriesHook: activeProject.series_hook,
-        seasonHooks: activeProject.season_hooks
+        seasonHooks: activeProject.season_hooks,
+        autoFixInstruction
       }, { thinkingBudget: effectiveOutlineBudget })
 
       const chapterPatch: Partial<Chapter> = {

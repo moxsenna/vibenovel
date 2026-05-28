@@ -29,6 +29,12 @@ export function useAuth(): AuthState {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+    }).catch((error) => {
+      console.warn('[VibeNovel] Failed to get Supabase session. Project might be paused or network error:', error)
+      if (unsubscribed) return
+      setSession(null)
+      setUser(null)
+      setLoading(false)
     })
 
     // Listen to auth changes

@@ -12,7 +12,7 @@ interface CompassStep {
 }
 
 export interface CompassEditDraft {
-  draftType: 'story_contract' | 'character' | 'ending' | 'mystery'
+  draftType: 'story_contract' | 'character' | 'ending' | 'mystery' | 'item' | 'world_rule'
   initialData: Record<string, unknown>
   entityId?: string
 }

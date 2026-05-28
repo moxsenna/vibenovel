@@ -272,32 +272,32 @@ Seluruh interaksi dialog konfirmasi dan toast pemberitahuan di dalam aplikasi te
 ### Provider Hierarchy
 
 ```mermaid
-graph LR
-    subgraph "AI Router"
-        Router[ai-router.ts]
+graph TD
+    subgraph "AI Router (ai-router.ts)"
+        Router[Auto-Pilot Routing Logic]
     end
 
-    subgraph "Gemini Pool (Core — Gratis)"
-        GP[gemini-pool.ts]
-        K1[Key 1]
-        K2[Key 2]
-        K3[Key N...]
-        GP --> K1
-        GP --> K2
-        GP --> K3
+    subgraph "Gemini Pool (gemini-pool.ts)"
+        GP[Gemini Key Pool<br/>Round-Robin Keys #0...#N]
+        GP_Fail{depleted / 429?}
     end
 
-    subgraph "OpenRouter (Prose Toggle)"
-        ORA[openrouter-adapter.ts]
-        Claude[Claude Sonnet/Opus]
-        DS[Deepseek Chat]
-        ORA --> Claude
-        ORA --> DS
+    subgraph "OpenRouter (openrouter-adapter.ts)"
+        OR_Free[OpenRouter Free Keys<br/>Nemotron / Llama / Gemini Free]
+        OR_Paid[OpenRouter Paid Keys<br/>Claude Sonnet / Deepseek Paid]
     end
 
-    Router -->|Brainstorm, Outline,<br/>QA, Lore, State,<br/>Import, Recap| GP
-    Router -->|Prose Generation<br/>jika user pilih OpenRouter| ORA
-    Router -->|Prose Generation<br/>jika user pilih Gemini| GP
+    Router -->|Auto-Pilot: Core & Outline Tasks| GP
+    Router -->|Auto-Pilot: Prose (paid models)| OR_Paid
+    Router -->|Auto-Pilot: Prose (free models)| OR_Free
+    
+    GP --> GP_Fail
+    GP_Fail -->|Yes| OR_Free
+    GP_Fail -->|No| GP_Success[Direct Gemini API Call]
+
+    Router -->|Settings Model: gemini| GP
+    Router -->|Settings Model: openrouter| OR_Paid
+    Router -->|Settings Model: auto| Router
 ```
 
 ### Adapter Interface
@@ -340,7 +340,8 @@ class GeminiPool implements AIAdapter {
         return key;
       }
     }
-    throw new Error('Semua API key sedang cooldown. Coba lagi nanti.');
+    // Jika Gemini pool habis, secara otomatis fallback menggunakan OpenRouter Free Key (jika terkonfigurasi)
+    return ''; 
   }
   
   reportRateLimit(key: string): void {
@@ -349,7 +350,7 @@ class GeminiPool implements AIAdapter {
 }
 ```
 
-### AI Router
+### AI Router & Auto-Pilot
 
 ```typescript
 // src/services/ai/ai-router.ts
@@ -357,20 +358,14 @@ class AIRouter {
   private geminiPool: GeminiPool;
   private openRouterAdapter: OpenRouterAdapter;
   
-  // Untuk semua operasi NON-prose → selalu Gemini
-  async runCore(task: CoreTask, prompt: string): Promise<string> {
-    return this.geminiPool.generateText(prompt, task.options);
-  }
-  
-  // Untuk prose → sesuai pilihan user di Settings
-  async runProse(prompt: string, project: Project): Promise<string> {
-    if (project.proseProvider === 'openrouter') {
-      return this.openRouterAdapter.generateStream(prompt, {
-        model: project.proseModel
-      });
-    }
-    return this.geminiPool.generateStream(prompt, {});
-  }
+  // Mendeteksi apakah sistem Auto-Pilot aktif (autoPilotEnabled)
+  get isAutoPilotActive(): boolean;
+
+  // AI Router mengelola routing cerdas berbasis beban kerja (Core vs Prose)
+  async chatCoAuthor(messages: ChatMessage[], settings: AISettings): Promise<ChatMessage>;
+  async generateChapterOutline(input: OutlineGenerateInput, settings: AISettings): Promise<string>;
+  async generateProseBeatStream(input: ProseGenerateInput, settings: AISettings): AsyncGenerator<ThinkingChunk>;
+  async generateDirectorsCutVariant(input: ProseGenerateInput, settings: AISettings): Promise<string>;
 }
 
 type CoreTask = 

@@ -2,6 +2,124 @@
 
 ---
 
+## Session: Context Panel Polish & Pacing Warnings UX
+**Date**: 2026-05-29
+**Status**: Completed - Build and TypeScript zero errors
+
+### What Was Done
+
+#### STEP 1: Fix Syntax Corruption
+- Fixed `src/prompts/brainstorm-agent.ts` which had a mangled prompt block from previous edits. 
+
+#### STEP 2: Context Panel Editable Lore
+- Added a `📚 Pustaka Lore` label in `ContextPanel.tsx` under the Outline mode.
+- Made Character, Item, and World Rule cards in the context panel clickable and editable by triggering the `EditDraftModal`.
+- Fixed `StoryCompassPreview.tsx` TypeScript types to allow editing `item` and `world_rule`.
+
+#### STEP 3: Generation Loading UI
+- Replaced the boring `Menyusun rencana bab...` text with a premium loading UI in `SeasonArchitectPanel.tsx`. 
+- Added a pulsating, glowing neon pink `psychology` brain icon and animated ellipsis dots using `framer-motion` to clearly communicate AI activity.
+
+#### STEP 4: Beautify Pacing Warnings & Auto-Fix UI
+- Transformed the flat pacing warning list in `SeasonArchitectPanel.tsx` into an elegant, scrollable card-based UI.
+- Implemented regex parsing to split warning headers (e.g., `Bab 1: TONE_MISMATCH`) from the detailed descriptions.
+- Added dynamic styling: critical `[BLOCKER]` warnings use red error colors, while standard `[WARNING]` notices use soft tertiary styling.
+- **Auto-Fix Feature**: Added a "✨ Perbaiki Otomatis" button for non-blocker warnings. When clicked, it automatically extracts the `autoFixInstruction` and feeds it into the `regenerateOutline` function (Deep Outline) so the AI specifically targets the pacing/tone error. The UI gracefully hides the warning card once resolved.
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `src/services/ai/types.ts` | Added `autoFixInstruction` to `OutlineGenerateInput` |
+| `src/prompts/outline-engine.ts` | Injected `[!!!] INSTRUKSI PERBAIKAN WAJIB (AUTO-FIX)` block into prompts |
+| `src/store/parts/outlines.ts` | Wired `autoFixInstruction` into `regenerateOutline` |
+| `src/prompts/brainstorm-agent.ts` | Fixed corrupted syntax |
+| `src/components/workspace/ContextPanel.tsx` | Added Pustaka Lore and edit capability for lore items |
+| `src/components/compass/StoryCompassPreview.tsx` | Fixed types for CompassEditDraft |
+| `src/components/workspace/SeasonArchitectPanel.tsx` | Upgraded generating UI, beautified pacing warnings, added Auto-Fix UI |
+
+---
+
+## Session: Dynamic Task-Specialized Multi-Model AI Router & Auto-Pilot
+**Date/Time**: 2026-05-28 22:54:00 +07:00
+**Status**: Completed - Build, TypeScript, and Lint all zero errors
+
+### Temuan Masalah
+- BYOK (Bring Your Own Key) sebelumnya menyamakan seluruh kunci OpenRouter, berisiko menguras kredit paid key untuk tugas-tugas background otomatis (State Snapshot, Plot Radar, Lore Extraction) atau batch outline.
+- Pengguna membutuhkan asisten AI yang hemat tetapi cerdas, yang secara otomatis memisahkan tugas ringan (menggunakan Gemini Flash / OpenRouter free models) dari tugas berat penghasil naskah kreatif premium (menggunakan model berbayar premium seperti Claude 3.5 Sonnet).
+- Ketika Gemini key pool habis terkena rate limit (429), penulisan terhenti sama sekali karena belum ada jalur fallback otomatis antar provider (Gemini ↔ OpenRouter).
+
+### Rangkuman Pekerjaan
+- **Pemisahan Kunci API & State**:
+  - Membagi `openRouterKey` di `AISettings` menjadi `openRouterFreeKey` dan `openRouterPaidKey`.
+  - Menambahkan model `'auto'` ke `ProseModelChoice`.
+  - Menambahkan state global `autoPilotEnabled` (default `true`) di `useSettingsStore`.
+- **Implementasi Auto-Pilot Routing (`ai-router.ts`)**:
+  - *Core & Outline Tasks*: Mengalir seefisien mungkin ke Gemini Flash gratis via `gemini-pool`.
+  - *Co-Author Brainstorm*: Selalu diarahkan ke Gemini Flash gratis.
+  - *Prose Beat stream*: Jika model diset ke `'auto'` atau Auto-Pilot aktif, router otomatis memilih OpenRouter paid key + model paid pilihan. Jika paid key kosong, router langsung dialihkan ke OpenRouter free models atau Gemini Pool.
+  - *Director's Cut*: Menggunakan paid model untuk variasi maksimal, fallback ke Gemini Flash.
+- **Implementasi Two-Way Cross-Provider Fallback (`gemini-pool.ts` & `ai-router.ts`)**:
+  - Jika pool Gemini gratisan habis/terkena rate-limit, pool secara otomatis merutekan panggilan ke OpenRouter Free model menggunakan `openRouterFreeKey` yang terkonfigurasi.
+  - Jika OpenRouter paid/free adapter mengalami kegagalan API, router akan otomatis melakukan cross-fallback ke Gemini Pool gratisan.
+- **Pembaruan UI Settings (`SettingsModal.tsx`)**:
+  - Menghadirkan dual input fields terpisah untuk *OpenRouter Free Key* dan *OpenRouter Paid Key*.
+  - Menambahkan baris opsi visual "Auto-Pilot AI Router" dengan toggle interaktif.
+  - Menambahkan `'auto'` ("Rekomendasi Auto-Pilot") sebagai pilihan teratas Prose Model Choice.
+
+### Verification Results
+- `npx.cmd tsc -b --noEmit` -> SUCCESS (Zero errors)
+- `npm.cmd run build` -> SUCCESS (Zero errors, ~922ms build)
+- `graphify update .` -> SUCCESS (Rebuilt: 2764 nodes, 4387 edges, 188 communities)
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `src/store/useSettingsStore.ts` | Split key to Free/Paid, add `autoPilotEnabled` and `'auto'` choice |
+| `src/services/ai/types.ts` | Synchronized interfaces and choices |
+| `src/services/ai/openrouter-adapter.ts` | Free models mapping and fallback adapter |
+| `src/services/ai/gemini-pool.ts` | Auto fallback to OpenRouter Free key when pool depleted |
+| `src/services/ai/ai-router.ts` | Dynamic task-specific auto-routing and fallback wrapper |
+| `src/components/modals/SettingsModal.tsx` | UI fields for Free/Paid keys, Auto-Pilot toggle, and auto prose option |
+
+---
+
+## Session: Workspace Cleanup - Mixed/Dirty Commit Hardening
+**Date/Time**: 2026-05-28 00:00:56 +07:00
+**Status**: Completed - Two clean commits, workspace restored to clean state
+
+### Temuan Awal
+- Workspace sempat berada dalam kondisi mixed/dirty dengan campuran source, docs, generated assets, dan scratch lokal.
+- Beberapa file HTML dokumentasi masih memiliki trailing whitespace yang berpotensi memicu `git diff --check`.
+- Root scratch assets dan folder `tmp/` perlu di-ignore supaya commit berikutnya tetap bersih tanpa menghapus file mentah.
+
+### Rangkuman Pekerjaan
+- Membuat backup non-destruktif ke `D:\tmp\vibenovel-cleanup-backup` sebelum staging apa pun.
+- Menambahkan ignore rules untuk scratch lokal di [`.gitignore`](D:/Coding/vibenovel/.gitignore).
+- Menjalankan verification sebelum staging dan membersihkan trailing whitespace pada file yang terdeteksi.
+- Memisahkan hasil kerja menjadi dua commit yang jelas:
+  - `3a60e7d` `chore: add generated assets and graphify refresh`
+  - `ab3fbbe` `feat: consolidate vibenovel source updates`
+- Menjaga staging tetap eksplisit dan tidak memakai `git add .`.
+- Menutup sesi dengan workspace yang bersih dari perubahan tracked.
+
+### Verification Results
+- `npm.cmd run test` -> SUCCESS
+- `npx.cmd tsc -b --noEmit` -> SUCCESS
+- `npm.cmd run lint` -> SUCCESS
+- `npm.cmd run build` -> SUCCESS
+- `git diff --check` -> SUCCESS
+- `git diff --cached --check` -> SUCCESS
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `.gitignore` | Added local scratch ignores for root image files and `tmp/` |
+| `graphify-out/*`, `public/*`, `vibenovel_documentation.html`, `vibenovel_dokumentasi_id.html` | Added generated assets and refreshed documentation exports |
+| `src/*`, `supabase/schema.sql`, `package.json`, `package-lock.json`, `vitest.config.ts` | Consolidated source/docs updates into a single feature commit |
+| `architecture.md`, `task.md`, `walkthrough.md`, `session_reports.md` | Synchronized documentation with the cleanup and implementation status |
+
+---
+
 ## Session: Refactor Audit Follow-up - Maintainability Hardening
 **Date**: 2026-05-25
 **Status**: Completed - Lint, TypeScript, and production preview zero errors

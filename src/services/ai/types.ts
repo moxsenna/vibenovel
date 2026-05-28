@@ -2,7 +2,9 @@ import type { StoryContract, StoryValidationResult } from '../../types/project'
 
 export interface AISettings {
   geminiKeys: string[]
-  openRouterKey: string | null
+  openRouterFreeKey: string | null
+  openRouterPaidKey: string | null
+  autoPilotEnabled: boolean
   activeProseModel: string
 }
 
@@ -71,6 +73,7 @@ export interface OutlineGenerateInput {
   previousChapterSummaries: string[]
   emotionalHistory: string[]
   pacingWarnings: string[]
+  autoFixInstruction?: string
 }
 
 export interface OutlineResponse {

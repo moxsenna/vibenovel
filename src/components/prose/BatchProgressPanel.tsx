@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useUiStore } from '../../store/useUiStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { useBatchGenerator } from '../../hooks/useBatchGenerator'
+import { LogoLoader } from '../ui/LogoLoader'
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   running: { label: '🚀 Auto-Pilot', cls: 'bg-primary/15 text-primary border-primary/30' },
@@ -73,7 +74,7 @@ export const BatchProgressPanel: React.FC = () => {
         {/* Sprint 9.7 — Deep Think active label */}
         {deepThinkEnabled && deepThinkInBatch && (
           <div className="px-4 py-1.5 bg-purple-500/8 border-b border-purple-500/15 flex items-center gap-1.5">
-            <span className="text-xs">🧠</span>
+            <LogoLoader size={14} glow={false} />
             <span className="text-[10px] font-medium text-purple-300/90">
               Deep Think aktif — adegan dirancang dulu sebelum ditulis
             </span>

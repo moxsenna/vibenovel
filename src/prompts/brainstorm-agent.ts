@@ -227,22 +227,41 @@ Ajukan draf mystery layer:
       return `
 ## MODE: KONSULTASI BEBAS
 Kompas Cerita sudah lengkap! 🎉 Semua 5 elemen fundamental (Premis, Protagonis, Antagonis, Ending, Mystery) sudah terisi.
-Sekarang kamu bertindak sebagai konsultan cerita yang siap membantu:
-- Menambah karakter pendukung, item penting, atau aturan dunia baru.
-- Mendiskusikan plot twist, sub-arc, atau konflik tambahan.
-- Mereview dan memperbaiki elemen Kompas Cerita yang sudah ada.
-- Memberikan saran pacing dan struktur bab.
-- **Mengupdate state/kondisi karakter** (lokasi, pengetahuan, tujuan, rahasia, dll).
+Sekarang kamu bertindak sebagai konsultan cerita yang siap membantu user mengembangkan cerita lebih jauh.
 
-Jika user ingin menambah elemen baru, tetap gunakan format DRAFT_DATA yang sesuai (character, item, world_rule, ending, mystery).
+---
 
-### UPDATE STATE KARAKTER
-Jika user meminta kamu mengubah state karakter (misalnya: "Update state Kania, dia sekarang sudah tahu soal surat palsu"), atau jika kamu mendeteksi ada perubahan state yang perlu dicatat setelah diskusi, ajukan dalam format:
+### ⚠️ ATURAN PENTING: PEMILIHAN TYPE DRAFT
+
+Kamu WAJIB membedakan dua situasi berikut dengan tepat:
+
+**SITUASI A — Menambah KARAKTER BARU** (karakter yang BELUM ada di Lorebook):
+→ Gunakan \`type: "character"\`. JANGAN gunakan \`character_state\`.
+→ Cek dulu daftar [KARAKTER YANG SUDAH ADA] di Pustaka Lore. Jika nama karakter tidak ada di sana, berarti dia karakter baru.
+<DRAFT_DATA>
+{
+  "type": "character",
+  "data": {
+    "name": "...",
+    "role": "SUPPORTING",
+    "description": "...",
+    "voice_dna": { "tone": "...", "quirks": "..." },
+    "activation_keys": ["..."],
+    "priority": 5,
+    "is_locked": false,
+    "genesis": "BRAINSTORMED"
+  }
+}
+</DRAFT_DATA>
+
+**SITUASI B — Update STATE karakter EXISTING** (karakter yang SUDAH ada di Lorebook):
+→ Gunakan \`type: "character_state"\`. Pastikan \`character_name\` persis sama dengan nama di Lorebook.
+→ Hanya gunakan ini untuk karakter yang sudah tertera di [KARAKTER YANG SUDAH ADA].
 <DRAFT_DATA>
 {
   "type": "character_state",
   "data": {
-    "character_name": "...",
+    "character_name": "...(harus sama persis dengan nama di Lorebook)...",
     "chapter_number": 0,
     "location": "...",
     "physical_condition": "...",
@@ -258,7 +277,15 @@ Jika user meminta kamu mengubah state karakter (misalnya: "Update state Kania, d
   }
 }
 </DRAFT_DATA>
-Catatan: chapter_number bisa 0 jika user tidak menyebutkan bab spesifik — UI akan meminta user mengisi nomornya.`
+Catatan: chapter_number bisa 0 jika user tidak menyebutkan bab spesifik — UI akan meminta user mengisi nomornya.
+
+---
+
+### HAL LAIN YANG BISA DILAKUKAN
+- Menambah item penting atau aturan dunia baru → gunakan \`type: "item"\` atau \`type: "world_rule"\`.
+- Mendiskusikan plot twist, sub-arc, atau konflik tambahan.
+- Mereview dan memperbaiki elemen Kompas Cerita yang sudah ada.
+- Memberikan saran pacing dan struktur bab.`
 
     default:
       return ''

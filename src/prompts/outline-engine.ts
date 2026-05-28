@@ -43,6 +43,9 @@ export interface OutlinePromptParams {
 
   // Pacing warnings from kbm-pacing.ts
   pacingWarnings: string[]
+
+  // Auto-Fix instruction from validator
+  autoFixInstruction?: string
 }
 
 // ── System Instruction ─────────────────────────────────────────────────────
@@ -130,7 +133,8 @@ export function buildOutlineUserPrompt(params: OutlinePromptParams): string {
     chapterNumber,
     previousOutlineSummaries,
     emotionalHistory,
-    pacingWarnings
+    pacingWarnings,
+    autoFixInstruction
   } = params
 
   // Build character summary
@@ -194,6 +198,10 @@ export function buildOutlineUserPrompt(params: OutlinePromptParams): string {
     ? `\n⚠️ PACING WARNINGS (address these in your outline):\n${pacingWarnings.map(w => `- ${w}`).join('\n')}`
     : ''
 
+  const autoFixBlock = autoFixInstruction 
+    ? `\n\n[!!!] INSTRUKSI PERBAIKAN WAJIB (AUTO-FIX):\nOutline sebelumnya gagal lolos validasi karena alasan berikut:\n"${autoFixInstruction}"\n\nPerbaiki kesalahan ini pada outline yang baru! Anda WAJIB mematuhi instruksi perbaikan ini.`
+    : ''
+
   const storyContractBlock = storyContract && Object.keys(storyContract).length > 0
     ? `\nSTORY LOGIC CONTRACT (CANON - WAJIB DIPATUHI):\n${JSON.stringify(storyContract, null, 2)}\n\nKontrak ini lebih tinggi prioritasnya daripada improvisasi kreatif. Perhatikan khusus opening_contract, causality_rules, relationship_addressing, arc_order, required_reveals, dan forbidden_contradictions. Panggilan relasi seperti "Mas", "Sayang", "Kak", atau nama kecil harus mengikuti relationship_addressing jika tersedia.`
     : '\nSTORY LOGIC CONTRACT: Belum tersedia. Jangan membuat asumsi timeline/urutan besar yang bertentangan dengan premis.'
@@ -224,7 +232,7 @@ PREVIOUS CHAPTER OUTLINES:
 ${prevContext}
 
 ${emotionContext}
-${warningBlock}
+${warningBlock}${autoFixBlock}
 
 ─────────────────────────────────
 GENERATE OUTLINE FOR: Chapter ${chapterNumber} of ${targetChapters}

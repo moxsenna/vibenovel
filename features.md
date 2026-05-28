@@ -70,6 +70,13 @@ Mesin utama di balik kecerdasan buatan VibeNovel v2 yang dirancang efisien dan a
     *   Dilengkapi manajemen cooldown rate-limit (429) otomatis dan **BYOK (Bring Your Own Key) Guard** yang melarang keras pencatatan bagian mana pun dari kunci API di log konsol untuk menjaga keamanan.
 *   **OpenRouter Unified Adapter**:
     *   Adapter yang menyatukan pemanggilan model premium dari OpenRouter (seperti Claude 3.5 Sonnet atau Deepseek) dengan struktur masukan-luaran yang sama dengan Gemini.
+*   **Dynamic Task-Specialized Multi-Model Auto-Pilot Router**:
+    *   Mengelola pemilihan model secara cerdas dan otomatis berdasarkan kompleksitas tugas.
+    *   Memisahkan API key OpenRouter menjadi dua tingkat: *OpenRouter Free Key* (untuk model bebas hambatan seperti Nemotron / Llama / Gemini Free) dan *OpenRouter Paid Key* (untuk model kreatif premium seperti Claude 3.5 Sonnet / Deepseek Paid) untuk mencegah terkurasnya kredit berbayar untuk tugas otomatis.
+    *   **Two-way Cross-provider Fallback**:
+        - Jika Gemini Key Pool habis/rate-limit (429), sistem otomatis dialihkan ke OpenRouter Free model untuk menjaga kesinambungan background task atau outline.
+        - Jika OpenRouter mengalami kegagalan API, sistem otomatis melakukan fallback kembali ke Gemini Pool gratisan.
+    *   Menghadirkan opsi model prosa `'auto'` ("Rekomendasi Auto-Pilot") sebagai pilihan teratas Prose Model Choice dan kontrol Master Toggle Auto-Pilot di Settings Modal.
 *   **Deep Think Mode (Streaming Reasoning)**:
     *   Menyediakan dua fase streaming yang memberikan ruang berpikir bagi model AI sebelum menghasilkan prosa naskah final.
     *   Thought tokens (hasil pemikiran AI) dirender secara langsung di antarmuka pengguna dalam panel collapsible terpisah, dan disaring secara ketat agar tidak ikut tersimpan ke dalam naskah bab.

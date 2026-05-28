@@ -11,7 +11,7 @@ import type {
   MysteryLayer
 } from '../../types/project'
 import { geminiPool } from './gemini-pool'
-import { openRouterAdapter } from './openrouter-adapter'
+import { openRouterAdapter, OR_FREE_MODELS } from './openrouter-adapter'
 import { buildOutlineSystemInstruction, buildOutlineUserPrompt } from '../../prompts/outline-engine'
 import { buildProseSystemInstruction, buildProseUserPrompt } from '../../prompts/prose-writer'
 import { useSettingsStore } from '../../store/useSettingsStore'
@@ -77,8 +77,17 @@ interface ExtractedLore {
 
 class AiRouter {
   /**
-   * Co-Author chat helper using Gemini Core Engine (gratis).
-   * Receives a dynamic systemInstruction from the brainstorm-agent prompt builder.
+   * Whether Auto-Pilot mode is active: enabled in settings AND a free OR key exists.
+   */
+  private get isAutoPilotActive(): boolean {
+    const { autoPilotEnabled, openRouterFreeKey } = useSettingsStore.getState()
+    return autoPilotEnabled && !!openRouterFreeKey
+  }
+
+  /**
+   * Co-Author chat helper.
+   * Auto-Pilot: routes to DeepSeek V4 Flash (free) when active.
+   * Fallback: Gemini Core Engine (gratis).
    */
   public async chatCoAuthor(
     _project: Project,
@@ -105,6 +114,24 @@ Silakan balas dengan persona Co-Author sesuai instruksi sistem. Jika kamu mengaj
 Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak ada trailing comma).`
 
     const shouldThinkForContract = systemInstruction.includes('PREMIS & STORY CONTRACT')
+
+    // ── Auto-Pilot: route brainstorm to DeepSeek V4 Flash (free) ─────────
+    if (this.isAutoPilotActive) {
+      try {
+        const response = await openRouterAdapter.generateContent(
+          prompt,
+          systemInstruction,
+          OR_FREE_MODELS.brainstorm,
+          false,
+          true // useFreeKey
+        )
+        return this.parseDraftResponse(response)
+      } catch (autoPilotError) {
+        console.warn('Auto-Pilot brainstorm gagal, fallback ke Gemini:', autoPilotError)
+        // Fall through to Gemini below
+      }
+    }
+
     const response = shouldThinkForContract
       ? (
           await geminiPool.generateContentV2(
@@ -124,7 +151,13 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
           signal
         )
 
-    // ── Parse DRAFT_DATA ───────────────────────────────────────────────
+    return this.parseDraftResponse(response)
+  }
+
+  /**
+   * Parse DRAFT_DATA from AI response. Shared by Auto-Pilot and Gemini paths.
+   */
+  private parseDraftResponse(response: string): { reply: string; draftData?: CoAuthorDraft } {
     const draftMatch = response.match(/<DRAFT_DATA>([\s\S]*?)<\/DRAFT_DATA>/)
     let draftData: CoAuthorDraft | undefined
     const cleanedReply = response.replace(/<DRAFT_DATA>[\s\S]*?<\/DRAFT_DATA>/, '').trim()
@@ -167,25 +200,15 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
       }
     }
 
-    return {
-      reply: cleanedReply,
-      draftData
-    }
+    return { reply: cleanedReply, draftData }
   }
 
   /**
-   * Outline Engine: Generates a highly detailed, 20+ field outline for a specific chapter
-   * using Gemini Core Engine (gratis).
+   * Outline Engine: Generates a highly detailed, 20+ field outline for a specific chapter.
+   *
+   * Auto-Pilot: routes to GPT-OSS-120B (free) when active. Fallback: Gemini.
    *
    * Sprint 9.8 — Accepts optional `options.thinkingBudget` for Deep Outline.
-   * When > 0, switches from `geminiPool.generateContent()` to
-   * `geminiPool.generateContentV2()` which injects `thinkingConfig` into
-   * `generationConfig`. Thought summary is currently discarded — outline
-   * is an analytical task, user doesn't need to see model reasoning.
-   *
-   * Retry mechanism remains as defense-in-depth — Deep Outline reduces
-   * retry rate (model plans JSON shape before output) but doesn't replace
-   * the safety net.
    */
   public async generateChapterOutline(
     input: OutlineGenerateInput,
@@ -259,6 +282,26 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
     let retries = 2
     let lastError: Error | null = null
 
+    // ── Auto-Pilot: route outline to GPT-OSS-120B (free) ────────────────
+    if (this.isAutoPilotActive) {
+      try {
+        const result = await openRouterAdapter.generateContentV2(
+          userPrompt,
+          systemInstruction,
+          OR_FREE_MODELS.outline,
+          true, // jsonMode
+          signal,
+          thinkingBudget,
+          true // useFreeKey
+        )
+        const cleaned = result.text.replace(/^```json\s*/i, '').replace(/```$/, '').trim()
+        return JSON.parse(cleaned) as OutlineResponse
+      } catch (autoPilotError) {
+        console.warn('Auto-Pilot outline gagal, fallback ke Gemini:', autoPilotError)
+        // Fall through to Gemini below
+      }
+    }
+
     while (retries > 0) {
       try {
         const result = await geminiPool.generateContentV2(
@@ -306,10 +349,6 @@ Ingat: hanya SATU draf per pesan. Pastikan JSON valid (tanda kutip ganda, tidak 
 
   /**
    * AI Semantic Validator: second validation layer after deterministic checks.
-   *
-   * This uses Gemini thinking as an evaluator, not as canon. The validator must
-   * return only issue objects; callers still treat deterministic BLOCKERs as the
-   * hard source of truth.
    */
   public async validateStorySemanticsWithThinking(
     input: SemanticValidationInput,
@@ -381,12 +420,9 @@ Return validation JSON only.`
   /**
    * Prose Writer: Generates the actual chapter prose beat-by-beat via Streaming.
    *
-   * Sprint 9.7 — Returns {@link ThinkingChunk} so callers can split
-   * model reasoning ("thought" chunks) from final prose ("text" chunks).
-   * Caller passes `options.thinkingBudget` per call (0 = thinking off).
-   *
-   * Routes to Gemini (free, 2.5 Flash) or OpenRouter (Claude Sonnet 4.6,
-   * DeepSeek V4 Flash :free, DeepSeek V4 Pro) depending on settings.
+   * Sprint 9.7 — Returns ThinkingChunk so callers can split model reasoning
+   * from final prose. Routes to Gemini, Auto-Pilot (Nemotron 120B free), or
+   * manual OpenRouter model depending on settings.
    */
   public async *generateProseBeatStream(
     _project: Project,
@@ -412,6 +448,33 @@ Return validation JSON only.`
       for await (const chunk of stream) {
         yield chunk
       }
+    } else if (activeModel === 'auto') {
+      // Auto-Pilot: route to Nemotron 120B (free) for prose
+      if (!this.isAutoPilotActive) {
+        // Auto selected but no free key — fall back to Gemini
+        const stream = geminiPool.generateContentStreamV2(
+          userPrompt,
+          systemInstruction,
+          'gemini-flash-latest',
+          signal,
+          thinkingBudget
+        )
+        for await (const chunk of stream) {
+          yield chunk
+        }
+      } else {
+        const stream = openRouterAdapter.generateContentStreamV2(
+          userPrompt,
+          systemInstruction,
+          OR_FREE_MODELS.prose,
+          thinkingBudget,
+          signal,
+          true // useFreeKey
+        )
+        for await (const chunk of stream) {
+          yield chunk
+        }
+      }
     } else {
       // OpenRouter routing: claude → Sonnet 4.6, deepseek → V4 Flash (free),
       // deepseek-pro → V4 Pro (paid, best fiction quality).
@@ -429,7 +492,8 @@ Return validation JSON only.`
         systemInstruction,
         orModel,
         thinkingBudget,
-        signal
+        signal,
+        false // usePaidKey
       )
       for await (const chunk of stream) {
         yield chunk
@@ -592,10 +656,7 @@ Return validation JSON only.`
   /**
    * Sprint 9 — Mimicry Engine.
    *
-   * Extract project-wide voice DNA from a writing sample. Returns a record
-   * with structural style features (diction, rhythm, density, dialogue
-   * style, signature/taboo phrasing, pace, emotional palette).
-   *
+   * Extract project-wide voice DNA from a writing sample.
    * Privacy: sample is sent to Gemini for inference only — not stored.
    */
   public async extractProjectVoiceDna(
@@ -631,9 +692,8 @@ Return validation JSON only.`
   // ── Director's Cut + Inline Edit ────────────────────────────────────────
 
   /**
-   * Generate a single Director's Cut variant as a streaming response so the
-   * UI can render text as it arrives. Sequential generation lets the user
-   * abort the remaining variants once they've picked one.
+   * Generate a single Director's Cut variant as a streaming response.
+   * Auto-Pilot: routes to Gemma 4 31B (free) for creative rewrite.
    */
   public async *generateDirectorsCutVariant(
     variant: DirectorsCutVariant,
@@ -642,6 +702,26 @@ Return validation JSON only.`
   ): AsyncGenerator<string, void, unknown> {
     const systemInstruction = buildDirectorsCutSystemInstruction(variant)
     const userPrompt = buildDirectorsCutUserPrompt(input)
+
+    // ── Auto-Pilot: route to Gemma 4 31B (free) for creative rewrite ─────
+    if (this.isAutoPilotActive) {
+      try {
+        const stream = openRouterAdapter.generateContentStream(
+          userPrompt,
+          systemInstruction,
+          OR_FREE_MODELS.rewrite,
+          true // useFreeKey
+        )
+        for await (const chunk of stream) {
+          yield chunk
+        }
+        return
+      } catch (autoPilotError) {
+        console.warn('Auto-Pilot rewrite gagal, fallback ke Gemini:', autoPilotError)
+        // Fall through to Gemini below
+      }
+    }
+
     const stream = geminiPool.generateContentStream(
       userPrompt,
       systemInstruction,
@@ -655,7 +735,6 @@ Return validation JSON only.`
 
   /**
    * Inline (Magic) Edit: surgical rewrite driven by a free-form instruction.
-   * Uses the cheaper Flash Lite model since selections are usually short.
    */
   public async inlineEdit(
     input: InlineEditInput,

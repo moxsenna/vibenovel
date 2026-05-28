@@ -1549,7 +1549,50 @@ proposal canon yang harus disetujui user lebih dulu.
 5. **Panggilan relasi tidak dianggap karakter baru**
    - Term di `relationship_addressing` seperti Mas/Sayang diperlakukan sebagai warning jika salah masuk `activeCharacters`, bukan proposal karakter baru.
 
-### Verifikasi
-
 - `npx.cmd tsc -b --noEmit` sukses tanpa error.
 - `npm.cmd run build` sukses tanpa error.
+
+---
+
+## Session: Premium LogoLoader SVG Component
+**Date**: 2026-05-29
+**Status**: ✅ COMPLETED — Full-screen ambient loading splash and inline mini canvas integrated. Compiled and built successfully with zero errors.
+
+### Background
+We required a high-end, premium loading experience that reflects the intertwined "V" and "N" neon logo design from `image_e4606c.png` using pure React, Framer Motion, and Tailwind CSS v4. This eliminates heavy image asset loading, prevents stutter, and ensures immediate, buttery-smooth visual responses.
+
+### What Was Done
+
+#### 1. Created the Premium `LogoLoader` Component
+- Created `src/components/ui/LogoLoader.tsx`:
+  - **Premium Geometry**: Built a mathematically centered, parallel-aligned representation of the intertwined "V" and "N" using custom SVG coordinates mapped in a `340 x 260` viewBox.
+  - **Triple-Layer Glow System**:
+    - *Layer 1 (Ambient Blur)*: A soft background blur group utilizing SVG `<filter id="neonGlowBlur">` to mimic actual neon sign backlighting.
+    - *Layer 2 (Outlines)*: High-contrast sharp outlines matching the "Malam Kreatif" colors.
+    - *Layer 3 (Liquid Pulse Core)*: White/pastel glowing thin inner cores animating through Framer Motion `strokeDashoffset` loop to simulate flowing neon juice.
+  - **Seamless "Malam Kreatif Neon Flow" Animation**: Staggered motion paths so that as the V's right leg pulse reaches the top, the N's left vertical ignites in a seamless fluid crossover effect.
+  - **Flexible Layout**: Works in fullscreen mode with frosted glassmorphic backplate, dark plum radial gradients, and floating neon blurs, or in miniature mode (with customizable size and zero outer glow) for inline usage.
+
+#### 2. Replaced Route Suspense Fallbacks
+- Modified `src/components/ui/LoadingSplash.tsx` to delegate directly to `LogoLoader` in full-screen mode, instantly updating all workspace transition fallbacks.
+- Modified `src/App.tsx`'s `AuthLoader` to use the fullscreen `LogoLoader`, ensuring that the very first auth-check splash screen feels premium, dark, and highly polished, eliminating plain white flickers.
+
+#### 3. Added Inline Indicators
+- Modified `src/components/prose/BeatEditor.tsx` to display a mini inline `LogoLoader` (size 18) inside the collapsible "Merancang adegan..." deep think panel, replacing the static 🧠 emoji.
+- Modified `src/components/prose/BatchProgressPanel.tsx` to display a mini inline `LogoLoader` (size 14) in the Deep Think active header band.
+
+### Verification Results
+- `npx tsc -b --noEmit` → **SUCCESS (Zero errors)** ✅
+- `npm run build` → **SUCCESS (776ms, Zero errors/warnings)** ✅
+  - CSS Bundle: 118.07 KB
+  - Vendor & Workspace chunks compiled perfectly.
+
+### Files Created
+- `src/components/ui/LogoLoader.tsx` (~240 lines)
+
+### Files Modified
+- `src/components/ui/LoadingSplash.tsx` (~10 lines)
+- `src/App.tsx` (~15 lines)
+- `src/components/prose/BeatEditor.tsx` (~10 lines)
+- `src/components/prose/BatchProgressPanel.tsx` (~5 lines)
+

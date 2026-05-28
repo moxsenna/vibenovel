@@ -1,7 +1,42 @@
 import { useSettingsStore } from '../../store/useSettingsStore'
 import type { ThinkingChunk } from './types'
 
+/**
+ * Auto-Pilot free model IDs.
+ * Single source of truth for all OpenRouter free-tier model routing.
+ */
+export const OR_FREE_MODELS = {
+  /** Prose Writer — massive 1M context, strong narrative */
+  prose: 'nvidia/nemotron-3-super-120b-a12b:free',
+  /** Outline Engine — high reasoning, stable JSON output */
+  outline: 'openai/gpt-oss-120b:free',
+  /** Brainstorm Agent — ultra-fast ideation, 1M context */
+  brainstorm: 'deepseek/deepseek-v4-flash:free',
+  /** Director's Cut / Rewrite — expressive & creative */
+  rewrite: 'google/gemma-4-31b-it:free',
+  /** Fallback for analytical JSON tasks when Gemini keys exhausted */
+  jsonFallback: 'meta-llama/llama-3.3-70b-instruct:free'
+} as const
+
+export type OrFreeModelKey = keyof typeof OR_FREE_MODELS
+
 class OpenRouterAdapter {
+  /**
+   * Resolve the correct OpenRouter API key based on `useFreeKey`.
+   * Throws if the relevant key is not configured.
+   */
+  private getKey(useFreeKey: boolean): string {
+    const { openRouterFreeKey, openRouterPaidKey } = useSettingsStore.getState()
+    const key = useFreeKey ? openRouterFreeKey : openRouterPaidKey
+    if (!key) {
+      throw new Error(
+        useFreeKey
+          ? 'OpenRouter Free Key belum diatur. Tambahkan di Settings → Kunci.'
+          : 'OpenRouter Paid Key belum diatur. Tambahkan di Settings → Kunci.'
+      )
+    }
+    return key
+  }
   /**
    * Generates prose using OpenRouter API
    */
@@ -9,13 +44,10 @@ class OpenRouterAdapter {
     prompt: string,
     systemInstruction?: string,
     model = 'anthropic/claude-3.5-sonnet',
-    jsonMode = false
+    jsonMode = false,
+    useFreeKey = false
   ): Promise<string> {
-    const { openRouterKey } = useSettingsStore.getState()
-    
-    if (!openRouterKey) {
-      throw new Error('OpenRouter API key is not configured. Please add it in Settings.')
-    }
+    const openRouterKey = this.getKey(useFreeKey)
 
     try {
       const messages = []
@@ -91,13 +123,10 @@ class OpenRouterAdapter {
     model = 'anthropic/claude-sonnet-4.6',
     jsonMode = false,
     signal?: AbortSignal,
-    thinkingBudget = 0
+    thinkingBudget = 0,
+    useFreeKey = false
   ): Promise<{ text: string; thoughtSummary?: string }> {
-    const { openRouterKey } = useSettingsStore.getState()
-
-    if (!openRouterKey) {
-      throw new Error('OpenRouter API key is not configured. Please add it in Settings.')
-    }
+    const openRouterKey = this.getKey(useFreeKey)
 
     const messages: Array<{ role: string; content: string }> = []
     if (systemInstruction) {
@@ -176,13 +205,10 @@ class OpenRouterAdapter {
   public async *generateContentStream(
     prompt: string,
     systemInstruction?: string,
-    model = 'anthropic/claude-3.5-sonnet'
+    model = 'anthropic/claude-3.5-sonnet',
+    useFreeKey = false
   ): AsyncGenerator<string, void, unknown> {
-    const { openRouterKey } = useSettingsStore.getState()
-    
-    if (!openRouterKey) {
-      throw new Error('OpenRouter API key is not configured. Please add it in Settings.')
-    }
+    const openRouterKey = this.getKey(useFreeKey)
 
     try {
       const messages = []
@@ -276,13 +302,10 @@ class OpenRouterAdapter {
     systemInstruction?: string,
     model = 'anthropic/claude-sonnet-4.6',
     thinkingBudget = 0,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    useFreeKey = false
   ): AsyncGenerator<ThinkingChunk, void, unknown> {
-    const { openRouterKey } = useSettingsStore.getState()
-
-    if (!openRouterKey) {
-      throw new Error('OpenRouter API key is not configured. Please add it in Settings.')
-    }
+    const openRouterKey = this.getKey(useFreeKey)
 
     const messages: Array<{ role: string; content: string }> = []
     if (systemInstruction) {

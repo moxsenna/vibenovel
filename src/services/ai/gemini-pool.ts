@@ -1,5 +1,6 @@
 import { useSettingsStore, type GeminiKeyConfig } from '../../store/useSettingsStore'
 import type { ThinkingChunk } from './types'
+import { openRouterAdapter, OR_FREE_MODELS } from './openrouter-adapter'
 
 interface KeyStatus {
   key: string
@@ -108,7 +109,11 @@ class GeminiPool {
   }
 
   /**
-   * Helper to make a client-side API call to Gemini with automatic key rotation and retries
+   * Helper to make a client-side API call to Gemini with automatic key rotation and retries.
+   *
+   * Auto-Pilot fallback: if all Gemini keys are exhausted and auto-pilot is
+   * enabled, the pool will attempt to call OpenRouter free model as a last
+   * resort before throwing.
    */
   public async generateContent(
     prompt: string,
@@ -191,6 +196,23 @@ class GeminiPool {
       }
     }
 
+    // All Gemini keys exhausted — try OpenRouter free fallback if auto-pilot is enabled
+    const settings = useSettingsStore.getState()
+    if (settings.autoPilotEnabled && settings.openRouterFreeKey) {
+      console.warn('Semua key Gemini limit. Fallback ke OpenRouter JSON model...')
+      try {
+        return await openRouterAdapter.generateContent(
+          prompt,
+          systemInstruction,
+          OR_FREE_MODELS.jsonFallback,
+          jsonMode,
+          true // useFreeKey
+        )
+      } catch (fallbackError) {
+        console.error('OpenRouter fallback juga gagal:', fallbackError)
+      }
+    }
+
     throw lastError instanceof Error
       ? lastError
       : new Error('Failed to generate content after exhausting keys in the pool')
@@ -210,6 +232,9 @@ class GeminiPool {
    *
    * Backward-compat: original `generateContent()` is untouched. This is
    * a strictly additive helper used only by `generateChapterOutline`.
+   *
+   * Auto-Pilot fallback: same as generateContent — if all Gemini keys
+   * are exhausted and auto-pilot is on, falls back to OpenRouter free.
    */
   public async generateContentV2(
     prompt: string,
@@ -306,6 +331,25 @@ class GeminiPool {
         this.reportError(key, error)
         lastError = error
         retries--
+      }
+    }
+
+    // All Gemini keys exhausted — try OpenRouter free fallback if auto-pilot is enabled
+    const settingsV2 = useSettingsStore.getState()
+    if (settingsV2.autoPilotEnabled && settingsV2.openRouterFreeKey) {
+      console.warn('Semua key Gemini limit (V2). Fallback ke OpenRouter JSON model...')
+      try {
+        return await openRouterAdapter.generateContentV2(
+          prompt,
+          systemInstruction,
+          OR_FREE_MODELS.jsonFallback,
+          jsonMode,
+          undefined, // signal
+          thinkingBudget,
+          true // useFreeKey
+        )
+      } catch (fallbackError) {
+        console.error('OpenRouter V2 fallback juga gagal:', fallbackError)
       }
     }
 

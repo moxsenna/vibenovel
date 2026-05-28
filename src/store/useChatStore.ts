@@ -436,18 +436,16 @@ export const useChatStore = create<ChatStore>()(
 
           if (currentDraft.type === 'character_state') {
             const name = readName('character_name', 'name')
-            const exists = projectStoreForPreflight.characters.some(
-              (character) => character.name.toLowerCase() === name.toLowerCase()
-            )
-            if (!name || !exists) {
+            if (!name) {
               uiStoreForPreflight.addToast(
-                `State karakter tidak disimpan karena "${name || 'karakter ini'}" belum ada di Lorebook.`,
+                'State karakter tidak dapat disimpan karena nama karakter tidak ditemukan.',
                 'warning',
-                7000
+                5000
               )
               clearActiveDraftAction()
               return
             }
+            // Jika karakter belum ada, akan di-auto-create di execution block — tidak perlu reject di sini.
           }
         }
 
@@ -594,18 +592,46 @@ export const useChatStore = create<ChatStore>()(
                 projectStore.addMysteryLayer(newLayer)
                 shouldContinue = true
               } else if (msg.draftData.type === 'character_state') {
-                const characters = useProjectStore.getState().characters
-                const matchedChar = characters.find(
-                  (c) => c.name.toLowerCase() === str('character_name').toLowerCase()
+                const charName = str('character_name') || str('name')
+                let characters = useProjectStore.getState().characters
+                let matchedChar = characters.find(
+                  (c) => c.name.toLowerCase() === charName.toLowerCase()
                 )
+
+                // Auto-create karakter minimalis jika belum ada di Lorebook
+                if (!matchedChar && charName) {
+                  projectStore.addCharacter({
+                    project_id: projectId,
+                    name: charName,
+                    role: 'SUPPORTING',
+                    description: str('appearance_notes') || `Karakter yang muncul dalam cerita.`,
+                    voice_dna: {},
+                    activation_keys: [charName],
+                    priority: 5,
+                    is_locked: false,
+                    genesis: 'AUTO_EXTRACTED'
+                  })
+                  // Re-fetch setelah addCharacter
+                  characters = useProjectStore.getState().characters
+                  matchedChar = characters.find(
+                    (c) => c.name.toLowerCase() === charName.toLowerCase()
+                  )
+                  useUiStore.getState().addToast(
+                    `Karakter "${charName}" otomatis ditambahkan ke Lorebook.`,
+                    'success',
+                    4000
+                  )
+                }
+
                 if (!matchedChar) {
                   useUiStore.getState().addToast(
-                    `State karakter tidak disimpan karena "${str('character_name')}" belum ada di Lorebook.`,
-                    'warning',
+                    `State karakter tidak disimpan karena "${charName}" gagal ditambahkan ke Lorebook.`,
+                    'error',
                     7000
                   )
                   return state
                 }
+
                 const chapterNum = num('chapter_number', 0)
 
                 const newState: CharacterState = {

@@ -8,6 +8,7 @@ import { PremiumConfirmModal } from './components/ui/PremiumConfirmModal'
 import { PremiumToastContainer } from './components/ui/PremiumToastContainer'
 import { LoadingSplash } from './components/ui/LoadingSplash'
 import { CommandPalette } from './components/ui/CommandPalette'
+import { LogoLoader } from './components/ui/LogoLoader'
 
 // Sprint 9 — Lazy-load Workspace route. ProseWriter, ContextPanel, modals,
 // and visualization chunks all load on demand when user opens a project.
@@ -17,19 +18,9 @@ const Workspace = lazy(() =>
 
 // Loading spinner while checking auth
 function AuthLoader() {
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <img
-          src="/Logo11.webp"
-          alt="VibeNovel Logo"
-          className="h-12 w-auto object-contain animate-pulse"
-        />
-        <p className="text-on-surface-variant text-body-md">Memuat VibeNovel...</p>
-      </div>
-    </div>
-  )
+  return <LogoLoader fullscreen label="Memuat VibeNovel..." size={150} />
 }
+
 
 // Protected route — redirects to /login if not authenticated (only when Supabase is configured)
 function ProtectedRoute({ children }: { children: React.ReactNode }) {

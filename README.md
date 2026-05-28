@@ -5,8 +5,9 @@ VibeNovel v2 is a premium, 100% Client-Side (SPA/PWA) digital novel writing and 
 ## 🌟 Key Features
 
 - **Story Compass & Lorebook Engine**: Define characters (with Voice DNA), world rules, mystery layers, and items within a structured, highly visual workspace.
+- **Dynamic Task-Specialized Multi-Model AI Router & Auto-Pilot**: Configure separate OpenRouter Free/Paid keys and Gemini Pools. The router automatically selects optimal free models (Gemini Flash, Nemotron) for background tasks, outline generation, and co-author chats, reserving premium paid models (Claude Sonnet, Deepseek) for creative prose. Features a robust, two-way cross-provider fallback.
 - **Beat-by-Beat Prose Writer**: AI-assisted prose generation with a sophisticated 4-layer Context Pruning & memory system (Static Lorebook, Dynamic State Object, RAG, and Sliding Window).
-- **Bring Your Own Key (BYOK) Security**: All user AI keys (Gemini, OpenRouter) are strictly stored locally in the browser's persistent storage. No keys are ever sent to or logged on an external backend.
+- **Bring Your Own Key (BYOK) Security**: All user AI keys (Gemini, OpenRouter Free & Paid) are strictly stored locally in the browser's persistent storage. No keys are ever sent to or logged on an external backend.
 - **100% Client-Side Architecture**: Designed to be PWA-ready and seamlessly bundled via Capacitor for Android/iOS, with zero server-side rendering required. Data synchronization is handled directly from the client to Supabase.
 - **Premium Themes & Visuals**: Enjoy "Malam Kreatif" (Dark) and "Jurnal Cantik" (Light) themes with dynamic, anti-flicker synchronization and smooth micro-animations powered by Framer Motion.
 - **Visualization Mode**: Built-in data visualization for story pacing (Emotional Arc Heatmaps) and character relationships (Constellation Maps).

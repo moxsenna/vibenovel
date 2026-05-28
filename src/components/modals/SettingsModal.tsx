@@ -48,23 +48,30 @@ const PROSE_MODELS: Array<{
     requiresOpenRouter: false
   },
   {
+    value: 'auto',
+    label: 'Auto-Pilot (Nemotron 120B)',
+    helper: 'OpenRouter gratis. Konteks 1M token, kualitas tinggi.',
+    icon: 'rocket_launch',
+    requiresOpenRouter: true
+  },
+  {
     value: 'claude',
     label: 'Claude Sonnet 4.6',
-    helper: 'OpenRouter, kualitas prosa premium.',
+    helper: 'OpenRouter berbayar, kualitas prosa premium.',
     icon: 'diamond',
     requiresOpenRouter: true
   },
   {
     value: 'deepseek',
     label: 'DeepSeek V4 Flash',
-    helper: 'OpenRouter, cepat dan hemat.',
+    helper: 'OpenRouter berbayar, cepat dan hemat.',
     icon: 'bolt',
     requiresOpenRouter: true
   },
   {
     value: 'deepseek-pro',
     label: 'DeepSeek V4 Pro',
-    helper: 'OpenRouter, opsi kualitas tertinggi.',
+    helper: 'OpenRouter berbayar, opsi kualitas tertinggi.',
     icon: 'psychology',
     requiresOpenRouter: true
   }
@@ -73,12 +80,16 @@ const PROSE_MODELS: Array<{
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const {
     geminiKeys,
-    openRouterKey,
+    openRouterFreeKey,
+    openRouterPaidKey,
+    autoPilotEnabled,
     activeProseModel,
     freeWriteMode,
     addGeminiKey,
     removeGeminiKey,
-    setOpenRouterKey,
+    setOpenRouterFreeKey,
+    setOpenRouterPaidKey,
+    setAutoPilotEnabled,
     setActiveProseModel,
     setFreeWriteMode
   } = useSettingsStore()
@@ -342,20 +353,71 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <div className="space-y-3 pt-3 border-t border-outline-variant/30">
                       <div>
                         <label className="block text-label-md text-on-surface-variant uppercase tracking-wider mb-2">
-                          OpenRouter API Key
+                          OpenRouter API Key (Berbayar)
                         </label>
                         <input
                           type="password"
-                          placeholder="sk-or-••••••••••••"
-                          value={openRouterKey || ''}
-                          onChange={(e) => setOpenRouterKey(e.target.value)}
+                          placeholder="sk-or-•••••••••••• (untuk Claude/DeepSeek Pro)"
+                          value={openRouterPaidKey || ''}
+                          onChange={(e) => setOpenRouterPaidKey(e.target.value || null)}
                           className="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface text-body-sm focus:outline-none focus:border-primary-container"
                         />
                         <p className="text-[11px] text-on-surface-variant/70 mt-2">
-                          Wajib hanya jika memilih Claude atau DeepSeek.
+                          Wajib hanya jika memilih Claude atau DeepSeek berbayar.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-label-md text-on-surface-variant uppercase tracking-wider mb-2">
+                          OpenRouter API Key (Gratis)
+                        </label>
+                        <input
+                          type="password"
+                          placeholder="sk-or-•••••••••••• (untuk model gratis Auto-Pilot)"
+                          value={openRouterFreeKey || ''}
+                          onChange={(e) => setOpenRouterFreeKey(e.target.value || null)}
+                          className="w-full h-10 px-3 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface text-body-sm focus:outline-none focus:border-primary-container"
+                        />
+                        <p className="text-[11px] text-on-surface-variant/70 mt-2">
+                          Dipakai oleh Auto-Pilot untuk model gratis (DeepSeek Flash, Nemotron, dll).
                         </p>
                       </div>
                     </div>
+
+                    {/* Auto-Pilot Toggle */}
+                    <section className="bg-surface-container-low p-4 rounded-xl border border-primary/20 mt-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <h4 className="font-bold text-on-surface text-body-md flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[18px] text-primary">rocket_launch</span>
+                            Auto-Pilot AI Router
+                          </h4>
+                          <p className="text-[11px] text-on-surface-variant/70 mt-1 leading-relaxed">
+                            Otomatis rutekan setiap tugas AI ke model gratis terspesialisasi. Brainstorm → DeepSeek Flash, Outline → GPT-OSS, Prosa → Nemotron 120B, Rewrite → Gemma 4.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setAutoPilotEnabled(!autoPilotEnabled)}
+                          disabled={!openRouterFreeKey}
+                          className={`relative w-12 h-7 rounded-full transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
+                            autoPilotEnabled ? 'bg-primary' : 'bg-surface-container-highest'
+                          }`}
+                          aria-pressed={autoPilotEnabled}
+                          aria-label="Toggle Auto-Pilot"
+                        >
+                          <span
+                            className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
+                              autoPilotEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      {!openRouterFreeKey && (
+                        <p className="text-[10px] text-error mt-2 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">warning</span>
+                          Masukkan OpenRouter Free Key terlebih dahulu untuk mengaktifkan.
+                        </p>
+                      )}
+                    </section>
                 </section>
               </motion.div>
             )}

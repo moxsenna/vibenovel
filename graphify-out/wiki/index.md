@@ -1,35 +1,14 @@
 # VibeNovel v2 Knowledge Graph Wiki
 
 Welcome to the AI-navigable, clustered Knowledge Graph Wiki for VibeNovel v2.
-This wiki indexes 265 architectural concepts and code entities across the project codebase and documentation, automatically grouped into **21 communities** using community-clustering algorithms.
+This wiki indexes **2764** architectural concepts and code entities across the project codebase and documentation, automatically grouped into **188 communities** using community-clustering algorithms.
 
 ## Graph Statistics
-- **Last Run**: 12,450 input tokens, 2,890 output tokens
-- **Cumulative Runs**: 1 builds
+- **Last Run**: 2,764 nodes, 4,387 edges, 188 communities
+- **Cumulative Runs**: 2 builds
 
 ## System Communities
-Explore individual modules, components, and concepts by community:
-- **[Community 0: Workspace & UI Theme Sync](community_0.md)** (36 members)
-- **[Community 1: Story Compass & Projects](community_1.md)** (35 members)
-- **[Community 2: Project Packages & Build](community_2.md)** (33 members)
-- **[Community 3: AI Router & Configuration](community_3.md)** (25 members)
-- **[Community 4: Dashboard & Navigation](community_4.md)** (23 members)
-- **[Community 5: Core Architecture Systems](community_5.md)** (21 members)
-- **[Community 6: CoAuthor Chat & Brainstorming](community_6.md)** (20 members)
-- **[Community 7: App TypeScript Config](community_7.md)** (19 members)
-- **[Community 8: Node TypeScript Config](community_8.md)** (18 members)
-- **[Community 9: CoAuthor Chat Components](community_9.md)** (10 members)
-- **[Community 10: Gemini API Pool Layer](community_10.md)** (8 members)
-- **[Community 11: Sprint Plans & Progress](community_11.md)** (4 members)
-- **[Community 12: Root TypeScript Config](community_12.md)** (3 members)
-- **[Community 13: Story Compass Preview Component](community_13.md)** (2 members)
-- **[Community 14: AI Coding Rules](community_14.md)** (2 members)
-- **[Community 15: ESLint Configuration](community_15.md)** (1 members)
-- **[Community 16: Vite Bundler Config](community_16.md)** (1 members)
-- **[Community 17: Project Readme](community_17.md)** (1 members)
-- **[Community 18: Pair Programming Reports](community_18.md)** (1 members)
-- **[Community 19: Favicon Resource](community_19.md)** (1 members)
-- **[Community 20: Hero Header Resource](community_20.md)** (1 members)
+Explore individual modules, components, and concepts by community inside `graphify-out/GRAPH_REPORT.md` or dynamically query relationships using `query_graph` or `/graphify`.
 
 ## God Nodes (Core System Abstractions)
 These symbols represent the most heavily connected nodes in the entire codebase graph, serving as the central pillars of the architecture:
@@ -44,6 +23,8 @@ These symbols represent the most heavily connected nodes in the entire codebase 
 
 ## Surprising Context-Spanning Inferences
 These semantic relationships were inferred by the graphify analysis engine across codebases, docs, and boundaries:
+- **Task-Specialized AI Router & Fallback** --`implements`--> **Dynamic Auto-Pilot & Multi-Key Pool** (Linking `src/services/ai/ai-router.ts` to `architecture.md`)
+- **Dual-Input API Key UI Configuration** --`implements`--> **Bring Your Own Key (BYOK) Security** (Linking `src/components/modals/SettingsModal.tsx` to `architecture.md`)
 - **4-Layer Context Assembly** --`implements`--> **4-Layer Memory & Context Pruning System** (Linking `src/services/ai/context-injector.ts` to `architecture.md`)
 - **Dual-Theme UI Zustand Store** --`implements`--> **Anti-Flicker Dual-Theme Architecture** (Linking `src/store/useUiStore.ts` to `architecture.md`)
 - **Settings Zustand Store (API Keys)** --`implements`--> **BYOK & Local Encrypted Keyring Security** (Linking `src/store/useSettingsStore.ts` to `architecture.md`)

@@ -17,6 +17,7 @@ export const SeasonArchitectPanel: React.FC = () => {
   const outlineProgress = useProjectStore((s) => s.outlineProgress)
   const generateOutlineBatch = useProjectStore((s) => s.generateOutlineBatch)
   const abortOutlineGeneration = useProjectStore((s) => s.abortOutlineGeneration)
+  const regenerateOutline = useProjectStore((s) => s.regenerateOutline)
   const canonProposals = useProjectStore((s) => s.canonProposals)
   const approveCanonProposal = useProjectStore((s) => s.approveCanonProposal)
   const rejectCanonProposal = useProjectStore((s) => s.rejectCanonProposal)
@@ -45,6 +46,17 @@ export const SeasonArchitectPanel: React.FC = () => {
   const setDeepOutlineBudget = useSettingsStore((s) => s.setDeepOutlineBudget)
   const setDeepOutlineInBatch = useSettingsStore((s) => s.setDeepOutlineInBatch)
   const outlineBudgetPresets = [512, 1024, 2048, 4096]
+
+  // Auto-Fix state
+  const [autoFixingWarningIndex, setAutoFixingWarningIndex] = useState<number | null>(null)
+  const [fixedWarningIndices, setFixedWarningIndices] = useState<number[]>([])
+
+  // Reset fixed warnings when result modal opens/closes
+  React.useEffect(() => {
+    if (!showResult) {
+      setFixedWarningIndices([])
+    }
+  }, [showResult])
 
   // ── Story Compass Completeness Check ───────────────────────────────────
   const compassStatus = useMemo(() => {
@@ -436,15 +448,36 @@ export const SeasonArchitectPanel: React.FC = () => {
               {outlineGenerating && outlineProgress && (
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <h4 className="text-body-md font-bold text-on-surface">
+                    <h4 className="text-body-md font-bold text-on-surface flex items-center gap-2">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                        className="w-4 h-4 rounded-full border-2 border-primary/30 border-t-primary"
+                      />
                       Menyusun rencana bab...
                     </h4>
                     <button
                       onClick={abortOutlineGeneration}
-                      className="h-8 px-4 rounded-lg bg-error/10 border border-error/20 text-error text-label-md cursor-pointer hover:bg-error/20 flex items-center gap-1.5 font-semibold"
+                      disabled={useProjectStore.getState()._outlineAbortFlag}
+                      className="h-8 px-4 rounded-lg bg-error/10 border border-error/20 text-error text-label-md cursor-pointer hover:bg-error/20 flex items-center gap-1.5 font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      <span className="material-symbols-outlined text-[14px]">stop</span>
-                      Berhenti
+                      {useProjectStore.getState()._outlineAbortFlag ? (
+                        <>
+                          <motion.span 
+                            animate={{ rotate: 360 }} 
+                            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                            className="material-symbols-outlined text-[14px]"
+                          >
+                            progress_activity
+                          </motion.span>
+                          Menghentikan...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-[14px]">stop</span>
+                          Berhenti
+                        </>
+                      )}
                     </button>
                   </div>
 
@@ -473,19 +506,39 @@ export const SeasonArchitectPanel: React.FC = () => {
                       const isGenerated = chapNum < outlineProgress.currentChapter
                       const isCurrent = chapNum === outlineProgress.currentChapter
                       return (
-                        <div
+                        <motion.div
                           key={i}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold border transition-all ${
+                          initial={isCurrent ? { scale: 0.9, opacity: 0 } : false}
+                          animate={isCurrent ? { scale: 1, opacity: 1 } : false}
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-bold border transition-all relative overflow-hidden ${
                             isGenerated
-                              ? 'bg-primary/20 text-primary border-primary/30'
+                              ? 'bg-primary/10 text-primary border-primary/40 shadow-[0_0_10px_rgba(var(--color-primary),0.2)]'
                               : isCurrent
-                                ? 'bg-secondary/20 text-secondary border-secondary/30 animate-pulse'
-                                : 'bg-surface-container-low text-on-surface-variant border-outline-variant/20'
+                                ? 'bg-surface-container-high text-secondary border-secondary/50 shadow-[0_0_15px_rgba(var(--color-secondary),0.15)]'
+                                : 'bg-surface-container-low text-on-surface-variant border-outline-variant/20 opacity-70'
                           }`}
                           title={`Bab ${chapNum}`}
                         >
-                          {isGenerated ? '✅' : isCurrent ? '🔄' : chapNum}
-                        </div>
+                          {isCurrent && (
+                            <motion.div
+                              className="absolute inset-[-2px] rounded-xl border-[2px] border-transparent border-t-secondary/80 border-r-secondary/80"
+                              animate={{ rotate: 360 }}
+                              transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                            />
+                          )}
+                          
+                          {isCurrent && (
+                            <div className="absolute inset-0 bg-secondary/10 animate-pulse" />
+                          )}
+
+                          <span className="relative z-10 flex items-center justify-center">
+                            {isGenerated ? (
+                              <span className="material-symbols-outlined text-[16px] drop-shadow-sm">check</span>
+                            ) : (
+                              chapNum
+                            )}
+                          </span>
+                        </motion.div>
                       )
                     })}
                   </div>
@@ -513,13 +566,76 @@ export const SeasonArchitectPanel: React.FC = () => {
                     )}
                   </div>
                   {outlineProgress.warnings.length > 0 && (
-                    <div className="bg-tertiary/10 border border-tertiary/20 rounded-lg p-3 space-y-1">
-                      <span className="text-label-md font-bold text-tertiary uppercase tracking-wider">
-                        ⚠️ Peringatan Pacing
-                      </span>
-                      {outlineProgress.warnings.map((w: string, i: number) => (
-                        <p key={i} className="text-body-sm text-on-surface-variant">{w}</p>
-                      ))}
+                    <div className="bg-surface-container/50 border border-tertiary/20 rounded-xl p-4 flex flex-col mt-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="material-symbols-outlined text-tertiary text-[20px]">warning</span>
+                        <span className="text-label-lg font-bold text-tertiary uppercase tracking-wider">
+                          Hasil Validasi ({outlineProgress.warnings.length - fixedWarningIndices.length} Catatan)
+                        </span>
+                      </div>
+                      <div className="max-h-[250px] overflow-y-auto pr-2 space-y-2.5 scrollbar-thin scrollbar-thumb-tertiary/20">
+                        {outlineProgress.warnings.map((w: string, i: number) => {
+                          if (fixedWarningIndices.includes(i)) return null
+
+                          const isBlocker = w.includes('[BLOCKER]') || w.includes('tertahan') || w.includes('Gagal generate')
+                          
+                          const parts = w.split(/ - /)
+                          const header = parts.length > 1 ? parts[0] : ''
+                          const detail = parts.length > 1 ? parts.slice(1).join(' - ') : w
+
+                          const babMatch = header.match(/Bab (\d+)/)
+                          const chapterNum = babMatch ? parseInt(babMatch[1]) : null
+                          
+                          const chapterExists = chapterNum ? chapters.some(c => c.chapter_number === chapterNum) : false
+                          
+                          return (
+                            <div key={i} className={`p-3 rounded-lg border flex gap-3 ${
+                              isBlocker 
+                                ? 'bg-error/5 border-error/20' 
+                                : 'bg-surface-container-low border-outline-variant/30 hover:border-tertiary/30 transition-colors'
+                            }`}>
+                              <span className={`material-symbols-outlined text-[16px] shrink-0 mt-0.5 ${
+                                isBlocker ? 'text-error' : 'text-tertiary'
+                              }`}>
+                                {isBlocker ? 'error' : 'info'}
+                              </span>
+                              <div>
+                                {header && (
+                                  <div className={`text-[11px] font-bold mb-0.5 ${isBlocker ? 'text-error/80' : 'text-on-surface-variant'}`}>
+                                    {header.replace(/\[(WARNING|BLOCKER)\]/, '').trim()}
+                                  </div>
+                                )}
+                                <p className={`text-body-sm leading-relaxed ${isBlocker ? 'text-error' : 'text-on-surface'}`}>
+                                  {detail}
+                                </p>
+                                {chapterNum && chapterExists && (
+                                  <button
+                                    onClick={async () => {
+                                      setAutoFixingWarningIndex(i)
+                                      const chapterId = chapters.find((c) => c.chapter_number === chapterNum)?.id
+                                      if (chapterId) {
+                                        await regenerateOutline(chapterId, detail)
+                                        setFixedWarningIndices((prev) => [...prev, i])
+                                        addToast(`Berhasil memperbaiki secara otomatis Bab ${chapterNum}`, 'success')
+                                      } else {
+                                        addToast('Bab tidak ditemukan.', 'error')
+                                      }
+                                      setAutoFixingWarningIndex(null)
+                                    }}
+                                    disabled={autoFixingWarningIndex !== null}
+                                    className="mt-3 h-8 px-3 rounded-md bg-secondary/10 text-secondary border border-secondary/20 text-label-md flex items-center gap-1.5 hover:bg-secondary/20 transition-colors disabled:opacity-50"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">
+                                      {autoFixingWarningIndex === i ? 'psychology' : 'auto_awesome'}
+                                    </span>
+                                    {autoFixingWarningIndex === i ? 'Memperbaiki...' : 'Perbaiki Otomatis'}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   )}
                   <button
