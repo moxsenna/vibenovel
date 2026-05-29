@@ -25,16 +25,33 @@ export const SeasonArchitectPanel: React.FC = () => {
   const activeChapterNumber = useUiStore((s) => s.activeChapter)
   const addToast = useUiStore((s) => s.addToast)
   const showConfirm = useUiStore((s) => s.showConfirm)
+  const setMode = useUiStore((s) => s.setMode)
   const geminiKeys = useSettingsStore((s) => s.geminiKeys)
   const { startBatch, isRunning: batchRunning, progress: batchProgress } = useBatchGenerator()
 
   // Range selector state
   const [rangeStart, setRangeStart] = useState(1)
   const [rangeEnd, setRangeEnd] = useState(5)
-  const [showRangeModal, setShowRangeModal] = useState(false)
+  const [showRangeModal, setShowRangeModal] = useState(() => {
+    const progress = useProjectStore.getState().outlineProgress
+    return !!(
+      progress &&
+      (progress.status === 'success' ||
+        progress.status === 'error' ||
+        progress.status === 'cancelled')
+    )
+  })
 
   // Completed result display
-  const [showResult, setShowResult] = useState(false)
+  const [showResult, setShowResult] = useState(() => {
+    const progress = useProjectStore.getState().outlineProgress
+    return !!(
+      progress &&
+      (progress.status === 'success' ||
+        progress.status === 'error' ||
+        progress.status === 'cancelled')
+    )
+  })
   const [resolvingCanonProposalId, setResolvingCanonProposalId] = useState<string | null>(null)
 
   // Sprint 9.8 — Deep Outline settings panel
@@ -587,6 +604,21 @@ export const SeasonArchitectPanel: React.FC = () => {
                           const chapterNum = babMatch ? parseInt(babMatch[1]) : null
                           
                           const chapterExists = chapterNum ? chapters.some(c => c.chapter_number === chapterNum) : false
+
+                          const matchingProposal = chapterNum
+                            ? canonProposals.find(
+                                (p) => {
+                                  const name = typeof p.payload.name === 'string' ? p.payload.name : ''
+                                  return (
+                                    p.project_id === activeProject.id &&
+                                    p.chapter_number === chapterNum &&
+                                    p.status === 'PENDING' &&
+                                    name &&
+                                    w.toLowerCase().includes(name.toLowerCase())
+                                  )
+                                }
+                              )
+                            : null
                           
                           return (
                             <div key={i} className={`p-3 rounded-lg border flex gap-3 ${
@@ -608,28 +640,56 @@ export const SeasonArchitectPanel: React.FC = () => {
                                 <p className={`text-body-sm leading-relaxed ${isBlocker ? 'text-error' : 'text-on-surface'}`}>
                                   {detail}
                                 </p>
-                                {chapterNum && chapterExists && (
+                                
+                                {matchingProposal ? (
                                   <button
                                     onClick={async () => {
                                       setAutoFixingWarningIndex(i)
-                                      const chapterId = chapters.find((c) => c.chapter_number === chapterNum)?.id
-                                      if (chapterId) {
-                                        await regenerateOutline(chapterId, detail)
+                                      try {
+                                        await handleApproveCanonProposal(matchingProposal.id)
                                         setFixedWarningIndices((prev) => [...prev, i])
-                                        addToast(`Berhasil memperbaiki secara otomatis Bab ${chapterNum}`, 'success')
-                                      } else {
-                                        addToast('Bab tidak ditemukan.', 'error')
+                                      } catch (err: unknown) {
+                                        // Toast error is handled in handleApproveCanonProposal
                                       }
                                       setAutoFixingWarningIndex(null)
                                     }}
                                     disabled={autoFixingWarningIndex !== null}
-                                    className="mt-3 h-8 px-3 rounded-md bg-secondary/10 text-secondary border border-secondary/20 text-label-md flex items-center gap-1.5 hover:bg-secondary/20 transition-colors disabled:opacity-50"
+                                    className="mt-3 h-8 px-3 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-label-md flex items-center gap-1.5 hover:bg-emerald-500/20 transition-colors disabled:opacity-50 cursor-pointer font-bold"
                                   >
                                     <span className="material-symbols-outlined text-[16px]">
-                                      {autoFixingWarningIndex === i ? 'psychology' : 'auto_awesome'}
+                                      {autoFixingWarningIndex === i ? 'progress_activity' : 'add_circle'}
                                     </span>
-                                    {autoFixingWarningIndex === i ? 'Memperbaiki...' : 'Perbaiki Otomatis'}
+                                    {autoFixingWarningIndex === i ? 'Menambahkan...' : `Tambahkan "${matchingProposal.payload.name || 'Canon Baru'}" ke Lorebook`}
                                   </button>
+                                ) : (
+                                  chapterNum && chapterExists && (
+                                    <button
+                                      onClick={async () => {
+                                        setAutoFixingWarningIndex(i)
+                                        const chapterId = chapters.find((c) => c.chapter_number === chapterNum)?.id
+                                        if (chapterId) {
+                                          try {
+                                            await regenerateOutline(chapterId, detail)
+                                            setFixedWarningIndices((prev) => [...prev, i])
+                                            addToast(`Berhasil memperbaiki secara otomatis Bab ${chapterNum}`, 'success')
+                                          } catch (err: unknown) {
+                                            const msg = err instanceof Error ? err.message : String(err)
+                                            addToast(msg, 'warning')
+                                          }
+                                        } else {
+                                          addToast('Bab tidak ditemukan.', 'error')
+                                        }
+                                        setAutoFixingWarningIndex(null)
+                                      }}
+                                      disabled={autoFixingWarningIndex !== null}
+                                      className="mt-3 h-8 px-3 rounded-md bg-secondary/10 text-secondary border border-secondary/20 text-label-md flex items-center gap-1.5 hover:bg-secondary/20 transition-colors disabled:opacity-50 cursor-pointer"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">
+                                        {autoFixingWarningIndex === i ? 'psychology' : 'auto_awesome'}
+                                      </span>
+                                      {autoFixingWarningIndex === i ? 'Memperbaiki...' : 'Perbaiki Otomatis'}
+                                    </button>
+                                  )
                                 )}
                               </div>
                             </div>
@@ -638,12 +698,48 @@ export const SeasonArchitectPanel: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  <button
-                    onClick={() => { setShowRangeModal(false); setShowResult(false) }}
-                    className="h-9 px-4 rounded-lg bg-surface-container border border-outline-variant text-on-surface-variant text-label-md cursor-pointer hover:bg-surface-variant/30"
-                  >
-                    Tutup
-                  </button>
+                  <div className="flex flex-wrap gap-2.5 pt-3 border-t border-outline-variant/20 mt-4">
+                    {outlineProgress.status !== 'cancelled' && (
+                      <button
+                        onClick={() => {
+                          setMode('write')
+                          setActiveChapter(rangeStart)
+                          setShowRangeModal(false)
+                          setShowResult(false)
+                          addToast(`Dialihkan ke editor Bab ${rangeStart}!`, 'success')
+                        }}
+                        className="h-9 px-5 rounded-lg btn-gradient text-white font-bold text-label-md cursor-pointer hover-glow flex items-center gap-1.5"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                        Tulis Naskah Sekarang
+                      </button>
+                    )}
+                    
+                    {outlineProgress.status !== 'cancelled' && (
+                      <button
+                        onClick={() => {
+                          setShowResult(false)
+                          const lastChapter = chapters.length > 0
+                            ? Math.max(...chapters.map((ch) => ch.chapter_number))
+                            : 0
+                          setRangeStart(lastChapter + 1)
+                          setRangeEnd(Math.min(lastChapter + 5, activeProject.target_chapters))
+                        }}
+                        className="h-9 px-4 rounded-lg bg-secondary-container text-on-secondary-container font-semibold text-label-md cursor-pointer hover-glow flex items-center gap-1.5"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">schema</span>
+                        Generate Outline Lagi
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => { setShowRangeModal(false); setShowResult(false) }}
+                      className="h-9 px-4 rounded-lg bg-surface-container border border-outline-variant text-on-surface-variant text-label-md cursor-pointer hover:bg-surface-variant/30 flex items-center gap-1.5 ml-auto"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                      Tutup
+                    </button>
+                  </div>
                 </div>
               )}
             </motion.div>

@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\store\\useProjectStore.ts": {
-    "mtime": 1779604292.5739322,
-    "ast_hash": "9ba503b3e18c787827fc11b850644604",
+    "mtime": 1779992345.7097235,
+    "ast_hash": "7fe4389359b30596f578ab8644a9168c",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\store\\useSettingsStore.ts": {
@@ -125,8 +125,8 @@
     "semantic_hash": "611f784b3a371f43ffbe83030fc548ac"
   },
   "D:\\Coding\\vibenovel\\index.html": {
-    "mtime": 1779712102.0472574,
-    "ast_hash": "e08da2b998f47b51d396f98ec0f29030",
+    "mtime": 1779993068.3124819,
+    "ast_hash": "3293dc57be5db87ea572ed0136b44098",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\README.md": {
@@ -235,8 +235,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\session_reports.md": {
-    "mtime": 1779989467.3207984,
-    "ast_hash": "e1f021baa7b1786b8ac16f82892413da",
+    "mtime": 1779994398.7363045,
+    "ast_hash": "e79c94850cb0eddb6b38fdff91f97a51",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\sprint_plan.md": {
@@ -260,8 +260,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\components\\workspace\\SeasonArchitectPanel.tsx": {
-    "mtime": 1779989430.8941107,
-    "ast_hash": "26fa85ee7058f030d864348fe3913859",
+    "mtime": 1779994786.7504637,
+    "ast_hash": "aa665166e539ff56e70ce164630fbec2",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\lib\\kbm-pacing.ts": {
@@ -340,13 +340,13 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\store\\parts\\outlines.ts": {
-    "mtime": 1779989308.2453005,
-    "ast_hash": "370bd2da1c4925e3bb7f2d2690a72958",
+    "mtime": 1779991713.9560459,
+    "ast_hash": "78523459bd84162bf3bf826b9578cecf",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\store\\parts\\projects.ts": {
-    "mtime": 1779990431.7819858,
-    "ast_hash": "ba10369f5abce2f118f1c28f006e4b11",
+    "mtime": 1779994524.7054875,
+    "ast_hash": "abaeff464fccab7063b8eb45dd623426",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\components\\modals\\LoreDiffModal.tsx": {
@@ -420,8 +420,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\components\\prose\\FreeWriteEditor.tsx": {
-    "mtime": 1779649843.1129332,
-    "ast_hash": "e9b4b7dd0bfeccde70c774c4e3c6599a",
+    "mtime": 1779993802.1466126,
+    "ast_hash": "1d112776ad9e7e524dc1dc0201e4a4ea",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\components\\prose\\SelectionToolbar.tsx": {

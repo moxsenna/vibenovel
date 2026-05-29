@@ -79,7 +79,7 @@ export const projectsPart: StateCreator<
   },
 
   setActiveProject: (activeProject) => {
-    set({ activeProject, canonProposals: [] })
+    set({ activeProject })
     if (activeProject && isSupabaseConfigured()) {
       get().loadProjectData(activeProject.id)
     }

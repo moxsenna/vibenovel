@@ -41,7 +41,202 @@
     </script>
   </head>
   <body class="bg-bg-primary text-text-main font-body antialiased">
-    <div id="root"></div>
+    <div id="root">
+      <!-- Premium Neon Loader Splash -->
+      <style>
+        .splash-container {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: #1A1118;
+          background-image: radial-gradient(circle at center, rgba(34, 21, 31, 0.9) 0%, #1A1118 100%);
+          font-family: 'Nunito Sans', system-ui, -apple-system, sans-serif;
+          color: #fff;
+          overflow: hidden;
+        }
+        .splash-blur-1 {
+          position: absolute;
+          top: 25%;
+          left: 25%;
+          transform: translate(-50%, -50%);
+          width: 18rem;
+          height: 18rem;
+          border-radius: 50%;
+          background-color: #9c27b0;
+          opacity: 0.07;
+          filter: blur(120px);
+          pointer-events: none;
+        }
+        .splash-blur-2 {
+          position: absolute;
+          bottom: 25%;
+          right: 25%;
+          transform: translate(50%, 50%);
+          width: 20rem;
+          height: 20rem;
+          border-radius: 50%;
+          background-color: #ff9800;
+          opacity: 0.06;
+          filter: blur(130px);
+          pointer-events: none;
+        }
+        .splash-card {
+          padding: 3rem;
+          border-radius: 1rem;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          background-color: rgba(255, 255, 255, 0.01);
+          backdrop-filter: blur(16px);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          position: relative;
+          z-index: 10;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 1.5rem;
+        }
+        .splash-svg-container {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 140px;
+          height: 107px;
+          animation: breathe-glow 3s ease-in-out infinite;
+        }
+        .splash-text-title {
+          font-family: 'Playfair Display', serif;
+          font-size: 1.25rem;
+          font-weight: 600;
+          letter-spacing: 0.05em;
+          text-align: center;
+          color: #E8A0BF;
+          margin: 0;
+          animation: text-fade 3s ease-in-out infinite;
+          text-shadow: 0 2px 10px rgba(26, 17, 24, 0.4);
+        }
+        .splash-text-desc {
+          font-size: 0.85rem;
+          font-weight: 400;
+          letter-spacing: 0.02em;
+          text-align: center;
+          color: rgba(255, 255, 255, 0.4);
+          max-width: 280px;
+          margin: -0.5rem 0 0 0;
+          line-height: 1.4;
+        }
+        
+        /* Neon Glow Base filter */
+        #neonGlowBlur {
+          filter: drop-shadow(0 0 8px rgba(184, 131, 224, 0.55)) drop-shadow(0 0 15px rgba(255, 152, 0, 0.35));
+        }
+
+        /* Dash animation keyframes */
+        @keyframes pulse-v-outer {
+          0% { stroke-dashoffset: 70; }
+          100% { stroke-dashoffset: -430.8; }
+        }
+        @keyframes pulse-v-inner {
+          0% { stroke-dashoffset: -323.0; }
+          100% { stroke-dashoffset: 55; }
+        }
+        @keyframes pulse-n-outer {
+          0% { stroke-dashoffset: 70; }
+          100% { stroke-dashoffset: -633.2; }
+        }
+        @keyframes pulse-n-inner {
+          0% { stroke-dashoffset: -489.0; }
+          100% { stroke-dashoffset: 55; }
+        }
+        @keyframes breathe-glow {
+          0%, 100% {
+            filter: drop-shadow(0 0 10px rgba(184, 131, 224, 0.4)) drop-shadow(0 0 20px rgba(255, 152, 0, 0.2));
+          }
+          50% {
+            filter: drop-shadow(0 0 18px rgba(184, 131, 224, 0.75)) drop-shadow(0 0 35px rgba(255, 152, 0, 0.45));
+          }
+        }
+        @keyframes text-fade {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 0.95; }
+        }
+
+        /* Assigning animations */
+        .pulse-v-out {
+          stroke-dasharray: 70 430.8;
+          animation: pulse-v-outer 2.4s linear infinite;
+        }
+        .pulse-v-in {
+          stroke-dasharray: 55 323.0;
+          animation: pulse-v-inner 2.16s linear infinite;
+        }
+        .pulse-n-out {
+          stroke-dasharray: 70 633.2;
+          animation: pulse-n-outer 2.4s linear infinite;
+          animation-delay: 0.67s;
+        }
+        .pulse-n-in {
+          stroke-dasharray: 55 489.0;
+          animation: pulse-n-inner 2.28s linear infinite;
+          animation-delay: 0.36s;
+        }
+      </style>
+
+      <div class="splash-container">
+        <div class="splash-blur-1"></div>
+        <div class="splash-blur-2"></div>
+        <div class="splash-card">
+          <div class="splash-svg-container">
+            <svg viewBox="0 0 340 260" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; overflow: visible;">
+              <defs>
+                <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#C39AE6" />
+                  <stop offset="35%" stop-color="#9C27B0" />
+                  <stop offset="70%" stop-color="#E8A0BF" />
+                  <stop offset="100%" stop-color="#FF9800" />
+                </linearGradient>
+                <filter id="htmlNeonGlowBlur" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="8" result="blur1" />
+                  <feGaussianBlur stdDeviation="15" result="blur2" />
+                  <feMerge>
+                    <feMergeNode in="blur2" />
+                    <feMergeNode in="blur1" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <!-- Layer 1: Base Glow -->
+              <g filter="url(#htmlNeonGlowBlur)" opacity="0.65">
+                <path d="M 57.5,30 L 137.5,230 L 217.5,30" stroke="url(#neonGradient)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M 77.5,30 L 137.5,180 L 197.5,30" stroke="url(#neonGradient)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M 162.5,230 L 162.5,30 L 282.5,230 L 282.5,30" stroke="url(#neonGradient)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M 182.5,230 L 182.5,63.3 L 262.5,196.7 L 262.5,30" stroke="url(#neonGradient)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+              </g>
+
+              <!-- Layer 2: Sharp Tubes -->
+              <g opacity="0.9">
+                <path d="M 57.5,30 L 137.5,230 L 217.5,30" stroke="url(#neonGradient)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M 77.5,30 L 137.5,180 L 197.5,30" stroke="url(#neonGradient)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M 162.5,230 L 162.5,30 L 282.5,230 L 282.5,30" stroke="url(#neonGradient)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M 182.5,230 L 182.5,63.3 L 262.5,196.7 L 262.5,30" stroke="url(#neonGradient)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+              </g>
+
+              <!-- Layer 3: Neon Pulse Liquid Light -->
+              <path class="pulse-v-out" d="M 57.5,30 L 137.5,230 L 217.5,30" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px #FFFFFF) drop-shadow(0 0 8px rgba(156, 39, 176, 0.8));" />
+              <path class="pulse-v-in" d="M 77.5,30 L 137.5,180 L 197.5,30" stroke="#FFF0F5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 3px #FFFFFF) drop-shadow(0 0 6px rgba(156, 39, 176, 0.6));" />
+              <path class="pulse-n-out" d="M 162.5,230 L 162.5,30 L 282.5,230 L 282.5,30" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px #FFFFFF) drop-shadow(0 0 8px rgba(255, 152, 0, 0.8));" />
+              <path class="pulse-n-in" d="M 182.5,230 L 182.5,63.3 L 262.5,196.7 L 262.5,30" stroke="#FFFFF0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 3px #FFFFFF) drop-shadow(0 0 6px rgba(255, 152, 0, 0.6));" />
+            </svg>
+          </div>
+          <p class="splash-text-title">Memuat VibeNovel...</p>
+          <p class="splash-text-desc">Sedang memuat sistem AI menulis untuk pertama kalinya. Proses ini hanya berjalan lambat di awal.</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

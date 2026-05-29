@@ -2,6 +2,48 @@
 
 ---
 
+## Session: Onboarding Splash, Collapsible Outline Peek & AI Guided Flow Hardening
+**Date**: 2026-05-29
+**Status**: Completed - Build, PWA service worker, and TypeScript zero errors
+
+### What Was Done
+
+#### STEP 1: Premium HTML/CSS Neon Loader Splash in index.html
+- Replaced the blank `<div id="root"></div>` in `index.html` with a lightweight, high-performance pure HTML/CSS version of the intertwined V-N Neon Logo Loader.
+- Implemented pure CSS keyframe animations for breathing glow, liquid neon stroke pulses (`pulse-v-out`, `pulse-v-in`, `pulse-n-out`, `pulse-n-in`), and text fade.
+- Added absolute backdrop blur circles matching Malam Kreatif theme colors.
+- Added a supportive loading subtitle: *"Sedang memuat sistem AI menulis untuk pertama kalinya. Proses ini hanya berjalan lambat di awal."*
+- This completely prevents blank screens during initial React bundle load, giving a state-of-the-art first impression.
+
+#### STEP 2: AI Guided Transition Banner in Free Write Editor
+- Enhanced `src/components/prose/FreeWriteEditor.tsx` to dynamically check if the chapter has a generated outline (`hasOutline`).
+- Hardened the `hasOutline` condition to check both `chapter.beats` and `chapter.key_events` (since beats are not initialized while in freeWriteMode, preventing the banner from showing on reload).
+- Displayed a premium glassmorphic banner in the Free Write panel whenever an outline is detected, offering: *"Rencana Bab & Beat Ditemukan! Anda sudah menyusun outline bab ini menggunakan AI. Aktifkan Mode Pemandu (Beat-by-Beat) untuk mulai menulis secara terpandu."*
+- Added two actions in the banner:
+  1. **`Tulis dengan AI (Pemandu)`**: Instantly disables `freeWriteMode` and activates AI Beat-by-Beat guided mode.
+  2. **`Tolak & Tulis Manual`**: Saves the dismissal state persistently in the browser's local storage (`vn_dismiss_ai_banner_${chapterId}`) with a smooth exit animation, keeping the banner hidden for that chapter.
+
+#### STEP 3: Collapsible Outline Peek Panel & Keyboard Shortcut
+- Added a **`👁️ Intip Outline`** toggle button in the header of `FreeWriteEditor.tsx`.
+- Integrated a global keyboard shortcut: **`Alt + O`** toggles the outline view instantly.
+- Developed a collapsible drawer panel inside the editor displaying complete outline plans (Chapter title, Synopsis, Key Events, Emotional Tone, and Cliffhanger type) with a modern semi-translucent glass style.
+
+#### STEP 4: Smart Action Loop after Outline Generation
+- Expanded the batch outline generation completion modal in `src/components/workspace/SeasonArchitectPanel.tsx`.
+- Replaced the generic single "Tutup" button with a highly functional 3-way choice panel:
+  1. **`✍️ Tulis Naskah Sekarang`**: Closes the dialog, automatically switches workspace mode to `write` (Naskah), loads the newly created chapter and its first beat, and triggers a success toast redirection.
+  2. **`📋 Generate Outline Lagi`**: Closes the result panel but keeps the generator modal open, while pre-populating inputs with smart defaults for the next chapter range (e.g. 3-7 if 1-2 just finished).
+  3. **`Tutup`**: Clears the modal.
+
+### Files Modified
+| File | Change Summary |
+|---|---|
+| `index.html` | Embedded pure HTML/CSS premium neon loader splash page |
+| `src/components/prose/FreeWriteEditor.tsx` | Added outline beats/events checks, banner dismissal, collapsible peek drawer, and Alt+O shortcut |
+| `src/components/workspace/SeasonArchitectPanel.tsx` | Wired setMode hook and added multi-choice actions post-outline generation |
+
+---
+
 ## Session: Context Panel Polish & Pacing Warnings UX
 **Date**: 2026-05-29
 **Status**: Completed - Build and TypeScript zero errors
