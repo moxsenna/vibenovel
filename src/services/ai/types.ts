@@ -104,6 +104,7 @@ export interface OutlineResponse {
 export interface ProseGenerateInput {
   title: string
   genre: string
+  wordCountTarget: number
   narrativeConstitution: string
   storyContract?: StoryContract | Record<string, unknown> | null
   chapterTitle: string

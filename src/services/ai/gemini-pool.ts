@@ -122,8 +122,7 @@ class GeminiPool {
     model = 'gemini-flash-latest',
     signal?: AbortSignal
   ): Promise<string> {
-    // Lock model to gemini-flash-latest for all Gemini calls
-    model = 'gemini-flash-latest'
+    // Respect the requested model (defaults to gemini-flash-latest)
 
     let retries = Math.max(3, this.keyStatuses.length)
     let lastError: unknown = null
@@ -244,8 +243,11 @@ class GeminiPool {
     signal?: AbortSignal,
     thinkingBudget = 0
   ): Promise<{ text: string; thoughtSummary?: string }> {
-    // Lock model to gemini-flash-latest for all Gemini calls
-    model = 'gemini-flash-latest'
+    // If thinking is requested, we MUST use the experimental thinking model.
+    // Otherwise, we respect the passed model parameter (which defaults to gemini-flash-latest).
+    if (thinkingBudget > 0) {
+      model = 'gemini-2.0-flash-thinking-exp'
+    }
 
     let retries = Math.max(3, this.keyStatuses.length)
     let lastError: unknown = null
@@ -367,8 +369,7 @@ class GeminiPool {
     model = 'gemini-flash-latest',
     signal?: AbortSignal
   ): AsyncGenerator<string, void, unknown> {
-    // Lock model to gemini-flash-latest for all Gemini calls
-    model = 'gemini-flash-latest'
+    // Respect the requested model (defaults to gemini-flash-latest)
 
     let retries = Math.max(3, this.keyStatuses.length)
     let lastError: unknown = null
@@ -450,6 +451,26 @@ class GeminiPool {
       }
     }
 
+    // All Gemini keys exhausted — try OpenRouter free fallback if auto-pilot is enabled
+    const settings = useSettingsStore.getState()
+    if (settings.autoPilotEnabled && settings.openRouterFreeKey) {
+      console.warn('Semua key Gemini limit. Fallback ke OpenRouter streaming...')
+      try {
+        const stream = openRouterAdapter.generateContentStream(
+          prompt,
+          systemInstruction,
+          OR_FREE_MODELS.prose,
+          true // useFreeKey
+        )
+        for await (const chunk of stream) {
+          yield chunk
+        }
+        return // Successfully yielded from fallback, exit
+      } catch (fallbackError) {
+        console.error('OpenRouter fallback juga gagal:', fallbackError)
+      }
+    }
+
     throw lastError instanceof Error
       ? lastError
       : new Error('Failed to generate stream after exhausting keys')
@@ -476,9 +497,16 @@ class GeminiPool {
     model = 'gemini-flash-latest',
     signal?: AbortSignal,
     thinkingBudget = 0
-  ): AsyncGenerator<ThinkingChunk, void, unknown> {
-    // Lock model to gemini-flash-latest for all Gemini calls
-    model = 'gemini-flash-latest'
+  ): AsyncGenerator<
+    { type: 'text' | 'thought'; content: string },
+    void,
+    unknown
+  > {
+    // If thinking is requested, we MUST use the experimental thinking model.
+    // Otherwise, we respect the passed model parameter (which defaults to gemini-flash-latest).
+    if (thinkingBudget > 0) {
+      model = 'gemini-2.0-flash-thinking-exp'
+    }
 
     let retries = Math.max(3, this.keyStatuses.length)
     let lastError: unknown = null
@@ -578,6 +606,28 @@ class GeminiPool {
         this.reportError(key, error)
         lastError = error
         retries--
+      }
+    }
+
+    // All Gemini keys exhausted — try OpenRouter free fallback if auto-pilot is enabled
+    const settingsV2 = useSettingsStore.getState()
+    if (settingsV2.autoPilotEnabled && settingsV2.openRouterFreeKey) {
+      console.warn('Semua key Gemini limit (V2). Fallback ke OpenRouter streaming...')
+      try {
+        const stream = openRouterAdapter.generateContentStreamV2(
+          prompt,
+          systemInstruction,
+          OR_FREE_MODELS.prose,
+          thinkingBudget,
+          signal,
+          true // useFreeKey
+        )
+        for await (const chunk of stream) {
+          yield chunk
+        }
+        return // Successfully yielded from fallback, exit
+      } catch (fallbackError) {
+        console.error('OpenRouter V2 fallback juga gagal:', fallbackError)
       }
     }
 

@@ -336,12 +336,19 @@ export const BeatEditor = forwardRef<BeatEditorHandle, BeatEditorProps>(function
 
           {!isGenerating && (
             <motion.button
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.97 }}
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               onClick={onNext}
-              className="px-6 py-2 bg-success text-bg-primary text-sm font-semibold rounded-lg hover:bg-success/90 transition-colors shadow-lg shadow-success/20"
+              className="px-6 py-2.5 bg-success text-on-success text-sm font-bold rounded-lg hover:bg-success/90 hover:shadow-lg hover:shadow-success/30 transition-all flex items-center gap-2 cursor-pointer shadow-md shadow-success/20"
             >
-              {isLastBeat ? 'Selesaikan Bab 🎉' : 'Lanjut ke Adegan Berikutnya ➡️'}
+              <span>{isLastBeat ? 'Selesaikan Bab' : 'Lanjut ke Adegan Berikutnya'}</span>
+              {isLastBeat ? (
+                <span className="material-symbols-outlined text-[18px] font-bold">celebrate</span>
+              ) : (
+                <span className="material-symbols-outlined text-[18px] font-bold">arrow_forward</span>
+              )}
             </motion.button>
           )}
         </div>

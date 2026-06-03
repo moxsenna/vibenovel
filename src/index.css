@@ -46,6 +46,12 @@
   --m3-on-error: #ffffff;
   --m3-on-error-container: #410002;
 
+  /* Success */
+  --m3-success: #3b5a40;
+  --m3-success-container: #d2ebd5;
+  --m3-on-success: #ffffff;
+  --m3-on-success-container: #00220a;
+
   /* Surface / Background */
   --m3-background: #fff8f6;
   --m3-on-background: #231a1e;
@@ -118,6 +124,12 @@
   --m3-on-error: #690005;
   --m3-on-error-container: #ffdad6;
 
+  /* Success */
+  --m3-success: #a0d1a5;
+  --m3-success-container: #1b3821;
+  --m3-on-success: #053915;
+  --m3-on-success-container: #d2ebd5;
+
   /* Surface / Background */
   --m3-background: #1a1118;
   --m3-on-background: #efdee8;
@@ -189,6 +201,12 @@
   --color-error-container: var(--m3-error-container);
   --color-on-error: var(--m3-on-error);
   --color-on-error-container: var(--m3-on-error-container);
+
+  /* Success */
+  --color-success: var(--m3-success);
+  --color-success-container: var(--m3-success-container);
+  --color-on-success: var(--m3-on-success);
+  --color-on-success-container: var(--m3-on-success-container);
 
   /* Surface / Background */
   --color-background: var(--m3-background);

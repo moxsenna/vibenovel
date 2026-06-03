@@ -224,6 +224,7 @@ export const ProseWriterPanel: React.FC = () => {
             )}
           </div>
         </div>
+
       </motion.div>
     )
   }
@@ -288,6 +289,9 @@ const ProseWriterInner: React.FC<ProseWriterInnerProps> = ({
   const handleNextBeat = () => {
     if (chapter.beats && currentBeatIndex < chapter.beats.length - 1) {
       setCurrentBeatIndex((prev) => prev + 1)
+    } else if (isLastBeat) {
+      addToast('Bab selesai ditulis!', 'success')
+      if (!contextPanelOpen) toggleContextPanel()
     }
   }
 

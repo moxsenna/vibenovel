@@ -110,6 +110,7 @@ export function buildProseInput(args: BuildProseInputArgs): ProseGenerateInput {
   return {
     title: project.title,
     genre: project.genre,
+    wordCountTarget: project.word_count_target,
     narrativeConstitution: project.narrative_constitution || '',
     storyContract: project.story_contract || {},
     chapterTitle: chapter.title || '',

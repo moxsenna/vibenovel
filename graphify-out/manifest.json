@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\services\\ai\\gemini-pool.ts": {
-    "mtime": 1779982792.4096234,
-    "ast_hash": "c5ca782c95c9bd7a4e2e0f977e1f4703",
+    "mtime": 1780037976.2408187,
+    "ast_hash": "ef8e6b8599d7aaac4ffdc3085992efcb",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\services\\ai\\openrouter-adapter.ts": {
@@ -80,8 +80,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\services\\ai\\types.ts": {
-    "mtime": 1779989190.3561351,
-    "ast_hash": "248a709b5bfdb445b311d377b2a4b275",
+    "mtime": 1780038804.2909813,
+    "ast_hash": "261e370dbd58e82d75f7dd92732f124a",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\store\\useChatStore.ts": {
@@ -235,8 +235,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\session_reports.md": {
-    "mtime": 1779994398.7363045,
-    "ast_hash": "e79c94850cb0eddb6b38fdff91f97a51",
+    "mtime": 1780038946.2885785,
+    "ast_hash": "78e121cd30463924520095fd5f158e36",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\sprint_plan.md": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\components\\prose\\BeatEditor.tsx": {
-    "mtime": 1779990480.6874363,
-    "ast_hash": "42a5b228884ae0a83b07d54fdf597199",
+    "mtime": 1780036670.4923763,
+    "ast_hash": "dbe40b23cd7af5b5d42b0e788a371fbd",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\components\\prose\\BeatIndicator.tsx": {
@@ -305,8 +305,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\components\\workspace\\ProseWriterPanel.tsx": {
-    "mtime": 1779898013.4862475,
-    "ast_hash": "41b52780512ddb7f8810208878cf6447",
+    "mtime": 1780038127.2784114,
+    "ast_hash": "af07007872dfb7901632ea3df66c3f8d",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\hooks\\useBeatWriter.ts": {
@@ -315,8 +315,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\prompts\\prose-writer.ts": {
-    "mtime": 1779849598.8893945,
-    "ast_hash": "6dab3928909803252110242f5508f2b3",
+    "mtime": 1780038908.1151173,
+    "ast_hash": "1a1568e331b580d3190ae858b57bcf9a",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\prompts\\state-snapshot.ts": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\services\\state-tracker.ts": {
-    "mtime": 1779850741.969663,
-    "ast_hash": "a7ec880584105cb4f496549dd6bf7353",
+    "mtime": 1780038916.351495,
+    "ast_hash": "48a9dc53b452b4e8d9d46f35138858ae",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\store\\parts\\chapters.ts": {
@@ -495,8 +495,8 @@
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\services\\prose-context.ts": {
-    "mtime": 1779849583.7830648,
-    "ast_hash": "6c2697c1ce7133d9e12970ecc5117708",
+    "mtime": 1780038885.640575,
+    "ast_hash": "31e6509cd109abe6f9faedf179831a78",
     "semantic_hash": ""
   },
   "D:\\Coding\\vibenovel\\src\\components\\modals\\RecapModal.tsx": {

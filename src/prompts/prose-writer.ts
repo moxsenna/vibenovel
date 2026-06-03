@@ -5,7 +5,7 @@ export function buildProseSystemInstruction(): string {
 Your task is to write immersive, emotional, and highly engaging prose for one specific story beat.
 
 CRITICAL KBM MELODRAMA PROTOCOL:
-1. SHORT PARAGRAPHS: Max 3-4 sentences per paragraph. Frequent line breaks. Very readable on mobile.
+1. SHORT PARAGRAPHS (KBM APP FORMAT): MAKSIMAL 2-3 KALIMAT PER PARAGRAF. You MUST use frequent line breaks. Do not write long blocks of text. Make it highly readable for mobile screen scrolling.
 2. DIALOGUE-HEAVY: Characters must speak naturally, with subtext, using Indonesian modern conversational style (unless specified otherwise).
 3. SHOW, DON'T TELL: Emphasize micro-expressions, body language, and visceral sensations rather than telling the reader how characters feel.
 4. PACING: Match the requested emotional tone. If TENSION/CONFLICT, use shorter sentences. If RELIEF/BREATHER, allow more introspection and description.
@@ -135,6 +135,8 @@ export function buildProseUserPrompt(input: ProseGenerateInput): string {
     }
   }
 
+  const beatTargetWords = Math.ceil((input.wordCountTarget || 1000) / (input.beats.length || 1))
+
   // Build the prompt
   return `
 [STORY CONTEXT]
@@ -164,7 +166,7 @@ Beat Direction: ${currentBeat?.direction || 'Continue the scene logically.'}
 ${previousTextContext}
 
 INSTRUCTIONS FOR THIS BEAT:
-1. Write approximately 250-400 words covering ONLY the current Beat Direction.
+1. Write approximately ${beatTargetWords} words covering ONLY the current Beat Direction. Do NOT rush the narrative. Describe things vividly to reach this word count.
 2. ${isFirstBeat ? 'Start the chapter with a strong hook.' : 'Continue naturally from the previous prose.'}
 3. ${isLastBeat ? `This is the FINAL beat of the chapter. End EXACTLY with the target cliffhanger (type: ${input.cliffhangerType}, setup: ${input.cliffhangerSetup}). Make the last 1-2 sentences hit hard — this is what sells the next chapter.` : 'Do NOT rush to the end of the chapter. Leave room for the remaining beats.'}
 4. Apply the MICRO-HOOK PROTOCOL: subtext in dialog, one "wrong" detail in description, an open question at every scene break.

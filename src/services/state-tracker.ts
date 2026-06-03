@@ -49,7 +49,7 @@ class StateTracker {
         const response = await geminiPool.generateContent(
           userPrompt,
           systemInstruction,
-          false,
+          true, // jsonMode = true required for robust JSON parsing
           'gemini-flash-latest'
         )
 
